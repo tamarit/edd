@@ -1,4 +1,4 @@
 edd
 ===
 
-Erlang Decladrative Debugger
+Erlang Declarative Debugger
