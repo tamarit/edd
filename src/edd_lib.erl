@@ -1,7 +1,40 @@
+%%%    Copyright (C) 2013 Salvador Tamarit <stamarit@dsic.upv.es>
+%%%
+%%%    This file is part of Erlang Declarative Debugger.
+%%%
+%%%    Erlang Declarative Debugger is free software: you can redistribute it and/or modify
+%%%    it under the terms of the GNU General Public License as published by
+%%%    the Free Software Foundation, either version 3 of the License, or
+%%%    (at your option) any later version.
+%%%
+%%%    Erlang Declarative Debugger is distributed in the hope that it will be useful,
+%%%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%%    GNU General Public License for more details.
+%%%
+%%%    You should have received a copy of the GNU General Public License
+%%%    along with Erlang Declarative Debugger.  If not, see <http://www.gnu.org/licenses/>.
+
+%%%-----------------------------------------------------------------------------
+%%% @author Salvador Tamarit <stamarit@dsic.upv.es>
+%%% @copyright 2013 Salvador Tamarit
+%%% @version 0.1
+%%% @doc Erlang Declarative Debugger auxiliary library. This module contains 
+%%%      auxiliary functions needed by the Erlang Declarative Debugger 'edd'.
+%%% @end
+%%%-----------------------------------------------------------------------------
+
 -module(edd_lib).
 
--export([parse_expr/1, dotGraphFile/2, ask/1,lookForRoot/1,core_module/1,getOrdinal/1]).
+%-export([parse_expr/1, dotGraphFile/2, ask/1,lookForRoot/1,core_module/1,getOrdinal/1]).
+-export([parse_expr/1, dotGraphFile/2, ask/1, core_module/1]).
 
+%%------------------------------------------------------------------------------
+%% @doc Parses a string as if it were an expression. Returns a unitary list 
+%%      containing the abstract representation of the expression.
+%% @end
+%%------------------------------------------------------------------------------
+-spec parse_expr(Func::string()) -> {ok, [erl_parse:abstract_expr()]} | {error, parse_error}.
 parse_expr(Func) ->
     case erl_scan:string(Func) of
 	{ok, Toks, _} ->
@@ -14,11 +47,27 @@ parse_expr(Func) ->
 	_Err ->
 	    {error, parse_error}
     end.
-    
+
+%%------------------------------------------------------------------------------
+%% @doc Compiles the Erlang program 'File' into Core Erlang and returns the 
+%%      resulting Core program as a binary.
+%%      
+%% @end
+%%------------------------------------------------------------------------------
+-spec core_module( File :: string()) -> binary().    
 core_module(File) ->
 	{ok,_,Core} = compile:file(File,[to_core,binary,no_copt]),
 	Core.
 
+%%------------------------------------------------------------------------------
+%% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
+%%      node. The tree 'G' must be a digraph representing the abbreviated proof 
+%%      tree of the evaluation of an expression that yields an incorrect value.
+%%      When it finds the buggy node, shows the function rule responsible for
+%%      the incorrect value.      
+%% @end
+%%------------------------------------------------------------------------------
+-spec ask( G :: digraph() ) -> ok.
 ask(G)->
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
@@ -239,7 +288,17 @@ askQuestion(G,V)->
 	list_to_atom(lists:reverse(Answer)).
 	
 	  
-	   
+%%------------------------------------------------------------------------------
+%% @doc Created a DOT file and a PDF file containing the tree in the graph 'G'. 
+%%      Creates the file 'Name'.dot containing the description of the digraph 
+%%      'G' using the plain text graph description language DOT 
+%%      ([http://en.wikipedia.org/wiki/DOT_language]). It also generates a visual 
+%%      PDF version of the graph 'G' using the generated DOT file and using the
+%%      'dot' command. If this program is not installed in the system the PDF 
+%%      will not be created but the function will not throw any exception.
+%% @end
+%%------------------------------------------------------------------------------
+-spec dotGraphFile( G :: digraph(), Name :: string() ) -> string().	   
 dotGraphFile(G,Name)->
 	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dotGraph(G)++"}")),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	

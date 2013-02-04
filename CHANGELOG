@@ -1,0 +1,5 @@
+2013/02/01
+==========
+[version 0.1]
+ * Initial release: Erlang Declarative Debugger for a sequential subset of the
+   Erlang language.

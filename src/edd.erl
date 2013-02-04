@@ -1,6 +1,33 @@
+%%%    Copyright (C) 2013 Salvador Tamarit <stamarit@dsic.upv.es>
+%%%
+%%%    This file is part of Erlang Declarative Debugger.
+%%%
+%%%    Erlang Declarative Debugger is free software: you can redistribute it and/or modify
+%%%    it under the terms of the GNU General Public License as published by
+%%%    the Free Software Foundation, either version 3 of the License, or
+%%%    (at your option) any later version.
+%%%
+%%%    Erlang Declarative Debugger is distributed in the hope that it will be useful,
+%%%    but WITHOUT ANY WARRANTY; without even the implied warranty of
+%%%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%%%    GNU General Public License for more details.
+%%%
+%%%    You should have received a copy of the GNU General Public License
+%%%    along with Erlang Declarative Debugger.  If not, see <http://www.gnu.org/licenses/>.
+
+%%%-----------------------------------------------------------------------------
+%%% @author Salvador Tamarit <stamarit@dsic.upv.es>
+%%% @copyright 2013 Salvador Tamarit
+%%% @version 0.1
+%%% @doc Erlang Declarative Debugger. This is the main module of the Erlang
+%%%      Declarative Debugger (edd). The debugger asks to programmer questions 
+%%%      about the expected results of function calls and points out the 
+%%%      program fragment that is causing the bug. 
+%%% @end
+%%%-----------------------------------------------------------------------------
+
 %c(adbgc),c(edd_lib).
 -module(edd).
-
 -export([dd/1]).
 
 %TODO
@@ -21,6 +48,12 @@
 %fer que els binary funcionen al case. cerl_clauses no funciona amb binaris.
 %pareix que les guardes q son crides a funcions no funcionen al cerl_clauses
 %tractar de fer una transformacio del case de manera que torne la clausula evaluada y les variables dels patrons enllaçades. despres llançarlo amb smerl.
+%%------------------------------------------------------------------------------
+%% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
+%%      whose evaluation yields an incorrect value.
+%% @end
+%%------------------------------------------------------------------------------
+-spec dd(Expr::string()) -> ok.
 dd(Expr)->
 	{ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
 	M1 = smerl:new(foo),
