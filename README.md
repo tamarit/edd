@@ -48,9 +48,7 @@ installer:
 
     1> c(edd_comp).
     {ok,edd_comp}
-    2> l(edd_comp).
-    {module,edd_comp}
-    3> edd_comp:compile().
+    2> edd_comp:compile().
     ok
 
 The 'edd_comp:compile()' function simply automates the process. The files 
@@ -75,8 +73,8 @@ code path when running the Erlang emulator. For example, if the edd folder is in
     {module,edd}
     >
  
-The 'edd' directory contains a 'test' folder with some buggy programs to debug.
-For example, if you compile and load the 'merge.erl' program you can observe 
+The 'edd' directory contains a 'examples' folder with some buggy programs to 
+debug. For example, if you compile and load the 'merge.erl' program you can observe 
 that the mergesort/2 function is buggy:
 
     > merge:mergesort([b,a], fun merge:comp/2).
