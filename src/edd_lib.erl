@@ -26,7 +26,7 @@
 
 -module(edd_lib).
 
--export([parse_expr/1, dot_graph_file/2, ask/1, core_module/1]).
+-export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -63,11 +63,11 @@ core_module(File) ->
 %%      node. The tree 'G' must be a digraph representing the abbreviated proof 
 %%      tree of the evaluation of an expression that yields an incorrect value.
 %%      When it finds the buggy node, shows the function rule responsible for
-%%      the incorrect value. The strategy followed is indicated in its second
+%%      the incorrect value. The strategy followed is indicated by its second
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
--spec ask( G :: digraph(), top_down | divide_query) -> ok.
+-spec ask( G :: digraph(), Strategy :: top_down | divide_query) -> ok.
 ask(G,Strategy)->
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
@@ -76,7 +76,7 @@ ask(G,Strategy)->
 	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
-	ask_about(G,Vertices,IniCorrect,[Root]).
+	ask_about(G,Strategy,Vertices,IniCorrect,[Root]).
 	
 
 ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) -> 

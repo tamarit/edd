@@ -37,7 +37,8 @@
 %%      tree, indicating that the tree will be created.
 %% @end
 %%------------------------------------------------------------------------------
--spec dd(Expr::string(), top_down | tree, top_down | tree) -> ok.
+-spec dd(Expr::string(), StrategyGraph1 :: top_down | tree, 
+         StrategyGraph2 :: top_down | tree) -> ok.
 dd(Expr,top_down,tree) -> 
 	dd_internal(Expr,top_down,true);
 dd(Expr,tree,top_down) -> 
@@ -57,11 +58,11 @@ dd(Expr,_,_) ->
 %% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
 %%      whose evaluation yields an incorrect value. If the second argument is 
 %%      atom top_down, the strategy will be set to Top Down and the tree will
-%%      not be created. Contrarily, If the second argument is atom tree, the
-%%      tree will be created, but the strategy will be Divide & Query.
+%%      not be created. Contrarily, if the second argument is atom tree, the
+%%      tree will be created, but the strategy will be Divide and Query.
 %% @end
 %%------------------------------------------------------------------------------
--spec dd(Expr::string(), top_down | tree) -> ok.	
+-spec dd(Expr::string(), StrategyGraph :: top_down | tree) -> ok.	
 dd(Expr,top_down) ->
 	dd_internal(Expr,top_down,false);
 dd(Expr,tree) ->
@@ -71,7 +72,7 @@ dd(Expr,_) ->
 
 %%------------------------------------------------------------------------------
 %% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
-%%      whose evaluation yields an incorrect value. It will use Divide & Query
+%%      whose evaluation yields an incorrect value. It will use Divide and Query
 %%      strategy and will not create the tree.
 %% @end
 %%------------------------------------------------------------------------------
