@@ -147,7 +147,7 @@ found. The default strategy is "Divide & Query", so a debugging session using
 dd/1 will use this strategy. To use the "Top Down" strategy, use the 'top_down'
 argument in a dd/2 call. For example:
 
-    > edd:dd("merge:mergesort([b,a], fun merge:comp/2), top_down").
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", top_down).
     
 The Erlang Declarative Debugger can also generate the proof tree in a DOT file
 (http://en.wikipedia.org/wiki/DOT_language) and a PDF file using the 'dot'
