@@ -7,18 +7,16 @@ out the program fragment that is causing the bug.
 
 The Erlang Declarative Debugger uses the module 'smerl.erl' for metaprogramming 
 in Erlang. This module has been written by Yariv Sadan for Erlyweb 
-
-  https://github.com/yariv/erlyweb
+(https://github.com/yariv/erlyweb).
   
 We have included this file in the repository only to make the installation of
-edd easier, since it does not requiere a complete Erlyweb installed in the 
+edd easier, since it does not require a complete Erlyweb installed in the 
 system to run edd but only the smerl.erl file.
 
 Getting edd
 ----------------
-The code of 'edd' is contained in a GIT repository on GitHub. The URL is:
-
-    https://github.com/tamarit/edd
+The code of 'edd' is contained in a GIT repository on GitHub. The URL is 
+https://github.com/tamarit/edd
 
 To get a copy of the repository you only have to write in your Linux/MacOS 
 console:
@@ -34,7 +32,7 @@ Compiling edd
 
 The Erlang Declarative Debugger is written in Erlang, so you will need an Erlang
 system installed in you computer. To compile the 'edd' source first move to the
-directory of the repository (for exmple /home/john/edd) and open an Erlang 
+directory of the repository (for example /home/john/edd) and open an Erlang 
 emulator:
 
     $ erl
@@ -136,5 +134,42 @@ responsible. In the example:
           false -> [H1 | merge([H2 | T1], T2, Comp)];
           true -> [H1 | merge(T1, [H2 | T2], Comp)]
         end.
+
+Options for edd
+---------------
+
+The Erlang Declarative Debugger has two different strategies to traverse the
+proof tree looking for the buggy node: "Divide & Query" and "Top Down". The
+"Divide & Query" strategy tries to make the minimum number of questions, and selects
+those nodes that split the tree into two of about the same size. On the other hand,
+"Top Down" traverses the tree from the root to the leaves until a buggy node is 
+found. The default strategy is "Divide & Query", so a debugging session using 
+dd/1 will use this strategy. To use the "Top Down" strategy, use the 'top_down'
+argument in a dd/2 call. For example:
+
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2), top_down").
+    
+The Erlang Declarative Debugger can also generate the proof tree in a DOT file
+(http://en.wikipedia.org/wiki/DOT_language) and a PDF file using the 'dot'
+command. To activate this option, use the 'tree' argument in dd/2. For
+example the call:
+
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", tree).
+    
+will start a debugging session using the default strategy "Divide & Query" and
+generate the proof tree of the evaluation of the expression in a file called 
+"dbg.dot" and also in "dbg.pdf" in the current directory. If your system does not
+have the 'dot' command to create PDF from DOT files, the PDF will not be create
+but no error will be raised. 
+
+To generate the proof tree file and also use the "Top Down" strategy, use the
+dd/3 function:
+
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", tree, top_down).
+    
+or 
+
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", top_down, tree).
+
 
 
