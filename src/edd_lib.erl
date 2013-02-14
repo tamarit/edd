@@ -136,7 +136,7 @@ find_unknown_children(_,_,[]) ->
  
 print_buggy_node(G,NotCorrectVertex,Message) ->
 	{NotCorrectVertex,{Label,Clause}} = digraph:vertex(G,NotCorrectVertex),
-	io:format("~s: ~s\n",[Message,Label]),
+	io:format("~s:\n~s\n",[Message,Label]),
 	print_clause(G,NotCorrectVertex,Clause).
    
 print_clause(G,NotCorrectVertex,Clause) ->
@@ -161,7 +161,7 @@ get_MFA_Label(G,Vertex) ->
 	{Vertex,{Label,_}} = digraph:vertex(G,Vertex),
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	{match,1,{call,1,{remote,1,{atom,1,ModName},{atom,1,FunName}},APars},_} = Aexpr,
+	{match,_,{call,_,{remote,_,{atom,_,ModName},{atom,_,FunName}},APars},_} = Aexpr,
 	Arity = length(APars),
 	{ModName,FunName,Arity}.
 	
@@ -319,8 +319,15 @@ dot_graph(G)->
 	
 dot_vertex({V,{L,_}}) ->
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
-	++integer_to_list(V)++" .- " ++ L ++ "\"];\n".     
+	++integer_to_list(V)++" .- " ++ changeNewLines(L) ++ "\"];\n".     
 	    
 dot_edge({V1,V2}) -> 
 	integer_to_list(V1)++" -> "++integer_to_list(V2)
 	++" [color=black, penwidth=3];\n".	
+	
+changeNewLines([10|Chars]) ->
+	[$\\,$l|changeNewLines(Chars)];
+changeNewLines([Other|Chars]) ->
+	[Other|changeNewLines(Chars)];
+changeNewLines([]) ->
+	[].

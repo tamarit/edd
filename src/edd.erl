@@ -95,8 +95,13 @@ dd_internal(Expr,Strategy,Graph) ->
 	
 	%to get the .core file. ONLY FOR DEBUGGING 
 	%compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
-
+	
+	FunsInitialCall = get_funs_from_abstract(AExpr,-1),
+	%TO CHANGE
+	put(funs_initial_call,FunsInitialCall),
 	put(case_id,0),
+	%
+	
 	G = digraph:new([acyclic]),
 	{Value,FreeV,Roots} = 
 	  get_tree(InitialCall,ets:new(env,[bag]),G,Core,
@@ -313,7 +318,7 @@ get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,G,FunVar,FunName,Trusted,E
 	  lists:map(
 	          fun ({anonymous_function,FunName_,FunCore}) -> 
 			 {anonymous,_,File,Line,_} = get_anon_func(EnvAF,FunName_,FunCore),
-			 get_fun_from_abstract(File,Line);
+			 get_fun_from_file(File,Line);
 	              (Par_) -> 
 	                Par = cerl:fold_literal(Par_),
 	          	case cerl:is_literal(Par) of
@@ -346,7 +351,7 @@ get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,G,FunVar,FunName,Trusted,E
 		_ -> 
 			""
 %			[{_,{anonymous,_,File,Line}}] = ets:lookup(EnvAF,FunName),
-%			{call,1,get_fun_from_abstract(File,Line),APars}
+%			{call,1,get_fun_from_file(File,Line),APars}
 	  end,
 	case AApply of 
 	     "" -> {Value,NFreeV,Roots};
@@ -592,19 +597,27 @@ add_bindings_to_env([{VarName,Value}| TailBindings],Env) ->
 	add_bindings_to_env(TailBindings,Env);
 add_bindings_to_env([],_) -> ok.
 
-get_fun_from_abstract(File,Line) -> 
-	{ok,Abstract} = smerl:for_file(File),
-	[AFun|_] =
-	     lists:flatten(
-		[erl_syntax_lib:fold(fun(Tree,Acc) -> 
-		               		case Tree of 
-		               	    	     {'fun',Line,{clauses,_}}->
-		               	    		[Tree|Acc];
-		               	    	     _ -> 
-		               	    		Acc
-		               		end
-			    	     end, [], Form)||Form<-smerl:get_forms(Abstract)]),		    
-	AFun.
+get_fun_from_file(File,Line) -> 
+	case smerl:for_file(File) of
+	     {ok,Abstract} ->
+		hd(lists:flatten([get_funs_from_abstract(Form,Line) 
+		                  || Form <- smerl:get_forms(Abstract)]));
+	     {error, {invalid_module, _}} -> 
+	     	hd(get(funs_initial_call))
+	end.
+	
+get_funs_from_abstract(Abstract,Line) -> 
+	erl_syntax_lib:fold(fun(Tree,Acc) -> 
+	               		case Tree of 
+	               	    	     {'fun',Line,{clauses,_}} ->
+	               	    		[Tree|Acc];
+	               	             {'fun',_,{clauses,_}} when Line =:= -1 ->
+	               	    		[Tree|Acc];
+	               	    	     _ -> 
+	               	    		Acc
+	               		end
+		    	     end, [], Abstract).
+		    	    
 
 extract_module_from_ann([_,{file,File}]) ->
 	[_,_,_,_|ModName_] = lists:reverse(File),
