@@ -137,6 +137,7 @@ dd_internal(Expr,Strategy,Graph) ->
 
 get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 	%io:format("Expr: ~p\n",[Expr]),
+	%io:format("Env: ~p\n",[ets:tab2list(Env)]),
 	case cerl:type(Expr) of
 		'apply' ->
 			get_tree_apply(Expr,Env,G,Core,FreeV,EnvAF,Trusted);
@@ -161,7 +162,9 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 			% de cómputo del cuerpo (RootArgs)
 			end;
 		'letrec' ->
-			NewDefs = cerl:letrec_defs(Expr),
+			NewDefs_ = cerl:letrec_defs(Expr),
+			NewDefs = 
+			   [{V,apply_substitution(FunDef,Env,[])} || {V,FunDef} <- NewDefs_],
 			NCore =	cerl:c_module(cerl:module_name(Core), 
 					 	cerl:module_exports(Core),
 					 	cerl:module_attrs(Core),
@@ -169,14 +172,7 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 			get_tree(cerl:letrec_body(Expr),Env,G,NCore,FreeV,EnvAF,Trusted);
 			% Genero un nuevo CORE de un módulo que es igual a 'Core' pero que tiene
 			% la función declarada en el letrec y genero el arbol del cuerpo del letrec
-		'call' ->
-			case Expr of
-			     {c_call,_,{c_literal,_,erlang},{c_literal,_,make_fun},_} ->
-			     	{Expr,FreeV,[]};
-			     _ -> 
-			     	get_tree_call(Expr,Env,G,Core,FreeV,EnvAF)
-			end;
-		'fun' -> 
+	        'fun' -> 
 			[{id,{_,_,FunName}},Line,{file,File}] = cerl:get_ann(Expr),
 			NExpr = apply_substitution(Expr,Env,[]), % Sustituye las variables libres
 			% de la fun por sus valores
@@ -184,6 +180,13 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 			% Guardo la función anónima en el entorno por si luego me aparece saber
 			% dónde estaba
 			{{anonymous_function,FunName,NExpr},FreeV,[]};
+		'call' ->
+			case Expr of
+			     {c_call,_,{c_literal,_,erlang},{c_literal,_,make_fun},_} ->
+			     	{Expr,FreeV,[]};
+			     _ -> 
+			     	get_tree_call(Expr,Env,G,Core,FreeV,EnvAF)
+			end;
 		'cons' ->
 			{[NHd,NTl],NFreeV,Roots} = 
 				get_tree_list([cerl:cons_hd(Expr),cerl:cons_tl(Expr)],
