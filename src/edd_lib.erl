@@ -289,13 +289,43 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	   end, 
 	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
 	
+%ask_question(G,V)->
+%	{V,{Label,_}} = digraph:vertex(G,V),
+%	io:format("~s",[Label]),
+%	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/d/i/s/u/a]: ")),
+%	list_to_atom(lists:reverse(Answer)).
+	
 ask_question(G,V)->
 	{V,{Label,_}} = digraph:vertex(G,V),
-	io:format("~s",[Label]),
+	NLabel = transform_label(lists:flatten(Label),[]),
+	io:format("~s",[NLabel]),
 	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/d/i/s/u/a]: ")),
 	list_to_atom(lists:reverse(Answer)).
 	
-	  
+	
+transform_label([],Acc) -> Acc;
+transform_label([$[|Tail],Acc) ->
+	{Numbers,[_|NTail]} = lists:splitwith(fun($]) -> false; (_) -> true end, Tail),
+	Tokens = string:tokens(Numbers, ", \n\t"),
+	case analyze_tokens(Tokens) of
+	     {ok,List} -> transform_label(NTail,Acc++io_lib:format("~p",[List]));
+	     error -> transform_label(Tail,Acc++[$[])
+	end;
+transform_label([Char|Tail],Acc) ->
+	transform_label(Tail,Acc++[Char]).
+	
+analyze_tokens([]) -> {ok,[]};
+analyze_tokens([H|T]) -> 
+	case string:to_integer(H) of
+	     {Int,[]} when Int >= 32, Int =< 126 ->  
+	     	case analyze_tokens(T) of
+	     	     {ok,List} -> {ok,[Int|List]};
+	     	     error -> error
+	     	end;
+	     _ -> error
+	end.
+	
+		  
 %%------------------------------------------------------------------------------
 %% @doc Created a DOT file and a PDF file containing the tree in the graph 'G'. 
 %%      Creates the file 'Name'.dot containing the description of the digraph 
@@ -319,7 +349,9 @@ dot_graph(G)->
 	
 dot_vertex({V,{L,_}}) ->
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
-	++integer_to_list(V)++" .- " ++ changeNewLines(L) ++ "\"];\n".     
+	++integer_to_list(V)++" .- " 
+	++ changeNewLines(lists:flatten(
+		transform_label(lists:flatten(L),[]))) ++ "\"];\n".     
 	    
 dot_edge({V1,V2}) -> 
 	integer_to_list(V1)++" -> "++integer_to_list(V2)
@@ -327,6 +359,8 @@ dot_edge({V1,V2}) ->
 	
 changeNewLines([10|Chars]) ->
 	[$\\,$l|changeNewLines(Chars)];
+changeNewLines([$"|Chars]) ->
+	[$\\,$"|changeNewLines(Chars)];
 changeNewLines([Other|Chars]) ->
 	[Other|changeNewLines(Chars)];
 changeNewLines([]) ->
