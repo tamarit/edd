@@ -136,7 +136,7 @@ find_unknown_children(_,_,[]) ->
  
 print_buggy_node(G,NotCorrectVertex,Message) ->
 	{NotCorrectVertex,{Label,Clause}} = digraph:vertex(G,NotCorrectVertex),
-	io:format("~s:\n~s\n",[Message,Label]),
+	io:format("~s:\n~s\n",[Message,transform_label(Label,[])]),
 	print_clause(G,NotCorrectVertex,Clause).
    
 print_clause(G,NotCorrectVertex,Clause) ->
@@ -288,12 +288,6 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	        _ -> {Vertices,Correct,NotCorrect,Unknown,State,Strategy}
 	   end, 
 	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
-	
-%ask_question(G,V)->
-%	{V,{Label,_}} = digraph:vertex(G,V),
-%	io:format("~s",[Label]),
-%	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/d/i/s/u/a]: ")),
-%	list_to_atom(lists:reverse(Answer)).
 	
 ask_question(G,V)->
 	{V,{Label,_}} = digraph:vertex(G,V),
