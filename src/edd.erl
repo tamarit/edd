@@ -268,37 +268,45 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 
 get_tree_apply(Apply,Env0,G,Core,FreeV,EnvAF,Trusted)->
 	FunVar = cerl:apply_op(Apply),
-%	io:format("Apply: ~p\nFunVar: ~p\nModule: ~p\nEnv0: ~p\nTrusted: ~p\n",[Apply,FunVar,cerl:module_name(Core),ets:tab2list(Env0),Trusted]),
+	%io:format("Apply: ~p\nFunVar: ~p\nModule: ~p\nEnv0: ~p\nTrusted: ~p\n",[Apply,FunVar,cerl:module_name(Core),ets:tab2list(Env0),Trusted]),
 	Pars = cerl:apply_args(Apply),
 	NPars = lists:map(fun(Par) -> bind_vars(Par,Env0) end,Pars),
 	FunDefs = cerl:module_defs(Core),
-	case cerl:var_name(FunVar) of
-	     {FunName,_} ->
-		case [FunBody_ || {{c_var,_,FunName_},FunBody_} <- FunDefs, 
-		                  FunName_ == cerl:var_name(FunVar)] of
-		     [{c_fun,_,Args,FunBody}|_] -> % apply 'd'/1 (3)
-		     	get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,
-		     	                FunBody,G,FunVar,FunName,Trusted,[]);
-		     _ -> % Apply de ¿?
-		     	get_tree_call(
-		     	  cerl:ann_c_call(cerl:get_ann(Apply),
-		     	              {c_literal,[],extract_module_from_ann(cerl:get_ann(Apply))},
-		     	              {c_literal,[],FunName},Pars),Env0,G,Core,FreeV,EnvAF)
-		end;
-	     _ -> % Apply de una variable
-	     	BFunVar = bind_vars(FunVar,Env0),
-	     	case BFunVar of
-	     	     {anonymous_function,FunName,FunCore} -> % Se enlaza a una función anónima
-	     	        {anonymous,{c_fun,_,Args,FunBody},_,_,EnvAF0} = 
-	     	                get_anon_func(EnvAF,FunName,FunCore),
-	           get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,
-	                           G,FunVar,FunName,Trusted,EnvAF0);
-	     	     _ -> % Caso de un make_fun
-		     	{ModName,FunName,_} = get_MFA(BFunVar),
-		     	get_tree_call({c_call,cerl:get_ann(Apply),
-		     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
-		     	            ets:new(env, [bag]),G,Core,FreeV,EnvAF)
-		end
+	case cerl:type(FunVar) of
+		'var' ->
+			case cerl:var_name(FunVar) of
+			     {FunName,_} ->
+					case [FunBody_ || {{c_var,_,FunName_},FunBody_} <- FunDefs, 
+					                  FunName_ == cerl:var_name(FunVar)] of
+					     [{c_fun,_,Args,FunBody}|_] -> % apply 'd'/1 (3)
+					     	get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,
+					     	                FunBody,G,FunVar,FunName,Trusted,[]);
+					     _ -> % Apply de ¿?
+					     	get_tree_call(
+					     	  cerl:ann_c_call(cerl:get_ann(Apply),
+					     	              {c_literal,[],extract_module_from_ann(cerl:get_ann(Apply))},
+					     	              {c_literal,[],FunName},Pars),Env0,G,Core,FreeV,EnvAF)
+					end;
+			     _ -> % Apply de una variable
+			     	BFunVar = bind_vars(FunVar,Env0),
+			     	case BFunVar of
+			     	     {anonymous_function,FunName,FunCore} -> % Se enlaza a una función anónima
+			     	        {anonymous,{c_fun,_,Args,FunBody},_,_,EnvAF0} = 
+			     	                get_anon_func(EnvAF,FunName,FunCore),
+			           get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,
+			                           G,FunVar,FunName,Trusted,EnvAF0);
+			     	     _ -> % Caso de un make_fun
+				     	{ModName,FunName,_} = get_MFA(BFunVar),
+				     	get_tree_call({c_call,cerl:get_ann(Apply),
+				     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
+				     	            ets:new(env, [bag]),G,Core,FreeV,EnvAF)
+					end
+			end;
+		_ -> 
+			{ModName,FunName,_} = get_MFA(FunVar),
+	     	get_tree_call({c_call,cerl:get_ann(Apply),
+	     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
+	     	             ets:new(env, [bag]),G,Core,FreeV,EnvAF)
 	end.
 	
 get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) ->
