@@ -31,8 +31,18 @@ Compiling edd
 -------------
 
 The Erlang Declarative Debugger is written in Erlang, so you will need an Erlang
-system installed in you computer. To compile the 'edd' source first move to the
-directory of the repository (for example /home/john/edd) and open an Erlang 
+system installed in you computer. There are two ways to compile 'edd': the 
+simplest and the simple.
+
+1. **The simplest**
+Move to the directory of the repository (for example /home/john/edd) and type *make*:	
+	
+    $ make
+    erlc edd_comp.erl
+    erl -run edd_comp compile -noshell -s erlang halt
+
+2. **The simple**	
+Move to the directory of the repository (for example /home/john/edd) and open an Erlang 
 emulator:
 
     $ erl
