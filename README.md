@@ -35,18 +35,23 @@ system installed in you computer. There are two ways to compile 'edd': the
 simplest and the simple.
 
 1. **The simplest**: Move to the directory of the repository (for example /home/john/edd) and type *make*:	
+
         $ make
         erlc edd_comp.erl
         erl -run edd_comp compile -noshell -s erlang halt
+        
 2. **The simple**: Move to the directory of the repository (for example /home/john/edd) and open an Erlang 
 emulator:
+
         $ erl
         Erlang R15B02 (erts-5.9.2) [source] [smp:4:4] [async-threads:0] [hipe] [kernel-poll:false]
         
         Eshell V5.9.2  (abort with ^G)
         1> 
+        
     Write the following commands to compile, load and run the compiler and 
     installer: 
+    
         1> c(edd_comp).
         {ok,edd_comp}
         2> edd_comp:compile().
