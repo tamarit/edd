@@ -140,20 +140,37 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 	print_clause(G,NotCorrectVertex,Clause).
    
 print_clause(G,NotCorrectVertex,Clause) ->
-	{ModName,FunName,Arity} = get_MFA_Label(G,NotCorrectVertex),
-	{ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
-	Clauses = hd([Clauses_ || 
-	              	{function,_,FunName_,Arity_,Clauses_} <- smerl:get_forms(M),
-			FunName_ =:= FunName, Arity_ =:= Arity]),
+	{Clauses,FunName,Arity} = 
+		case get_MFA_Label(G,NotCorrectVertex) of 
+			{'fun',_,_} = AnoFun ->
+				{erl_syntax:fun_expr_clauses(AnoFun),none,none};
+			{ModName,FunName0,Arity0} ->
+				{ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
+				Clauses_ = 
+				  hd([Clauses_ || 
+		             {function,_,FunName_,Arity_,Clauses_} <- smerl:get_forms(M),
+		             FunName_ =:= FunName0, Arity_ =:= Arity0]),
+				{Clauses_,FunName0,Arity0} 
+		end,
+	% {ModName,FunName,Arity} = get_MFA_Label(G,NotCorrectVertex),
+	% {ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
+	% Clauses = hd([Clauses_ || 
+	%               	{function,_,FunName_,Arity_,Clauses_} <- smerl:get_forms(M),
+	% 				FunName_ =:= FunName, Arity_ =:= Arity]),
 	case Clause > length(Clauses)  of
 	     true -> 		     	
 	     	io:format("There is no clause matching.\n");
 	     false -> 
 	     	io:format("Please, revise the ~s clause:\n",[get_ordinal(Clause)]),
-		SelectedClause = lists:nth(Clause, Clauses),
-		ClauseStr = 
-		   erl_prettypr:format({function,1,FunName,Arity,[SelectedClause]}),
-		io:format("~s\n",[ClauseStr])
+			SelectedClause = lists:nth(Clause, Clauses),
+			ClauseStr = 
+				case FunName of
+					none -> 
+						erl_prettypr:format(erl_syntax:fun_expr([SelectedClause]));
+					_ -> 
+						erl_prettypr:format({function,1,FunName,Arity,[SelectedClause]})
+				end,
+			io:format("~s\n",[ClauseStr])
 	end.
 	
 	
