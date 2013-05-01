@@ -103,9 +103,10 @@ dd_internal(Expr,Strategy,Graph) ->
 	%
 	
 	G = digraph:new([acyclic]),
+	Env = ets:new(env,[bag]),
 	{Value,FreeV,Roots} = 
-	  get_tree(InitialCall,ets:new(env,[bag]),G,Core,
-	          0,ets:new(env_anonymous_functions,[bag]),false),
+	  get_tree(InitialCall,ets:new(env,[bag]),G,Core,0,false),
+	ets:delete(Env),
 	%Caso especial si la llamada inicial tiene funciones anidadas como f(g(3)), que
 	%será traducido a CORE con un let x = g(3) in f(x)
 	case cerl:type(InitialCall) of 
@@ -132,22 +133,22 @@ dd_internal(Expr,Strategy,Graph) ->
 	     false -> 
 	       ok
 	end,
-    	edd_lib:ask(G,Strategy).
+    edd_lib:ask(G,Strategy).
 
 
-get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
+get_tree(Expr,Env,G,Core,FreeV,Trusted) ->
 	%io:format("Expr: ~p\n",[Expr]),
 	%io:format("Env: ~p\n",[ets:tab2list(Env)]),
 	case cerl:type(Expr) of
 		'apply' ->
-			get_tree_apply(Expr,Env,G,Core,FreeV,EnvAF,Trusted);
+			get_tree_apply(Expr,Env,G,Core,FreeV,Trusted);
 		'case' ->
-			get_tree_case(Expr,Env,G,Core,FreeV,EnvAF,Trusted);
+			get_tree_case(Expr,Env,G,Core,FreeV,Trusted);
 		'let' ->
 			Vars = cerl:let_vars(Expr),
 			LetArg = cerl:let_arg(Expr),
 			{ValueArg,NFreeV,RootsArg} =
-			   get_tree(LetArg,Env,G,Core,FreeV,EnvAF,Trusted),
+			   get_tree(LetArg,Env,G,Core,FreeV,Trusted),
 			case check_errors(ValueArg) of
 			     true -> 
 			     	{ValueArg,NFreeV,RootsArg};
@@ -155,7 +156,7 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 				lists:map(fun(Var) -> add_bindings_to_env([{Var,ValueArg}],Env) end,Vars),
 				LetBody = cerl:let_body(Expr),
 				{Value,NNFreeV,Roots} = 
-				   get_tree(LetBody,Env,G,Core,NFreeV,EnvAF,Trusted),
+				   get_tree(LetBody,Env,G,Core,NFreeV,Trusted),
 				{Value,NNFreeV,RootsArg ++ Roots} 
 			% Se devuelven las raices de los árboles de cómputo de cada expresión
 			% en el argumento del let (RootArgs) además de las raíces de los árboles
@@ -169,36 +170,36 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 					 	cerl:module_exports(Core),
 					 	cerl:module_attrs(Core),
 					 	NewDefs ++ cerl:module_defs(Core)),
-			get_tree(cerl:letrec_body(Expr),Env,G,NCore,FreeV,EnvAF,Trusted);
+			get_tree(cerl:letrec_body(Expr),Env,G,NCore,FreeV,Trusted);
 			% Genero un nuevo CORE de un módulo que es igual a 'Core' pero que tiene
 			% la función declarada en el letrec y genero el arbol del cuerpo del letrec
-	        'fun' -> 
+	    'fun' -> 
 			[{id,{_,_,FunName}},Line,{file,File}] = cerl:get_ann(Expr),
 			NExpr = apply_substitution(Expr,Env,[]), % Sustituye las variables libres
 			% de la fun por sus valores
-			ets:insert(EnvAF,{FunName,{anonymous,NExpr,File,Line,[]}}),
-			% Guardo la función anónima en el entorno por si luego me aparece saber
-			% dónde estaba
-			{{anonymous_function,FunName,NExpr},FreeV,[]};
+			% ets:insert(EnvAF,{FunName,{anonymous,NExpr,File,Line,Env}}),
+			% % Guardo la función anónima en el entorno por si luego me aparece saber
+			% % dónde estaba
+			{{anonymous_function,FunName,NExpr,File,Line,Env},FreeV,[]};
 		'call' ->
 			case Expr of
 			     {c_call,_,{c_literal,_,erlang},{c_literal,_,make_fun},_} ->
 			     	{Expr,FreeV,[]};
 			     _ -> 
-			     	get_tree_call(Expr,Env,G,Core,FreeV,EnvAF)
+			     	get_tree_call(Expr,Env,G,Core,FreeV)
 			end;
 		'cons' ->
 			{[NHd,NTl],NFreeV,Roots} = 
 				get_tree_list([cerl:cons_hd(Expr),cerl:cons_tl(Expr)],
-				            Env,G,Core,FreeV,EnvAF,Trusted),
+				            Env,G,Core,FreeV,Trusted),
 			{cerl:c_cons(NHd,NTl),NFreeV,Roots};
 		'tuple' ->
 			{NExps,NFreeV,Roots} = 
-			   get_tree_list(cerl:tuple_es(Expr),Env,G,Core,FreeV,EnvAF,Trusted),
+			   get_tree_list(cerl:tuple_es(Expr),Env,G,Core,FreeV,Trusted),
 			{cerl:c_tuple(NExps),NFreeV,Roots};
 		'try' -> 
 			{ValueArg,NFreeV,ArgRoots} = 
-			   get_tree(cerl:try_arg(Expr),Env,G,Core,FreeV,EnvAF,Trusted),
+			   get_tree(cerl:try_arg(Expr),Env,G,Core,FreeV,Trusted),
 			case ValueArg of
 			     {c_literal,[],{error,TypeError}} -> 
 			     	add_bindings_to_env(
@@ -206,14 +207,14 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 			     	             [cerl:abstract(Lit) 
 			     	              || Lit <- [error,TypeError,[]]]),Env),
 			     	{Value,NNFreeV,BodyRoots} = 
-			     	   get_tree(cerl:try_handler(Expr),Env,G,Core,NFreeV,EnvAF,Trusted),
+			     	   get_tree(cerl:try_handler(Expr),Env,G,Core,NFreeV,Trusted),
 			     	{Value,NNFreeV,ArgRoots ++ BodyRoots};
 			     _ ->
 			        lists:map(fun(Var) -> 
 			                    add_bindings_to_env([{Var,ValueArg}],Env) 
 			                  end,cerl:try_vars(Expr)),
 			     	{Value,NNFreeV,BodyRoots} = 
-			     	   get_tree(cerl:try_body(Expr),Env,G,Core,NFreeV,EnvAF,Trusted),
+			     	   get_tree(cerl:try_body(Expr),Env,G,Core,NFreeV,Trusted),
 			     	{Value,NNFreeV,ArgRoots ++ BodyRoots}
 			end;
 		'catch' ->
@@ -235,24 +236,24 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 			           	                             cerl:c_tuple(
 			           	                               [TempVar2,TempVar3])]))
 			           	])),
-			get_tree(EqTry,Env,G,Core,FreeV,EnvAF,Trusted);  
+			get_tree(EqTry,Env,G,Core,FreeV,Trusted);  
 		'bitstr' ->
-			{Value,NFreeV,Roots} = get_tree(cerl:bitstr_val(Expr),Env,G,Core,FreeV,EnvAF,Trusted),
+			{Value,NFreeV,Roots} = get_tree(cerl:bitstr_val(Expr),Env,G,Core,FreeV,Trusted),
 			{cerl:c_bitstr(Value,cerl:bitstr_size(Expr),
 			              cerl:bitstr_unit(Expr),cerl:bitstr_type(Expr),
 			              cerl:bitstr_flags(Expr)),
 			NFreeV,Roots};
 		'binary' ->
-			{NExps,NFreeV,Roots} = get_tree_list(cerl:binary_segments(Expr),Env,G,Core,FreeV,EnvAF,Trusted),
+			{NExps,NFreeV,Roots} = get_tree_list(cerl:binary_segments(Expr),Env,G,Core,FreeV,Trusted),
 			{cerl:c_binary(NExps),NFreeV,Roots};
 		'seq' ->
 		         {Value,NFreeV,Roots} =
-		           get_tree(cerl:seq_arg(Expr),Env,G,Core,FreeV,EnvAF,Trusted),
+		           get_tree(cerl:seq_arg(Expr),Env,G,Core,FreeV,Trusted),
 		         case check_errors(Value) of
 		              true -> 
 		              	{Value,NFreeV,Roots};
 		              _ ->
-		              	get_tree(cerl:seq_body(Expr),Env,G,Core,FreeV,EnvAF,Trusted)
+		              	get_tree(cerl:seq_body(Expr),Env,G,Core,FreeV,Trusted)
 		         end;
 		'literal' ->
 			{Expr,FreeV,[]};
@@ -266,116 +267,122 @@ get_tree(Expr,Env,G,Core,FreeV,EnvAF,Trusted) ->
 		     {Expr,FreeV,[]}	
 	end.
 
-get_tree_apply(Apply,Env0,G,Core,FreeV,EnvAF,Trusted)->
+get_tree_list([E|Es],Env,G,Core,FreeV,Trusted) ->
+	{NE,NFreeV,RootsH} = get_tree(bind_vars(E,Env),Env,G,Core,FreeV,Trusted),
+	{NEs,NNFreeV,RootsT} = get_tree_list(Es,Env,G,Core,NFreeV,Trusted),
+	{[NE|NEs],NNFreeV,RootsH++RootsT};
+get_tree_list([],_,_,_,FreeV,_) ->
+	{[],FreeV,[]}.
+
+get_tree_apply(Apply,Env0,G,Core,FreeV,Trusted)->
 	FunVar = cerl:apply_op(Apply),
 	%io:format("Apply: ~p\nFunVar: ~p\nModule: ~p\nEnv0: ~p\nTrusted: ~p\n",[Apply,FunVar,cerl:module_name(Core),ets:tab2list(Env0),Trusted]),
 	Pars = cerl:apply_args(Apply),
 	NPars = lists:map(fun(Par) -> bind_vars(Par,Env0) end,Pars),
 	FunDefs = cerl:module_defs(Core),
-	case cerl:type(FunVar) of
-		'var' ->
-			case cerl:var_name(FunVar) of
-			     {FunName,_} ->
-					case [FunBody_ || {{c_var,_,FunName_},FunBody_} <- FunDefs, 
-					                  FunName_ == cerl:var_name(FunVar)] of
-					     [{c_fun,_,Args,FunBody}|_] -> % apply 'd'/1 (3)
-					     	get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,
-					     	                FunBody,G,FunVar,FunName,Trusted,[]);
-					     _ -> % Apply de ¿?
-					     	get_tree_call(
-					     	  cerl:ann_c_call(cerl:get_ann(Apply),
-					     	              {c_literal,[],extract_module_from_ann(cerl:get_ann(Apply))},
-					     	              {c_literal,[],FunName},Pars),Env0,G,Core,FreeV,EnvAF)
-					end;
-			     _ -> % Apply de una variable
-			     	BFunVar = bind_vars(FunVar,Env0),
-			     	case BFunVar of
-			     	     {anonymous_function,FunName,FunCore} -> % Se enlaza a una función anónima
-			     	        {anonymous,{c_fun,_,Args,FunBody},_,_,EnvAF0} = 
-			     	                get_anon_func(EnvAF,FunName,FunCore),
-			           get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,
-			                           G,FunVar,FunName,Trusted,EnvAF0);
-			     	     _ -> % Caso de un make_fun
-				     	{ModName,FunName,_} = get_MFA(BFunVar),
-				     	get_tree_call({c_call,cerl:get_ann(Apply),
-				     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
-				     	            ets:new(env, [bag]),G,Core,FreeV,EnvAF)
-					end
-			end;
+	case FunVar of 
+		{anonymous_function,_,{c_fun,_,Args,FunBody},_,_,_} ->
+			get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,
+					          G,FunVar,FunVar,Trusted,[]);
 		_ -> 
-			{ModName,FunName,_} = get_MFA(FunVar),
-	     	get_tree_call({c_call,cerl:get_ann(Apply),
-	     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
-	     	             ets:new(env, [bag]),G,Core,FreeV,EnvAF)
-	end.
+			case cerl:type(FunVar) of
+				'var' ->
+					case cerl:var_name(FunVar) of
+					     {FunName,_} ->
+							case [FunBody_ || {{c_var,_,FunName_},FunBody_} <- FunDefs, 
+							                  FunName_ == cerl:var_name(FunVar)] of
+							     [{c_fun,_,Args,FunBody}|_] -> % apply 'd'/1 (3)
+							     	get_tree_applyFun(Args,NPars,Core,FreeV,
+							     	                FunBody,G,FunVar,FunName,Trusted,[]);
+							     _ -> % Apply de ¿?
+							     	get_tree_call(
+							     	  cerl:ann_c_call(cerl:get_ann(Apply),
+							     	              {c_literal,[],extract_module_from_ann(cerl:get_ann(Apply))},
+							     	              {c_literal,[],FunName},Pars),Env0,G,Core,FreeV)
+							end;
+					     _ -> % Apply de una variable
+					     	BFunVar = bind_vars(FunVar,Env0),
+					     	case BFunVar of
+					     	     {anonymous_function,_,{c_fun,_,Args,FunBody},_,_,_} -> % Se enlaza a una función anónima
+					     	        % {anonymous,{c_fun,_,Args,FunBody},_,_,_} = 
+					     	        %         get_anon_func(EnvAF,FunName,FunCore),
+					           get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,
+					                           G,FunVar,BFunVar,Trusted,[]);
+					     	     _ -> % Caso de un make_fun
+						     	{ModName,FunName,_} = get_MFA(BFunVar),
+						     	get_tree_call({c_call,cerl:get_ann(Apply),
+						     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
+						     	            ets:new(env, [bag]),G,Core,FreeV)
+							end
+					end;
+				_ -> 
+					{ModName,FunName,_} = get_MFA(FunVar),
+			     	get_tree_call({c_call,cerl:get_ann(Apply),
+			     	            {c_literal,[],ModName},{c_literal,[],FunName},NPars},
+			     	             ets:new(env, [bag]),G,Core,FreeV)
+			end
+		end.
 	
-get_tree_applyFun(Args,NPars,Core,EnvAF,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) ->
+get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) ->
 	Env = ets:new(env_temp, [bag]),
 	create_new_env(Args, NPars, Env),
+	%io:format("Env0: ~p\nEnv: ~p\n",[Env0,ets:tab2list(Env]),
 	add_bindings_to_env(Env0,Env),
 	CaseId = get(case_id),
-	{Value,NFreeV,Roots} = get_tree(FunBody,Env,G,Core,FreeV,EnvAF,Trusted),
+	{Value,NFreeV,Roots} = get_tree(FunBody,Env,G,Core,FreeV,Trusted),
 	IsLC = % Detecta si se trata de una list comprehension
-	  case cerl:var_name(FunVar) of
-	       {FunName,_} ->
-	     	  SFunName = atom_to_list(FunName), 
-		  case SFunName of
-			[$l,$c,$$,$^|_] -> true;
-			_ -> false
-		  end;
-	       _ -> false
-	  end,
+		case FunVar of 
+		  {anonymous_function,_,_,_,_,_} ->
+		  	false;
+		  _ ->
+			  case cerl:var_name(FunVar) of
+			       {FunName,_} ->
+			     	  SFunName = atom_to_list(FunName), 
+					  case SFunName of
+						[$l,$c,$$,$^|_] -> true;
+						_ -> false
+					  end;
+				       _ -> false
+			  end
+		end,
 	[AValue|APars] = 
-	  lists:map(
-	          fun ({anonymous_function,FunName_,FunCore}) -> 
-			 {anonymous,_,File,Line,_} = get_anon_func(EnvAF,FunName_,FunCore),
-			 get_fun_from_file(File,Line);
-	              (Par_) -> 
-	                Par = cerl:fold_literal(Par_),
-	          	case cerl:is_literal(Par) of
-	          	     true -> 
-		    		get_abstract_from_core_literal(Par);
-			      _ -> 
-			      	{ModName_,FunName_,FunArity_} = get_MFA(Par),
-			      	{'fun',1,
-			      	   {function,
-			      	      {atom,1,ModName_},
-			      	      {atom,1,FunName_},
-			      	      {integer,1,FunArity_}}}
-			 end
-		  end,[Value|NPars]),
+	  lists:map(fun get_abstract_form/1,[Value|NPars]),
 	AApply =  
-	  case  cerl:var_name(FunVar) of
-		{FunName,_} ->
-			case IsLC of
-			     true ->
-			     	"";
-			     _ -> 
-			     	case Trusted of
-			     	     true -> "";
-			     	     _ -> 
-					{call,1,{remote,1,
-					          {atom,1,cerl:concrete(cerl:module_name(Core))},
-					          {atom,1,FunName}},APars}
-				end
-			end;
-		_ -> 
-			""
-%			[{_,{anonymous,_,File,Line}}] = ets:lookup(EnvAF,FunName),
-%			{call,1,get_fun_from_file(File,Line),APars}
-	  end,
+	  case FunVar of 
+	     {anonymous_function,_,_,_,_,_} ->
+	     	{call,1,get_abstract_form(FunVar),APars};
+	     _ ->
+		  case  cerl:var_name(FunVar) of
+			{FunName,_} ->
+				case IsLC of
+				     true ->
+				     	"";
+				     _ -> 
+				     	case Trusted of
+				     	     true -> "";
+				     	     _ -> 
+						{call,1,{remote,1,
+						          {atom,1,cerl:concrete(cerl:module_name(Core))},
+						          {atom,1,FunName}},APars}
+					end
+				end;
+			_ -> 
+				{call,1,get_abstract_form(FunName),APars}
+		  end
+	   end,
 	case AApply of 
-	     "" -> {Value,NFreeV,Roots};
+	     "" -> 
+	     	{Value,NFreeV,Roots};
 	     _ -> 
-		digraph:add_vertex(G,NFreeV,
-		                   {erl_prettypr:format({match,1,AApply,AValue},
-		                                       [{paper, 300},{ribbon, 300}]),
-		                    get(CaseId)}),
-		[digraph:add_edge(G,NFreeV,Root) || Root <- Roots],
-		{Value,NFreeV+1,[NFreeV]}
+			digraph:add_vertex(G,NFreeV,
+			                   {erl_prettypr:format({match,1,AApply,AValue},
+			                                       [{paper, 300},{ribbon, 300}]),
+			                    get(CaseId)}),
+			[digraph:add_edge(G,NFreeV,Root) || Root <- Roots],
+			{Value,NFreeV+1,[NFreeV]}
 	end.
 
-get_tree_call(Call,Env0,G,Core,FreeV,EnvAF) -> 
+get_tree_call(Call,Env0,G,Core,FreeV) -> 
 	ModName = cerl:concrete(bind_vars(cerl:call_module(Call),Env0)),
 	FunName = cerl:concrete(bind_vars(cerl:call_name(Call),Env0)),
 	FunArity = cerl:call_arity(Call),
@@ -412,16 +419,16 @@ get_tree_call(Call,Env0,G,Core,FreeV,EnvAF) ->
 	     {ModName,false} -> % Call de una función en el mismo módulo
 	     	get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
 	     	             cerl:c_var({FunName,FunArity}), Args),
-	     	             Env0,G,Core,FreeV,EnvAF,false);
+	     	             Env0,G,Core,FreeV,false);
 	     {_,false} -> % Call de una función en un módulo distinto
 	     	ModCore = edd_lib:core_module(NFileAdress),
 	        get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
 	                     cerl:c_var({FunName,FunArity}),Args),
-	                     Env0,G,ModCore,FreeV,EnvAF,false);
+	                     Env0,G,ModCore,FreeV,false);
 	     _ -> % Es trusted
 	     	BArgs = lists:map(fun(Arg) -> bind_vars(Arg,Env0) end,Args),
 	     	NoLits = 
-		     	case [BArg || BArg = {anonymous_function,_,_} <- BArgs] of
+		     	case [BArg || BArg = {anonymous_function,_,_,_,_,_} <- BArgs] of
 		     	     [] ->
 		     	        [BArg || BArg <- BArgs,
 		     	                 not cerl:is_literal(cerl:fold_literal(BArg))];
@@ -462,9 +469,9 @@ get_tree_call(Call,Env0,G,Core,FreeV,EnvAF) ->
 	     	                            [CFunArity] -> {{c_literal,[],true},FreeV,[]};
 	     	                            _ -> {{c_literal,[],false},FreeV,[]}
 	     	                       end;
-		                     [{anonymous_function,AFunName,AFunCore} | MayBeArity] ->
-		                       {anonymous,{c_fun,_,AFunArgs,_},_,_,_} = 
-	     	                          get_anon_func(EnvAF,AFunName,AFunCore),
+		                     [{anonymous_function,_,{c_fun,_,AFunArgs,_},_,_,_} | MayBeArity] ->
+		                       % {anonymous,{c_fun,_,AFunArgs,_},_,_,_} = 
+	     	                  %         get_anon_func(EnvAF,AFunName,AFunCore),
 	     	                       AFunArity = length(AFunArgs),
 	     	                       case lists:map(fun cerl:concrete/1,MayBeArity) of
 	     	                            [] ->  {{c_literal,[],true},FreeV,[]};
@@ -479,35 +486,34 @@ get_tree_call(Call,Env0,G,Core,FreeV,EnvAF) ->
 		               get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
 		                               cerl:c_var({FunName,FunArity}),Args),
 		                     Env0,G,ModCore,
-		                     FreeV,EnvAF,Trusted)
+		                     FreeV,Trusted)
 		        end
 		        
 		 end
 	end.
 	
-get_tree_case(Expr,Env,G,Core,FreeV,EnvAF,Trusted) -> 
+get_tree_case(Expr,Env,G,Core,FreeV,Trusted) -> 
 	Args = cerl:case_arg(Expr),
-	{ArgsValue,NFreeV,RootsArgs} = get_tree(Args,Env,G,Core,FreeV,EnvAF,Trusted),
+	{ArgsValue,NFreeV,RootsArgs} = get_tree(Args,Env,G,Core,FreeV,Trusted),
 	BArgs_ = bind_vars(ArgsValue,Env),
 	BArgs = 
-		case cerl:type(BArgs_) of
-			values -> cerl:values_es(BArgs_);
-			_ -> [BArgs_]
+		case BArgs_ of
+			{anonymous_function,_,_,_,_,_} ->
+				[BArgs_];
+			_ ->
+				case cerl:type(BArgs_) of
+					values -> cerl:values_es(BArgs_);
+					_ -> [BArgs_]
+				end
 		end,
-        Clauses = cerl:case_clauses(Expr),
-	{Clause,ClauseBody,Bindings} = get_clause_body(Clauses,BArgs,Env,G,Core,EnvAF,Trusted),
+    Clauses = cerl:case_clauses(Expr),
+	{Clause,ClauseBody,Bindings} = get_clause_body(Clauses,BArgs,Env,G,Core,Trusted),
 	put(get(case_id),get_clause_number(Clauses,Clause,1)),
 	put(case_id,get(case_id)+1),
 	add_bindings_to_env(Bindings,Env),
-	{Value,NNFreeV,RootsValue} = get_tree(ClauseBody,Env,G,Core,NFreeV,EnvAF,Trusted),
+	{Value,NNFreeV,RootsValue} = get_tree(ClauseBody,Env,G,Core,NFreeV,Trusted),
 	{Value,NNFreeV,RootsArgs++RootsValue}.
 	
-get_tree_list([E|Es],Env,G,Core,FreeV,EnvAF,Trusted) ->
-	{NE,NFreeV,RootsH} = get_tree(bind_vars(E,Env),Env,G,Core,FreeV,EnvAF,Trusted),
-	{NEs,NNFreeV,RootsT} = get_tree_list(Es,Env,G,Core,NFreeV,EnvAF,Trusted),
-	{[NE|NEs],NNFreeV,RootsH++RootsT};
-get_tree_list([],_,_,_,FreeV,_,_) ->
-	{[],FreeV,[]}.
 	
 % 1.- Construye la 1ª cláusula sin guardas, el resto igual
 % 2.- Mira si ha elegido la 1ª cláusula
@@ -516,7 +522,7 @@ get_tree_list([],_,_,_,FreeV,_,_) ->
 % 3.- b) Si no, prueba con la siguiente
 %% Explicación: cerl_clauses:reduce(), que devuelve la cláusula que se elige
 %% en un case, no funciona con las guardas
-get_clause_body([Clause | Clauses],BArgs,Env,G,Core,EnvAF,Trusted) ->
+get_clause_body([Clause | Clauses],BArgs,Env,G,Core,Trusted) ->
 	NClause = cerl:c_clause(cerl:clause_pats(Clause), cerl:clause_body(Clause)),
 	case cerl_clauses:reduce([NClause| Clauses], BArgs) of
 	     {true, {{c_clause, _, _, _, ClauseBody}, Bindings}} -> 
@@ -524,16 +530,16 @@ get_clause_body([Clause | Clauses],BArgs,Env,G,Core,EnvAF,Trusted) ->
 		     ClauseBody -> 
 		     	{GuardValue,_,_} = 
 		     		get_tree(apply_substitution(cerl:clause_guard(Clause),Env,Bindings),
-		     		        Env,G,Core,0,EnvAF,Trusted),
+		     		        Env,G,Core,0,Trusted),
 		     	case cerl:concrete(GuardValue) of
 		     	     true -> {Clause,ClauseBody,Bindings};
-		     	     false -> get_clause_body(Clauses,BArgs,Env,G,Core,EnvAF,Trusted)
+		     	     false -> get_clause_body(Clauses,BArgs,Env,G,Core,Trusted)
 		     	end;
-		     _ -> get_clause_body(Clauses,BArgs,Env,G,Core,EnvAF,Trusted)
+		     _ -> get_clause_body(Clauses,BArgs,Env,G,Core,Trusted)
 		end;
-	      _ -> get_clause_body(Clauses,BArgs,Env,G,Core,EnvAF,Trusted)
+	      _ -> get_clause_body(Clauses,BArgs,Env,G,Core,Trusted)
 	end;
-get_clause_body([],_,_,_,_,_,_) -> throw({error,"Non matching clause exists"}).
+get_clause_body([],_,_,_,_,_) -> throw({error,"Non matching clause exists"}).
 	
     
 % Core es el CORE del módulo foo que tiene bar() -> Expr
@@ -543,12 +549,66 @@ extract_call(Core) ->
 	[{c_fun,_,_,FunBody}|_] = 
 		[FunBody_ || {{c_var,_,FunName},FunBody_} <- FunDefs, FunName == {bar,0}],
 	[{c_clause,_,_,_,Call}|_] = cerl:case_clauses(FunBody),
-	Call.	     	
+	Call.	
+
+
+get_abstract_form({anonymous_function,_,_,File,Line,Env}) -> 
+	get_fun_from_file(File,Line,Env);
+get_abstract_form(Par_) -> 
+	Par = cerl:fold_literal(Par_),
+	case cerl:is_literal(Par) of
+		true -> 
+			get_abstract_from_core_literal(Par);
+		_ -> 
+			{ModName_,FunName_,FunArity_} = get_MFA(Par),
+			{'fun',1,
+				{function,
+				{atom,1,ModName_},
+				{atom,1,FunName_},
+				{integer,1,FunArity_}}}
+	end. 
+
+get_fun_from_file(File,Line,Env) -> 
+	AnoFun = 
+		case smerl:for_file(File) of
+		     {ok,Abstract} ->
+			hd(lists:flatten([get_funs_from_abstract(Form,Line) 
+			                  || Form <- smerl:get_forms(Abstract)]));
+		     {error, {invalid_module, _}} -> 
+		     	hd(get(funs_initial_call))
+		end,
+	PatternsClause = 
+		[erl_syntax:clause_patterns(Clause) || Clause <- erl_syntax:fun_expr_clauses(AnoFun)],
+	BodyClause = 
+		[erl_syntax:clause_body(Clause) || Clause <- erl_syntax:fun_expr_clauses(AnoFun)],
+	VariablesPat = 
+		sets:union([erl_syntax_lib:variables(Pattern) 
+						|| Patterns <- PatternsClause, Pattern <- Patterns]),
+	VariablesBody = 
+		sets:union([erl_syntax_lib:variables(BodyExpression) 
+						|| Body <- BodyClause, BodyExpression <- Body]),
+	VarsOnlyInBody = sets:to_list(sets:subtract(VariablesBody, VariablesPat)),
+	FunChangeVar =
+		fun(T) ->
+			case erl_syntax:type(T) of 
+				variable -> 
+					VarName = erl_syntax:variable_name(T),
+					case lists:member(VarName,VarsOnlyInBody) of 
+						true ->
+							get_abstract_form(bind_vars(cerl:c_var(VarName),Env));
+						false ->
+							T
+					end;
+				_ ->
+					T
+			end
+		end,
+	erl_syntax_lib:map(FunChangeVar,AnoFun).    	
     
 bind_vars(Expr,Env) ->
 	%io:format("Expr: ~p\nEnv: ~p\n",[Expr,ets:tab2list(Env)]),
 	case Expr of
-	     {anonymous_function,_,_} -> Expr;
+	     {anonymous_function,_,_,_,_,_} -> Expr;
 	     _ ->
 		case cerl:type(Expr) of
 		     'var' -> 
@@ -565,7 +625,7 @@ bind_vars(Expr,Env) ->
 		     	     _ ->
 		     		{VarName,Value} = hd(ets:lookup(Env,VarName)),
 		     		case Value of
-		     	             {anonymous_function,_,_} -> Value;
+		     	             {anonymous_function,_,_,_,_,_} -> Value;
 		     	             _ -> cerl:unfold_literal(Value)
 		     	        end
 		     	end;
@@ -607,15 +667,6 @@ add_bindings_to_env([{VarName,Value}| TailBindings],Env) ->
 	ets:insert(Env,{VarName,Value}),
 	add_bindings_to_env(TailBindings,Env);
 add_bindings_to_env([],_) -> ok.
-
-get_fun_from_file(File,Line) -> 
-	case smerl:for_file(File) of
-	     {ok,Abstract} ->
-		hd(lists:flatten([get_funs_from_abstract(Form,Line) 
-		                  || Form <- smerl:get_forms(Abstract)]));
-	     {error, {invalid_module, _}} -> 
-	     	hd(get(funs_initial_call))
-	end.
 	
 get_funs_from_abstract(Abstract,Line) -> 
 	erl_syntax_lib:fold(fun(Tree,Acc) -> 
@@ -641,12 +692,12 @@ check_errors(Value) ->
 	     _ -> false
 	end.
 	
-get_anon_func(EnvAF,FunName,FunCore) ->
-	get_anon_func(ets:lookup(EnvAF,FunName),FunCore).
+% get_anon_func(EnvAF,FunName,FunCore) ->
+% 	get_anon_func(ets:lookup(EnvAF,FunName),FunCore).
 	
-get_anon_func([{_,AF = {anonymous,FunCore,_,_,_}}|_],FunCore) -> AF;
-get_anon_func([_|AFs],FunCore) -> get_anon_func(AFs,FunCore);
-get_anon_func([],_)->{}.
+% get_anon_func([{_,AF = {anonymous,FunCore,_,_,_}}|_],FunCore) -> AF;
+% get_anon_func([_|AFs],FunCore) -> get_anon_func(AFs,FunCore);
+% get_anon_func([],_)->{}.
 
 get_clause_number([Clause|_],Clause,N) -> N;
 get_clause_number([_|Clauses],Clause,N) -> get_clause_number(Clauses,Clause,N+1);

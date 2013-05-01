@@ -161,9 +161,15 @@ get_MFA_Label(G,Vertex) ->
 	{Vertex,{Label,_}} = digraph:vertex(G,Vertex),
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	{match,_,{call,_,{remote,_,{atom,_,ModName},{atom,_,FunName}},APars},_} = Aexpr,
-	Arity = length(APars),
-	{ModName,FunName,Arity}.
+	{match,_,{call,_,Called,APars},_} = Aexpr,
+	case Called of 
+		{remote,_,{atom,_,ModName},{atom,_,FunName}} ->
+			Arity = length(APars),
+			{ModName,FunName,Arity};
+		_ ->
+			%io:format("Called: ~p\n",[Called]),
+			Called
+	end.
 	
 get_ordinal(1) -> "first";
 get_ordinal(2) -> "second";
