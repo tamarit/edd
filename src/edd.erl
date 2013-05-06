@@ -180,7 +180,9 @@ get_tree(Expr,Env,G,Core,FreeV,Trusted) ->
 			% ets:insert(EnvAF,{FunName,{anonymous,NExpr,File,Line,Env}}),
 			% % Guardo la función anónima en el entorno por si luego me aparece saber
 			% % dónde estaba
-			{{anonymous_function,FunName,NExpr,File,Line,Env},FreeV,[]};
+			EnvFun = ets:new(FunName,[set]),
+			ets:insert(EnvFun,ets:tab2list(Env)),
+			{{anonymous_function,FunName,NExpr,File,Line,EnvFun},FreeV,[]};
 		'call' ->
 			case Expr of
 			     {c_call,_,{c_literal,_,erlang},{c_literal,_,make_fun},_} ->
@@ -588,6 +590,9 @@ get_fun_from_file(File,Line,Env) ->
 		sets:union([erl_syntax_lib:variables(BodyExpression) 
 						|| Body <- BodyClause, BodyExpression <- Body]),
 	VarsOnlyInBody = sets:to_list(sets:subtract(VariablesBody, VariablesPat)),
+	% io:format("VarsOnlyInBody: ~p\n",[VarsOnlyInBody]),
+	% io:format("VariablesPat: ~p\n",[sets:to_list(VariablesPat)]),
+	% io:format("VariablesBody: ~p\n",[sets:to_list(VariablesBody)]),
 	FunChangeVar =
 		fun(T) ->
 			case erl_syntax:type(T) of 
@@ -595,7 +600,13 @@ get_fun_from_file(File,Line,Env) ->
 					VarName = erl_syntax:variable_name(T),
 					case lists:member(VarName,VarsOnlyInBody) of 
 						true ->
-							get_abstract_form(bind_vars(cerl:c_var(VarName),Env));
+							BVars = bind_vars(cerl:c_var(VarName),Env),
+							case is_atom(BVars) of
+								true ->
+									erl_syntax:variable(BVars);
+								false ->
+									get_abstract_form(BVars)
+							end;
 						false ->
 							T
 					end;
@@ -623,11 +634,16 @@ bind_vars(Expr,Env) ->
           		             {c_literal,[],Arity}],
 		     	     	{c_call,[],{c_literal,[],erlang},{c_literal,[],make_fun},MFArgs};
 		     	     _ ->
-		     		{VarName,Value} = hd(ets:lookup(Env,VarName)),
-		     		case Value of
-		     	             {anonymous_function,_,_,_,_,_} -> Value;
-		     	             _ -> cerl:unfold_literal(Value)
-		     	        end
+		     	     	case ets:lookup(Env,VarName) of 
+		     	     		[{VarName,Value}|_] ->
+				     			case Value of
+				     	             {anonymous_function,_,_,_,_,_} -> Value;
+				     	             _ -> cerl:unfold_literal(Value)
+				     	        end;
+				     	    _ ->
+				     	    	%Esto se anyade porque get_fun_from_file no tiene en cuenta las variables que se declaran dentro del cuerpo de la función y intenta buscarlas
+				     	    	VarName
+				     	end
 		     	end;
 		     'values' -> 
 		     	Values = cerl:values_es(Expr),
