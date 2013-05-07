@@ -66,12 +66,12 @@ Using edd
 ---------
 
 To debug an expression that is returning an incorrect value, simply call the
-edd:dd/1 function with the string of the problematic expression. For that, the
-module edd must be loaded. To easiest way is including the ebin directory to the
+*edd:dd/1* function with the string of the problematic expression. For that, the
+module edd must be loaded. To easiest way is including the *ebin* directory to the
 code path when running the Erlang emulator. For example, if the edd folder is in
-/home/john/edd/ the command will be:
+*/home/john/edd/* the command will be:
 
-    $ erl -pa /home/john/edd/
+    $ erl -pa /home/john/edd/ebin
     Erlang R15B02 (erts-5.9.2) [source] [smp:4:4] [async-threads:0] [hipe] [kernel-poll:false]
     
     Eshell V5.9.2  (abort with ^G)
