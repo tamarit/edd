@@ -135,14 +135,20 @@ find_unknown_children(_,_,[]) ->
 	 
  
 print_buggy_node(G,NotCorrectVertex,Message) ->
-	{NotCorrectVertex,{Label,Clause}} = digraph:vertex(G,NotCorrectVertex),
+	{NotCorrectVertex,{Label,Clause,File,Line}} = digraph:vertex(G,NotCorrectVertex),
 	io:format("~s:\n~s\n",[Message,transform_label(Label,[])]),
+	case File of 
+		none ->
+			ok;
+		_ ->
+			io:format("fun location: (~s, line ~p)\n",[File,Line])
+	end,
 	print_clause(G,NotCorrectVertex,Clause).
    
 print_clause(G,NotCorrectVertex,Clause) ->
 	{Clauses,FunName,Arity} = 
 		case get_MFA_Label(G,NotCorrectVertex) of 
-			{'fun',_,_} = AnoFun ->
+			{{'fun',_,_} = AnoFun ,_,_}  ->
 				{erl_syntax:fun_expr_clauses(AnoFun),none,none};
 			{ModName,FunName0,Arity0} ->
 				{ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
@@ -175,7 +181,7 @@ print_clause(G,NotCorrectVertex,Clause) ->
 	
 	
 get_MFA_Label(G,Vertex) ->
-	{Vertex,{Label,_}} = digraph:vertex(G,Vertex),
+	{Vertex,{Label,_,File,Line}} = digraph:vertex(G,Vertex),
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
 	{match,_,{call,_,Called,APars},_} = Aexpr,
@@ -185,7 +191,7 @@ get_MFA_Label(G,Vertex) ->
 			{ModName,FunName,Arity};
 		_ ->
 			%io:format("Called: ~p\n",[Called]),
-			Called
+			{Called,File,Line}
 	end.
 	
 get_ordinal(1) -> "first";
@@ -266,9 +272,9 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	NSortedVertices = [V || {V,_} <- tl(SortedVertices)],
 	YesAnswer = begin
 	             EqualToSeleceted = 
-	                [V || V <- Vertices, begin {V,{L1,_}} = digraph:vertex(G,V),
-	                                           {Selected,{L2,_}} = digraph:vertex(G,Selected),
-	                                           L1 =:= L2
+	                [V || V <- Vertices, begin {V,{L1,_,F1,Line1}} = digraph:vertex(G,V),
+	                                           {Selected,{L2,_,F2,Line2}} = digraph:vertex(G,Selected),
+	                                           (L1 =:= L2) and (F1 =:= F2) and (Line1 =:= Line2)
 	                                     end],
 	             {NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
 	             EqualToSeleceted ++ Correct,NotCorrect,Unknown,
@@ -313,9 +319,14 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
 	
 ask_question(G,V)->
-	{V,{Label,_}} = digraph:vertex(G,V),
+	{V,{Label,_,File,Line}} = digraph:vertex(G,V),
 	NLabel = transform_label(lists:flatten(Label),[]),
-	io:format("~s",[NLabel]),
+	case File of 
+		none ->
+			io:format("~s",[NLabel]);
+		_ ->
+			io:format("~s\nfun location: (~s, line ~p)",[NLabel,File,Line])
+	end,
 	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/d/i/s/u/a]: ")),
 	list_to_atom(lists:reverse(Answer)).
 	
@@ -364,11 +375,19 @@ dot_graph(G)->
 	lists:flatten(lists:map(fun dot_vertex/1,Vertices))++
 	lists:flatten(lists:map(fun dot_edge/1,Edges)).
 	
-dot_vertex({V,{L,_}}) ->
+dot_vertex({V,{L,_,File,Line}}) ->
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
 	++integer_to_list(V)++" .- " 
 	++ changeNewLines(lists:flatten(
-		transform_label(lists:flatten(L),[]))) ++ "\"];\n".     
+		transform_label(lists:flatten(L),[]))) 
+	++ 
+	case File of 
+		none ->
+			"";
+		_ -> 
+			[$\\,$l] ++ changeNewLines(io_lib:format("fun location: (~s, line ~p)",[File, Line]))
+	end
+	++ "\"];\n".     
 	    
 dot_edge({V1,V2}) -> 
 	integer_to_list(V1)++" -> "++integer_to_list(V2)

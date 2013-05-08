@@ -120,7 +120,7 @@ dd_internal(Expr,Strategy,Graph) ->
 	     	     	       	digraph:add_vertex(G,FreeV,
 	     	     	                          {Expr++" = "
 	     	     	                           ++io_lib:format("~p",[cerl:concrete(Value)]),
-	     	     	                           get(0)}),
+	     	     	                           get(0),none,1}),
 				[digraph:add_edge(G,FreeV,Root) || Root <- Roots]
 	     	     	end;
 	     	     _ -> ok
@@ -349,27 +349,47 @@ get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) -
 		end,
 	[AValue|APars] = 
 	  lists:map(fun get_abstract_form/1,[Value|NPars]),
-	AApply =  
+	{AApply,FileCall,LineCall} =  
 	  case FunVar of 
-	     {anonymous_function,_,_,_,_,_} ->
-	     	{call,1,get_abstract_form(FunVar),APars};
+	     {anonymous_function,_,AFunCore,_,_,_} ->
+	     	AApply_ = {call,1,get_abstract_form(FunName),APars},
+			case cerl:get_ann(AFunCore) of 
+				[_,Line,{file,File}] ->
+					{AApply_,File,Line};
+				_ ->
+					{AApply_,none,1}
+			end;
 	     _ ->
-		  case  cerl:var_name(FunVar) of
-			{FunName,_} ->
-				case IsLC of
-				     true ->
-				     	"";
-				     _ -> 
-				     	case Trusted of
-				     	     true -> "";
-				     	     _ -> 
-						{call,1,{remote,1,
-						          {atom,1,cerl:concrete(cerl:module_name(Core))},
-						          {atom,1,FunName}},APars}
-					end
+			  case  cerl:var_name(FunVar) of
+				{FunName,_} ->
+					case IsLC of
+					     true ->
+					     	{"",none,1};
+					     _ -> 
+					     	case Trusted of
+					     	     true -> 
+					     	     	{"",none,1};
+					     	     _ -> 
+									{{call,1,{remote,1,
+									          {atom,1,cerl:concrete(cerl:module_name(Core))},
+									          {atom,1,FunName}},APars},
+									 none,1}
+						end
 				end;
 			_ -> 
-				{call,1,get_abstract_form(FunName),APars}
+				%io:format("~p\n",[cerl:get_ann(AFunCore)]),
+				AApply_ = {call,1,get_abstract_form(FunName),APars},
+				case FunName of 
+					{anonymous_function,_,AFunCore,_,_,_} ->
+						case cerl:get_ann(AFunCore) of 
+							[_,Line,{file,File}] ->
+								{AApply_,File,Line};
+							_ ->
+								{AApply_,none,1}
+						end;
+					_ ->
+						{AApply_,none,1}
+				end
 		  end
 	   end,
 	case AApply of 
@@ -379,7 +399,7 @@ get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) -
 			digraph:add_vertex(G,NFreeV,
 			                   {erl_prettypr:format({match,1,AApply,AValue},
 			                                       [{paper, 300},{ribbon, 300}]),
-			                    get(CaseId)}),
+			                    get(CaseId),FileCall,LineCall}),
 			[digraph:add_edge(G,NFreeV,Root) || Root <- Roots],
 			{Value,NFreeV+1,[NFreeV]}
 	end.
