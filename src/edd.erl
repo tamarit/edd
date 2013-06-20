@@ -109,23 +109,52 @@ dd_internal(Expr,Strategy,Graph) ->
 	ets:delete(Env),
 	%Caso especial si la llamada inicial tiene funciones anidadas como f(g(3)), que
 	%será traducido a CORE con un let x = g(3) in f(x)
+	%io:format("InitialCall: ~p\n",[InitialCall]),
+	%io:format("FreeV: ~p\n",[FreeV]),
+ 	%io:format("Roots: ~w\n",[Roots]),
+	FunAddVertexAndEdges = 
+		fun(Call) ->
+			case cerl:concrete(cerl:call_module(Call)) of
+ 	     	     'erlang' -> 
+ 	     	     	ok;
+ 	     	     _ ->
+ 	     	       	digraph:add_vertex(G,FreeV,
+	 	     	                          {Expr ++ " = "
+	 	     	                           ++ io_lib:format("~p",[cerl:concrete(Value)]),
+	 	     	                           get(0),none,1}),
+					[digraph:add_edge(G,FreeV,Root) || Root <- Roots]
+ 	     	end
+ 	     end,
 	case cerl:type(InitialCall) of 
 	     'let' ->
 	     	case cerl:type(cerl:let_arg(InitialCall)) of
 	     	     'call' ->
-	     	     	case cerl:concrete(cerl:call_module(cerl:let_arg(InitialCall))) of
-	     	     	     'erlang' -> 
-	     	     	     	ok;
-	     	     	     _ ->
-	     	     	       	digraph:add_vertex(G,FreeV,
-	     	     	                          {Expr++" = "
-	     	     	                           ++io_lib:format("~p",[cerl:concrete(Value)]),
-	     	     	                           get(0),none,1}),
-				[digraph:add_edge(G,FreeV,Root) || Root <- Roots]
-	     	     	end;
+	     	     	FunAddVertexAndEdges(cerl:let_arg(InitialCall));
+	     	%      	case cerl:concrete(cerl:call_module(cerl:let_arg(InitialCall))) of
+	     	%      	     'erlang' -> 
+	     	%      	     	ok;
+	     	%      	     _ ->
+	     	%      	       	digraph:add_vertex(G,FreeV,
+	     	%      	                          {Expr++" = "
+	     	%      	                           ++io_lib:format("~p",[cerl:concrete(Value)]),
+	     	%      	                           get(0),none,1}),
+							% [digraph:add_edge(G,FreeV,Root) || Root <- Roots]
+	     	%      	end;
 	     	     _ -> ok
 	     	end;
-	     _ -> ok
+	     % 'call' ->
+	     % 		io:format("ENTRA\n"),
+	     % 		FunAddVertexAndEdges(InitialCall);
+	     	% case cerl:concrete(cerl:call_module(cerl:let_arg(InitialCall))) of
+	     	%      'erlang' -> 
+	     	%      	ok;
+	     	%      _ ->
+	     	%        	digraph:add_vertex(G,FreeV,
+	     	%                           {Expr++" = "
+	     	%                            ++io_lib:format("~p",[cerl:concrete(Value)]),
+	     	%                            get(0),none,1}),
+	     _ -> 
+	     	ok
 	end,
 	case Graph of
 	     true ->
@@ -255,7 +284,9 @@ get_tree(Expr,Env,G,Core,FreeV,Trusted) ->
 		              true -> 
 		              	{Value,NFreeV,Roots};
 		              _ ->
-		              	get_tree(cerl:seq_body(Expr),Env,G,Core,FreeV,Trusted)
+		              	{ValueB,NNFreeV,RootsB} = 
+		              	   get_tree(cerl:seq_body(Expr),Env,G,Core,NFreeV,Trusted),
+		              	{ValueB,NNFreeV,Roots ++ RootsB}
 		         end;
 		'literal' ->
 			{Expr,FreeV,[]};
@@ -332,6 +363,7 @@ get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) -
 	add_bindings_to_env(Env0,Env),
 	CaseId = get(case_id),
 	{Value,NFreeV,Roots} = get_tree(FunBody,Env,G,Core,FreeV,Trusted),
+	%io:format("{Value,NFreeV,Roots}: ~p\n",[{Value,NFreeV,Roots} ]),
 	IsLC = % Detecta si se trata de una list comprehension
 		case FunVar of 
 		  {anonymous_function,_,_,_,_,_} ->
@@ -375,22 +407,22 @@ get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) -
 									          {atom,1,FunName}},APars},
 									 none,1}
 						end
-				end;
-			_ -> 
-				%io:format("~p\n",[cerl:get_ann(AFunCore)]),
-				AApply_ = {call,1,get_abstract_form(FunName),APars},
-				case FunName of 
-					{anonymous_function,_,AFunCore,_,_,_} ->
-						case cerl:get_ann(AFunCore) of 
-							[_,Line,{file,File}] ->
-								{AApply_,File,Line};
-							_ ->
-								{AApply_,none,1}
-						end;
-					_ ->
-						{AApply_,none,1}
-				end
-		  end
+					end;
+				_ -> 
+					%io:format("~p\n",[cerl:get_ann(AFunCore)]),
+					AApply_ = {call,1,get_abstract_form(FunName),APars},
+					case FunName of 
+						{anonymous_function,_,AFunCore,_,_,_} ->
+							case cerl:get_ann(AFunCore) of 
+								[_,Line,{file,File}] ->
+									{AApply_,File,Line};
+								_ ->
+									{AApply_,none,1}
+							end;
+						_ ->
+							{AApply_,none,1}
+					end
+		  	end
 	   end,
 	case AApply of 
 	     "" -> 
@@ -409,7 +441,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	FunName = cerl:concrete(bind_vars(cerl:call_name(Call),Env0)),
 	FunArity = cerl:call_arity(Call),
 	Args = cerl:call_args(Call),
-%	io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
+	%io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
 %	io:format("~p\n",[Call]),
 	FileAdress = code:where_is_file(atom_to_list(ModName)++".erl"),
 	% Busca el erl. Si no está, busca el beam (libreria de sistema) y tunea la ruta
@@ -437,7 +469,8 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	        $. -> false;
 	        _ -> true
 	   end,
-	case {cerl:module_name(Core),Trusted} of
+	%io:format("Current module: ~p\n",[cerl:module_name(Core)]),
+	case {cerl:concrete(cerl:module_name(Core)),Trusted} of
 	     {ModName,false} -> % Call de una función en el mismo módulo
 	     	get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
 	     	             cerl:c_var({FunName,FunArity}), Args),
@@ -457,59 +490,60 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 		     	     List -> List
 		     	end,
 	     	case {NoLits} of
-	     	     {[]} -> 
+	     	    {[]} -> 
 	     	     	ABArgs = 
 	     	     	   [get_abstract_from_core_literal(cerl: fold_literal(BArg)) 
 	     	     	    || BArg <- BArgs],
 	     	     	Value =  
-				try
-           % Posible problema si el ya existe un módulo foo
-				   M1 = smerl:new(foo),
-				   {ok, M2} = 
-				      smerl:add_func(M1, 
-				          {function,1,bar,0,
-			                    [{clause,1,[],[],
-			                     [{call,1,{remote,1,{atom,1,ModName},
-				                               {atom,1,FunName}},ABArgs}]}]}),
-                                       smerl:compile(M2,[nowarn_format]),
+						try
+		           % Posible problema si el ya existe un módulo foo
+						   M1 = smerl:new(foo),
+						   {ok, M2} = 
+						      smerl:add_func(M1, 
+						          {function,1,bar,0,
+					                    [{clause,1,[],[],
+					                     [{call,1,{remote,1,{atom,1,ModName},
+						                               {atom,1,FunName}},ABArgs}]}]}),
+	                         smerl:compile(M2,[nowarn_format]),
 		                     foo:bar() %Genera el valor utilizando el módulo creado
-		                               %on de fly
-				catch
-				   Exception:Reason -> {Exception,Reason}
-				end,
-			AValue = cerl:abstract(Value),
-			{AValue,FreeV,[]};
-		     _ -> 
-		        case {ModName,FunName} of
-		             {'erlang','is_function'} ->
-		                case BArgs of
-		                     [Function = {c_call,_,{c_literal,_,erlang},
-		                      {c_literal,_,make_fun},_} | MayBeArity] ->
-		                       {_,_,CFunArity} = get_MFA(Function),
-		                       case lists:map(fun cerl:concrete/1,MayBeArity) of
-	     	                            [] ->  {{c_literal,[],true},FreeV,[]};
-	     	                            [CFunArity] -> {{c_literal,[],true},FreeV,[]};
-	     	                            _ -> {{c_literal,[],false},FreeV,[]}
-	     	                       end;
-		                     [{anonymous_function,_,{c_fun,_,AFunArgs,_},_,_,_} | MayBeArity] ->
-		                       % {anonymous,{c_fun,_,AFunArgs,_},_,_,_} = 
-	     	                  %         get_anon_func(EnvAF,AFunName,AFunCore),
-	     	                       AFunArity = length(AFunArgs),
-	     	                       case lists:map(fun cerl:concrete/1,MayBeArity) of
-	     	                            [] ->  {{c_literal,[],true},FreeV,[]};
-	     	                            [AFunArity] -> {{c_literal,[],true},FreeV,[]};
-	     	                            _ -> {{c_literal,[],false},FreeV,[]}
-	     	                       end; 
-		                     _ ->
-		                       {{c_literal,[],false},FreeV,[]}
-		                end;
-		             _ ->
-		               ModCore = edd_lib:core_module(NFileAdress),
-		               get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
-		                               cerl:c_var({FunName,FunArity}),Args),
-		                     Env0,G,ModCore,
-		                     FreeV,Trusted)
-		        end
+				                               %on de fly
+						catch
+						   Exception:Reason -> {Exception,Reason}
+						end,
+					AValue = cerl:abstract(Value),
+					{AValue,FreeV,[]};
+			     _ -> 
+			        case {ModName,FunName} of
+			             {'erlang','is_function'} ->
+			                case BArgs of
+			                     [Function = {c_call,_,{c_literal,_,erlang},
+			                      {c_literal,_,make_fun},_} | MayBeArity] ->
+			                       {_,_,CFunArity} = get_MFA(Function),
+			                       case lists:map(fun cerl:concrete/1,MayBeArity) of
+		     	                            [] ->  {{c_literal,[],true},FreeV,[]};
+		     	                            [CFunArity] -> {{c_literal,[],true},FreeV,[]};
+		     	                            _ -> {{c_literal,[],false},FreeV,[]}
+		     	                       end;
+			                     [{anonymous_function,_,{c_fun,_,AFunArgs,_},_,_,_} | MayBeArity] ->
+			                       % {anonymous,{c_fun,_,AFunArgs,_},_,_,_} = 
+		     	                  %         get_anon_func(EnvAF,AFunName,AFunCore),
+		     	                       AFunArity = length(AFunArgs),
+		     	                       case lists:map(fun cerl:concrete/1,MayBeArity) of
+		     	                            [] ->  {{c_literal,[],true},FreeV,[]};
+		     	                            [AFunArity] -> {{c_literal,[],true},FreeV,[]};
+		     	                            _ -> {{c_literal,[],false},FreeV,[]}
+		     	                       end; 
+			                     _ ->
+			                       {{c_literal,[],false},FreeV,[]}
+			                end;
+			             _ ->
+			               ModCore = edd_lib:core_module(NFileAdress),
+			               get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
+			                               cerl:c_var({FunName,FunArity}),Args),
+			                     Env0,G,ModCore,
+			                     FreeV,Trusted)
+
+			        end
 		        
 		 end
 	end.
