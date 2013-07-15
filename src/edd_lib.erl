@@ -92,27 +92,34 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) ->
 	             [] ->
 	             	io:format("Not enough information.\n"),
 	             	NotCorrectWithUnwnownVertexs = 
-			  [NCV || NCV <- NotCorrect, 
+			  			[NCV || NCV <- NotCorrect, 
 	                          (digraph:out_neighbours(G, NCV)--(Correct++Unknown))=:=[]],
 	                Maybe0 = 
 	                         [U || U <- Unknown, 
 	                               NCV <- NotCorrectWithUnwnownVertexs,
 	                               lists:member(U,digraph:out_neighbours(G, NCV))],
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
-			case get_answer("Do you want to try to answer"
-			     ++" the needed information? [y/n]: ",[y,n]) of
-			     y -> ask_about(G,NStrategy,Maybe,Correct,NotCorrect);
-			     n -> 
-	                       [print_buggy_node(G,V,
-	                        "Call to a function that could contain an error") 
-	                        || V <- NotCorrectWithUnwnownVertexs],
-	                       [print_buggy_node(G,V,
-	                         "This call has not been answered and could contain an error") 
-	                        || V <- Maybe]
-			end;
+					case get_answer("Do you want to try to answer"
+					     ++" the needed information? [y/n]: ",[y,n]) of
+					     y -> ask_about(G,NStrategy,Maybe,Correct,NotCorrect);
+					     n -> 
+			                [print_buggy_node(G,V,
+			                        "Call to a function that could contain an error") 
+			                        || V <- NotCorrectWithUnwnownVertexs],
+			                [print_buggy_node(G,V,
+			                         "This call has not been answered and could contain an error") 
+			                        || V <- Maybe]
+					end;
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G,NotCorrectVertex,
-	               	 "Call to a function that contains an error")
+	               		"Call to a function that contains an error"),
+	               	case get_answer("Do you want to follow the debugging session"
+					     ++" inside this function? [y/n]: ",[y,n]) of
+					     y -> 
+					     	edd_zoom:zoom_graph(get_call_string(G,NotCorrectVertex));
+					     n -> 
+			                ok
+					end
 	        end
 	end,
 	ok.
@@ -192,6 +199,18 @@ get_MFA_Label(G,Vertex) ->
 		_ ->
 			%io:format("Called: ~p\n",[Called]),
 			{Called,File,Line}
+	end.
+
+get_call_string(G,Vertex) ->
+	{Vertex,{Label,_,_,_}} = digraph:vertex(G,Vertex),
+	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
+	{match,_,Call = {call,_,Called,_},_} = Aexpr,
+	case Called of 
+		{remote,_,_,_} ->
+			erl_prettypr:format(Call);
+		_ ->
+			""
 	end.
 	
 get_ordinal(1) -> "first";
