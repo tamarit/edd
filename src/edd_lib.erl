@@ -26,7 +26,7 @@
 
 -module(edd_lib).
 
--export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1]).
+-export([parse_expr/1, dot_graph_file/2, ask/3, core_module/1]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -67,8 +67,8 @@ core_module(File) ->
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
--spec ask( G :: digraph(), Strategy :: top_down | divide_query) -> ok.
-ask(G,Strategy)->
+-spec ask( G :: digraph(), Strategy :: top_down | divide_query,Graph :: binary()) -> ok.
+ask(G,Strategy,Graph)->
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
@@ -76,10 +76,10 @@ ask(G,Strategy)->
 	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
-	ask_about(G,Strategy,Vertices,IniCorrect,[Root]).
+	ask_about(G,Strategy,Vertices,IniCorrect,[Root],Graph).
 	
 
-ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) -> 
+ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) -> 
 	{Correct,NotCorrect,Unknown,_,NStrategy} = 
 	   asking_loop(G,Strategy,Vertices,Correct0,NotCorrect0,[],[]),
 	case NotCorrect of
@@ -101,7 +101,7 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) ->
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
 					case get_answer("Do you want to try to answer"
 					     ++" the needed information? [y/n]: ",[y,n]) of
-					     y -> ask_about(G,NStrategy,Maybe,Correct,NotCorrect);
+					     y -> ask_about(G,NStrategy,Maybe,Correct,NotCorrect,Graph);
 					     n -> 
 			                [print_buggy_node(G,V,
 			                        "Call to a function that could contain an error") 
@@ -116,7 +116,7 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) ->
 	               	case get_answer("Do you want to follow the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
-					     	edd_zoom:zoom_graph(get_call_string(G,NotCorrectVertex));
+					     	edd_zoom:zoom_graph(get_call_string(G,NotCorrectVertex),Graph);
 					     n -> 
 			                ok
 					end
@@ -202,7 +202,7 @@ get_MFA_Label(G,Vertex) ->
 	end.
 
 get_call_string(G,Vertex) ->
-	{Vertex,{Label,_,_,_}} = digraph:vertex(G,Vertex),
+	{Vertex,{Label,_,File,Line}} = digraph:vertex(G,Vertex),
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
 	{match,_,Call = {call,_,Called,_},_} = Aexpr,
@@ -210,7 +210,7 @@ get_call_string(G,Vertex) ->
 		{remote,_,_,_} ->
 			erl_prettypr:format(Call);
 		_ ->
-			""
+			{erl_prettypr:format(Call),File,Line}
 	end.
 	
 get_ordinal(1) -> "first";

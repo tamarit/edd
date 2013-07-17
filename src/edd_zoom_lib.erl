@@ -220,8 +220,8 @@ final_expression_message(FinalValue,AFinalExpr) ->
      	[] -> "";
      	[AFinalExpr_|_] -> 
      		transform_abstract(AFinalExpr_) ++ " (Line " 
-     			++ integer_to_list(element(2,AFinalExpr_)) ++ ")"
-    end ++ " is not correct.".
+     			++ integer_to_list(element(2,AFinalExpr_)) ++ ") "
+    end ++ "is not correct.".
    
 
 	
@@ -881,9 +881,16 @@ only_one_case_clause(ACase,ClauseNumber,Type) ->
 	end.
 
 only_one_fun_clause(AFun,ClauseNumber) ->
-	Clauses = erl_syntax:function_clauses(AFun),
-	Clause = lists:nth(ClauseNumber,Clauses),
-	erl_syntax:revert(erl_syntax:function(erl_syntax:function_name(AFun),[Clause])).
+	case erl_syntax:type(AFun) of
+		'function' ->
+			Clauses = erl_syntax:function_clauses(AFun),
+			Clause = lists:nth(ClauseNumber,Clauses),
+			erl_syntax:revert(erl_syntax:function(erl_syntax:function_name(AFun),[Clause]));
+		'fun_expr' ->
+			Clauses = erl_syntax:fun_expr_clauses(AFun),
+			Clause = lists:nth(ClauseNumber,Clauses),
+			erl_syntax:revert(erl_syntax:fun_expr([Clause]))
+	end.
 	
 % analyze_tokens([]) -> {ok,[]};
 % analyze_tokens([H|T]) -> 

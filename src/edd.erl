@@ -162,7 +162,7 @@ dd_internal(Expr,Strategy,Graph) ->
 	     false -> 
 	       ok
 	end,
-    edd_lib:ask(G,Strategy).
+    edd_lib:ask(G,Strategy,Graph).
 
 
 get_tree(Expr,Env,G,Core,FreeV,Trusted) ->

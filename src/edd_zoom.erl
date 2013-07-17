@@ -1,6 +1,6 @@
 -module(edd_zoom).
 
--export([zoom_graph/1]).
+-export([zoom_graph/1,zoom/1,zoom_graph/2]).
 
 
 %Pending:
@@ -8,55 +8,76 @@
 %% El shadowing provoca mal comportament per culpa del apply subsitution que substitueix variables en els patrons
 %poner los cases y sobretodo sus argumentos de manera que al traducir a Core no haya mas de un case en la misma linea 
 
+zoom(Expr)->
+	zoom_graph(Expr,false).
+
 zoom_graph(Expr)->
-	%Clause = 1, %Te que ser un parametro
-    {ok,[AExpr|_]} = edd_zoom_lib:parse_expr(Expr++"."),
+	zoom_graph(Expr,true).
+
+zoom_graph({Expr,File,_},Graph) ->
+	{AExpr,CoreArgs} = get_abstract_and_core_args(Expr),
+	Core = edd_zoom_lib:core_module(File),
+	% ONLY TO DEBUG
+	compile:file(File,[to_core,no_copt]),
+	FunctionDef = erl_syntax:application_operator(AExpr),
+	{anonymous_function,_,Definition,_,_,_} = extract_core_from_abstract(FunctionDef), 
+ 	CaseFun = cerl:fun_body(Definition),
+ 	InitialCall = cerl:update_c_case(CaseFun, cerl:c_values(CoreArgs), 
+	                                  cerl:case_clauses(CaseFun)),
+	% FunEquals = 
+	% 	fun(T,Acc) -> 
+	% 		case (get_file_line(T) =:= [Line,File]) and (cerl:type(T) =:= 'fun') of 
+	% 			true -> [T|Acc];
+	% 			false -> Acc 
+	% 		end
+	% 	end,
+ % 	Definition = hd(cerl_trees:fold(FunEquals,[],Core)),
+ % 	CaseFun = cerl:fun_body(Definition),
+ % 	InitialCall = cerl:update_c_case(CaseFun, cerl:c_values(CoreArgs), 
+	%                                  cerl:case_clauses(CaseFun)),
+  %   {ok,Forms} = epp:parse_file(File,[],[]),
+  %   FormsES = erl_syntax:form_list(Forms),
+  %   FunEqualsAbstract = 
+		% fun(T,Acc) -> 
+		% 	case (erl_syntax:get_pos(T) =:= Line) and (erl_syntax:type(T) =:= 'fun_expr') of 
+		% 		true -> [T|Acc];
+		% 		false -> Acc 
+		% 	end
+		% end,
+  %   FunctionDef = hd(erl_syntax_lib:fold(FunEqualsAbstract, [], FormsES)),
+    get_tree_then_ask(InitialCall,AExpr,Core,erl_syntax:revert(FunctionDef),Graph);
+
+
+
+zoom_graph(Expr,Graph)->
+	{AExpr,CoreArgs} = get_abstract_and_core_args(Expr),
     FunOperator = erl_syntax:application_operator(AExpr),
-    %io:format("FunOperator:~p\n",[FunOperator]),
-    FunArity = length(erl_syntax:application_arguments(AExpr)),
-    Env = ets:new(env,[set]),
-    CoreArgs = [
-    	try
-    		cerl:abstract(erl_syntax:concrete(Arg)) 
-    	catch
-    		_:_ -> 
-    			begin
-    				M1 = smerl:new(foo),
-					{ok, M2} = smerl:add_func(M1,"bar() ->" ++ erl_prettypr:format(Arg) ++ " ."),
-					%Obtiene el CORE de la expresión Expr
-					{ok,_,CoreP} = smerl:compile2(M2,[to_core,binary,no_copt]), 
-					CoreFun = extract_call(CoreP),
-					%io:format("CoreFun:~p\n",[CoreFun]),
-					case cerl:type(CoreFun) of 
-						call ->
-							CoreFun;
-						_ ->
-							[{id,{_,_,FunName}},_,{file,File}] = cerl:get_ann(CoreFun),
-							{anonymous_function,FunName,CoreFun,File,Arg,[]}
-					end
-    			end
-    	end
-                || Arg <- erl_syntax:application_arguments(AExpr)],
 	{remote,_,{atom,_,ModName},{atom,_,FunName}} = FunOperator,
 	Core = edd_zoom_lib:core_module(atom_to_list(ModName)++".erl"),
 	% ONLY TO DEBUG
 	compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
+	FunArity = length(erl_syntax:application_arguments(AExpr)),
 	ModuleDefs = cerl:module_defs(Core),
 	[Definition|_] = 
 	   [Def || {{c_var,[],{FunName_,FunArity_}},Def} <- ModuleDefs, 
 	           FunName_ =:= FunName, FunArity_ =:= FunArity],
 	CaseFun = cerl:fun_body(Definition),
 	InitialCall = cerl:update_c_case(CaseFun, cerl:c_values(CoreArgs), 
-	                                 cerl:case_clauses(CaseFun)), 
-	%io:format("InitialCall: ~p\n",[InitialCall]), 
+	                                 cerl:case_clauses(CaseFun)),
+	% %io:format("InitialCall: ~p\n",[InitialCall]), 
     {ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
 	FunctionDef = 
 	    hd([FunctionDef_ || 
               	FunctionDef_ = {function,_,FunName_,Arity_,_} <- smerl:get_forms(M),
 				FunName_ =:= FunName, Arity_ =:= FunArity]),
-    ets:insert(Env,{initial_case,true}),
+    get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph).
+	
+
+get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph) ->
+	Env = ets:new(env,[set]),
     ets:insert(Env,{function_definition, FunctionDef}),
-    ets:insert(Env,{core,Core}),
+	ets:insert(Env,{core,Core}),
+    ets:insert(Env,{initial_case,true}),
 	{Value,FreeV,Graphs,LastExprInfo} = get_tree(InitialCall,Env,0), %{c_literal,[],1}
 	%io:format("LastExprInfo:~p\n",[LastExprInfo]),
 	ALastExpr = 
@@ -67,41 +88,61 @@ zoom_graph(Expr)->
 				[]
 		end,
 	%io:format("ALastExpr:~p\n",[ALastExpr]),
-	
-
 	%io:format("Num. de grafos: ~p\n",[length(Graphs)]),
 	%io:format("Roots: ~p\n",[[edd_zoom_lib:look_for_root(G_) || G_ <- Graphs]]),
 	G = digraph:new([acyclic]),
 	AValue = get_abstract_form(Value),
-	% {FunDef,TotalClauses,VarsClause} = 	
-	%    get_fundef_and_vars_clause(ModName,FunName,FunArity,Clause),
-	%TotalClauses = 1,
 	RootInfo = {root,{AExpr,AValue,ALastExpr},[]},
-	% NFreeV = 
-	%     case TotalClauses of
-	%          1 -> 
 	digraph:add_vertex(G,FreeV,RootInfo),
-	 %         	FreeV;
-	 %         _ -> 
-		%         % digraph:add_vertex(G,FreeV,{function_clause, {FunDef,Clause,VarsClause}}),
-		%         % digraph:add_vertex(G,FreeV + 1, RootInfo),
-		%         % digraph:add_edge(G, FreeV + 1, FreeV),
-		%         FreeV + 1
-		% end,
 	add_graphs_to_graph(G,Graphs),
 	[digraph:add_edge(G,FreeV,edd_zoom_lib:look_for_root(G_)) || G_ <- Graphs],
+	%TO BE REMOVED
 	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
-	edd_zoom_lib:dot_graph_file(G,"dbg_zoom"),
+	ets:delete(Env),
+	case Graph of 
+		true ->
+			edd_zoom_lib:dot_graph_file(G,"dbg_zoom");
+		false ->
+			ok 
+	end,
 	edd_zoom_lib:ask(G,top_down),
 	%io:format("Env final:\n~p\n",[ets:tab2list(Env)]),
-	ets:delete(Env),
 	ok.
+
+get_abstract_and_core_args(Expr) ->
+	{ok,[AExpr|_]} = edd_zoom_lib:parse_expr(Expr++"."),
+    CoreArgs = 
+    	[extract_core_from_abstract(Arg) 
+    	 || Arg <- erl_syntax:application_arguments(AExpr)],
+    {AExpr,CoreArgs}.
 
 check_errors(Value) -> 
     %possiblement falten mes tipos d'errors.
 	case Value of
 	     {c_literal,[],{error,_}} -> true;
 	     _ -> false
+	end.
+
+extract_core_from_abstract(Arg) ->
+   	try
+		cerl:abstract(erl_syntax:concrete(Arg)) 
+	catch
+		_:_ -> 
+			begin
+				M1 = smerl:new(foo),
+				{ok, M2} = smerl:add_func(M1,"bar() ->" ++ erl_prettypr:format(Arg) ++ " ."),
+				%Obtiene el CORE de la expresión Expr
+				{ok,_,CoreP} = smerl:compile2(M2,[to_core,binary,no_copt]), 
+				CoreFun = extract_call(CoreP),
+				%io:format("CoreFun:~p\n",[CoreFun]),
+				case cerl:type(CoreFun) of 
+					call ->
+						CoreFun;
+					_ ->
+						[{id,{_,_,FunName}},_,{file,File}] = cerl:get_ann(CoreFun),
+						{anonymous_function,FunName,CoreFun,File,Arg,[]}
+				end
+			end
 	end.
 
 extract_call(Core) ->
@@ -130,6 +171,20 @@ get_tree_list([E|Es],Env,FreeV) ->
 	{[NE|NEs],NNFreeV,GraphsH++GraphsT};
 get_tree_list([],_,FreeV) ->
 	{[],FreeV,[]}.
+
+get_file_line(Expr) ->
+	case cerl:get_ann(Expr) of 
+		[_,Line,{file,File}] ->
+			 [Line,File];
+		[Line,{file,File}] ->
+			[Line,File];
+		[Line,{file,File}|_] ->
+			[Line,File];
+		[compiler_generated] ->
+			[];
+		[] ->
+			[]
+	end.
 
 build_graphs_and_add_bindings([{Var,Value,_,_}|Bins],Env,FreeV,Deps,ALet,InfoAcc) ->
 	{GraphsVar,_} = build_graphs_and_add_bindings([Var],Env,FreeV,Value,Deps,ALet,[]),
@@ -1017,17 +1072,7 @@ get_tree(Expr,Env,FreeV) ->
 	%io:format("Type: ~p\n",[cerl:type(Expr)]),
 	%io:format("Env: ~p\n",[ets:tab2list(Env)]),
 	%io:format("Ann: ~p\n",[cerl:get_ann(Expr)]),
-	LineFile =
-		case cerl:get_ann(Expr) of 
-			[_,Line_,{file,File_}] ->
-				 [Line_,File_];
-			[Line_,{file,File_}] ->
-				[Line_,File_];
-			[Line_,{file,File_}|_] ->
-				[Line_,File_];
-			[] ->
-				[]
-		end,
+	LineFile = get_file_line(Expr),
 	case cerl:type(Expr) of
 		'apply' ->
 			{Value,NFreeV,Graph,_} = get_tree_apply(Expr,Env,FreeV),
