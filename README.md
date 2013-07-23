@@ -2,8 +2,9 @@ Erlang Declarative Debugger (edd)
 =================================
 
 A declarative (algorithmic) debugger for Erlang. This debugger asks the 
-programmers questions about the expected results of function calls and points 
-out the program fragment that is causing the bug. 
+programmers questions about the expected results of some evaluations (function 
+and fun calls, evalulation of case expressions, etc.) and points out the program 
+fragment that is causing the bug. 
 
 The Erlang Declarative Debugger uses the module 'smerl.erl' for metaprogramming 
 in Erlang. This module has been written by Yariv Sadan for Erlyweb 
@@ -89,20 +90,20 @@ that the mergesort/2 function is buggy:
 To debug this function just call edd:dd/1 with the buggy expression. The 
 following lines show a complete debugging session:
 
-    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)").
+    > edd:dd( "merge:mergesort([b,a], fun merge:comp/2)", tree ).
     Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: 
-    merge:merge([b], [a], fun merge:comp/2) = [b, a]? [y/n/t/d/i/u/a]: n
-    merge:comp(b, a) = false? [y/n/t/d/i/u/a]: t
-    merge:merge([a], [], fun merge:comp/2) = [a]? [y/n/t/d/i/u/a]: y
-    Call to a function that contains an error: merge:merge([b], [a], fun merge:comp/2) = [b, a]
+    merge:merge([b], [a], fun merge:comp/2) = [b, a]? [y/n/t/d/i/s/u/a]: n
+    merge:comp(b, a) = false? [y/n/t/d/i/s/u/a]: t
+    merge:merge([a], [], fun merge:comp/2) = [a]? [y/n/t/d/i/s/u/a]: y
+    Call to a function that contains an error:
+    merge:merge([b], [a], fun merge:comp/2) = [b, a]
     Please, revise the fourth clause:
     merge([H1 | T1], [H2 | T2], Comp) ->
         case Comp(H1, H2) of
           false -> [H1 | merge([H2 | T1], T2, Comp)];
           true -> [H1 | merge(T1, [H2 | T2], Comp)]
         end.
-    ok
-    > 
+    Do you want to follow the debugging session inside this function? [y/n]: y
  
 First, the debugger asks for a list of trusted functions, i.e., functions that 
 the programmer is sure are correct, so that 'edd' will never ask about them. 
@@ -113,7 +114,7 @@ signatures
   
 If you do not want to mark any function as trusted, simply press 'Enter'. 
 After the trusted functions the debugger will ask some question about function 
-applications of the shape
+and 'fun' applications of the shape
 
     fun(val1, ..., valn) = val? [y/n/t/d/i/u/a]: 
   
@@ -142,6 +143,38 @@ responsible. In the example:
           false -> [H1 | merge([H2 | T1], T2, Comp)];
           true -> [H1 | merge(T1, [H2 | T2], Comp)]
         end.
+        
+After the debugger finds the wrong function, it can follow the debugging session 
+inside this function to find the the part of the function that is causing the
+erroneous behavior. In the 'merge.erl' example, the session continues as follows:
+
+    Do you want to follow the debugging session inside this function? [y/n]: y
+    For the case expression:
+    case Comp(H1, H2) of
+      false -> [H1 | merge([H2 | T1], T2, Comp)];
+      true -> [H1 | merge(T1, [H2 | T2], Comp)]
+    end
+    Is there anything incorrect?
+    1.- The context:
+            Comp = fun merge:comp/2
+            H1 = b
+            H2 = a
+            T1 = []
+            T2 = []
+    2.- The argument value: false.
+    3.- Enter in the first clause.
+    4.- The final value: [b,a].
+    5.- Nothing.
+    [1/2/3/4/5/d/s/u/a]? 4
+    
+    
+    This is the reason for the error:
+    Value [b,a] for the final expression [H1 | merge([H2 | T1], T2, Comp)] (Line 27) is not correct.
+    
+In this second step of debuggind, the debugger will not ask about function/fun
+applications but about the evaluation of different constructions like guards,
+case/if expressions, bindings, etc. 
+    
 
 Options for edd
 ---------------
@@ -151,11 +184,15 @@ proof tree looking for the buggy node: "Divide & Query" and "Top Down". The
 "Divide & Query" strategy tries to make the minimum number of questions, and selects
 those nodes that split the tree into two of about the same size. On the other hand,
 "Top Down" traverses the tree from the root to the leaves until a buggy node is 
-found. The default strategy is "Divide & Query", so a debugging session using 
-dd/1 will use this strategy. To use the "Top Down" strategy, use the 'top_down'
-argument in a dd/2 call. For example:
+found. The default strategy for the first step of debugging (to find a wrong
+function) is "Divide & Query", and the default strategy for the second step is 
+"Top Down". To use the "Top Down" strategy in both debugging steps, use the 
+'top_down' argument in the dd/2 call. For example:
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", top_down).
+    
+Note that you can change the strategy at any point of the debugging session by 
+pressing the key 's'.
     
 The Erlang Declarative Debugger can also generate the proof tree in a DOT file
 (http://en.wikipedia.org/wiki/DOT_language) and a PDF file using the 'dot'
@@ -165,10 +202,11 @@ example the call:
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", tree).
     
 will start a debugging session using the default strategy "Divide & Query" and
-generate the proof tree of the evaluation of the expression in a file called 
-"dbg.dot" and also in "dbg.pdf" in the current directory. If your system does not
-have the 'dot' command to create PDF from DOT files, the PDF will not be create
-but no error will be raised. 
+generate the proof tree of the evaluation of the expression in the files 
+"dbg.dot"/"dbg.pdf" for the first step of the debugging session, and 
+"dbg_zoom.dot"/"dbg_zoom.pdf" for the second one. These files will be stored in
+the current directory. If your system does not have the 'dot' command to create 
+PDF from DOT files, the PDF will not be create but no error will be raised. 
 
 To generate the proof tree file and also use the "Top Down" strategy, use the
 dd/3 function:
