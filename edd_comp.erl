@@ -35,7 +35,10 @@ compile() ->
   comp_aux( 'src/smerl.erl' ),
   comp_aux( 'src/edd_lib.erl' ),
   comp_aux( 'src/edd.erl' ),
-  edoc:files(['src/edd.erl','src/edd_lib.erl','src/smerl.erl', 'edd_comp.erl'],[{dir,doc}]).
+  comp_aux( 'src/edd_zoom_lib.erl'),
+  comp_aux( 'src/edd_zoom.erl'),
+  edoc:files(['src/edd.erl','src/edd_lib.erl','src/smerl.erl', 'edd_comp.erl',
+  'src/edd_zoom.erl', 'src/edd_zoom_lib.erl'],[{dir,doc}]).
 
 comp_aux( File ) ->
   case compile:file( File, [{outdir, ebin}]) of

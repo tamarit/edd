@@ -24,7 +24,7 @@ merge(S1, [], _Comp) ->
 merge([H1 | T1], [H2 | T2], Comp)  ->
         case Comp(H1,H2) of 
 %            false -> [H2 | merge([H1 | T1], T2, Comp)]; % Correct
-            false -> [H1 | merge([H2 | T1], T2, Comp)];
+            false -> [H1 | merge([H2 | T1], T2, Comp)];  % Incorrect
             true ->  [H1 | merge(T1, [H2 | T2], Comp)]
         end.
 
@@ -36,7 +36,7 @@ take(0,_) -> [];
 take(1,[H|_])->[H];
 take(_,[])->[];
 % take(N,[H|T])->[H | take(N-1, T)]. % Correct
-take(N,[_|T])->[N | take(N-1, T)].
+take(N,[_|T])->[N | take(N-1, T)].   % Incorrect
 
 last(N, List) ->
     lists:reverse(take(N, lists:reverse(List))).
