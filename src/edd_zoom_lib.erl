@@ -180,7 +180,7 @@ print_buggy_info({'let',{VarName,Value,ALetArg},_}) ->
 		[] ->
 			".";
 		[ALetArg_|_] ->
-			" in the expression:\n" ++ transform_abstract(ALetArg_) ++ " (Line " 
+			" in the expression:\n" ++ transform_abstract(ALetArg_) ++ " (line " 
      		++ integer_to_list(element(2,ALetArg_)) ++ ")."
 	end;
 print_buggy_info({'let_multiple',{InfoVars,ALetArg},_}) -> 
@@ -189,17 +189,17 @@ print_buggy_info({'let_multiple',{InfoVars,ALetArg},_}) ->
 		[] ->
 			".";
 		[ALetArg_|_] ->
-			"\nin the expression:\n" ++ transform_abstract(ALetArg_) ++ " (Line " 
+			"\nin the expression:\n" ++ transform_abstract(ALetArg_) ++ " (line " 
      		++ integer_to_list(element(2,ALetArg_)) ++ ")."
 	end;
 print_buggy_info({case_if,{{ACase,Type},ArgValue,_,_,_,_,_},_}) ->
-    "Argument value "++ transform_value(ArgValue) ++" of the " ++ Type ++ " exprressiom:\n" ++
+    "Argument value "++ transform_value(ArgValue) ++" of the " ++ Type ++ " expression:\n" ++
     transform_abstract(ACase) ++ 
     "\nis not correct.";
 print_buggy_info({case_if_2,{_,_,_,FinalValue,AFinalExpr,_,_},_}) ->
      final_expression_message(FinalValue,AFinalExpr);
 print_buggy_info({case_if_failed,{{ACase,Type},ArgValue,_,_},_}) ->
-    "Argument value "++ transform_value(ArgValue) ++" of the " ++ Type ++ " exprressiom:\n" ++
+    "Argument value "++ transform_value(ArgValue) ++" of the " ++ Type ++ " expression:\n" ++
     transform_abstract(ACase) ++ 
     "\nis not correct.";
 print_buggy_info({case_if_clause,{{ACase,Type}, _, ClauseNumber,PatGuard,_,_,_}, _}) ->
@@ -219,7 +219,7 @@ final_expression_message(FinalValue,AFinalExpr) ->
     case AFinalExpr of 
      	[] -> "";
      	[AFinalExpr_|_] -> 
-     		transform_abstract(AFinalExpr_) ++ " (Line " 
+     		transform_abstract(AFinalExpr_) ++ " (line " 
      			++ integer_to_list(element(2,AFinalExpr_)) ++ ") "
     end ++ "is not correct.".
    
@@ -282,6 +282,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 				       top_down ->
 				       		%io:format("Inicio: ~p\n",[hd(NotCorrect)]),
 							Children = digraph:out_neighbours(G, hd(NotCorrect)),
+							%io:format("Children: ~p\n",[Children]),	
 							SelectableChildren = Children -- (Children -- Vertices), 
 							[{V, - length(digraph_utils:reachable([V], G))} 
 							  || V <- SelectableChildren];
@@ -292,7 +293,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 							         Rest = (length(Vertices) - 1) - TotalReach,
 							         abs(TotalReach - Rest)
 							     end} || V <- Vertices]
-				  end,				
+				  end,			
 				SortedVertices = lists:keysort(2,VerticesWithValues), 
 				case SortedVertices of 
 					[] -> {-1,[]};
@@ -307,6 +308,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 			_ ->
 				{PreSelected, Vertices -- [PreSelected]}
 		end,
+	%io:format("Selected: ~p\nSortedVertices: ~p\n",[Selected,NSortedVertices]),
 	YesAnswer = %begin
 	             % EqualToSeleceted = 
 	             %    [V || V <- Vertices, begin {V,{L1,_}} = digraph:vertex(G,V),
@@ -320,6 +322,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	%io:format("Selected: ~p\n",[Selected]),
 	CurrentState = {Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected},
 	{Answer,StateQuestion} = ask_question(G,Selected,CurrentState,NSortedVertices),
+	%io:format("State: ~p\n",[StateQuestion]),
 	{NVertices,NCorrect,NNotCorrect,NUnknown,NState,NStrategy,NPreSelected} = 
 	   case Answer of
 	        y -> YesAnswer;
@@ -355,18 +358,29 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	                  [{PVertices,PCorrect,PNotCorrect,PUnknown,PPreSelected}|PState] ->
 	                     {PVertices,PCorrect,PNotCorrect,PUnknown,PState,Strategy,PPreSelected}
 	             end;
-	        s -> case get_answer("Select a strategy (Didide & Query or "
+	        s -> 
+	        	PrintStrategy = 
+		        	fun
+		        		(top_down)-> "Top Down";
+		        		(divide_query) -> "Didide & Query"
+		        	end,
+	        	io:format("The current strategy is "++ PrintStrategy(Strategy) ++ "."),
+	        	SelectedStrategy = 
+	        	case get_answer("Select the new strategy (Didide & Query or "
 	                  ++"Top Down): [d/t] ",[d,t]) of
 	                  t -> 
-	                     {Vertices,Correct,NotCorrect,Unknown,State,top_down,PreSelected};
+	                     top_down;
 	                  d -> 
-	                     {Vertices,Correct,NotCorrect,Unknown,State,divide_query,PreSelected}
-	             end;
+	                     divide_query
+	             end,
+	             io:format("Strategy is set to "++ PrintStrategy(Strategy) ++ "."),
+	             {Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy,PreSelected};
 	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy,-1};
 	        c -> StateQuestion;
 	        _ -> CurrentState
 	   end, 
-	asking_loop(G,NStrategy,lists:usort(NVertices),lists:usort(NCorrect),lists:usort(NNotCorrect),lists:usort(NUnknown),NState,NPreSelected).
+	%asking_loop(G,NStrategy,lists:usort(NVertices),lists:usort(NCorrect),lists:usort(NNotCorrect),lists:usort(NUnknown),NState,NPreSelected).
+	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState,NPreSelected).
 
 	
 %EN preguntes dobles tindre en conter el undo	
@@ -554,6 +568,8 @@ ask_question(G,Selected,CurrentState,NSortedVertices)->
 												[Children] -> [Children, Selected];
 												[] -> [Selected]
 											end,
+										%io:format("CorrectClauses: ~p\nWrongVertexs: ~p\n",[CorrectClauses,WrongVertexs]),
+										%io:format("Queden: ~p\n",[digraph_utils:reachable(WrongVertexs, G) -- (CorrectClauses ++ WrongVertexs)]),
 					        			{digraph_utils:reachable(WrongVertexs, G) -- (CorrectClauses ++ WrongVertexs),
 					        			 CorrectClauses ++ Correct,WrongVertexs ++ NotCorrect,Unknown,
 							             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,-1};
