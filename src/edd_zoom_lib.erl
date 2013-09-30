@@ -184,7 +184,7 @@ print_buggy_info({'let',{VarName,Value,ALetArg},_}) ->
      		++ integer_to_list(element(2,ALetArg_)) ++ ")."
 	end;
 print_buggy_info({'let_multiple',{InfoVars,ALetArg},_}) -> 
-	"The following variables are badly asigned:\n"++get_context(InfoVars)++
+	"The following variables are badly assigned:\n"++get_context(InfoVars)++
 	case ALetArg of 
 		[] ->
 			".";
@@ -712,10 +712,10 @@ build_question(Info) ->
 
 %falta tratar el case_if_failed
 transform_label({'let',{VarName,Value,_},_}) -> 
-	"the following variable is asigned:\n"
+	"the following variable is assigned:\n"
 	++atom_to_list(VarName) ++ " = " ++ transform_value(Value);
 transform_label({'let_multiple',{InfoVars,_},_}) -> 
-	"the following variables are asigned:\n"++get_context(InfoVars);
+	"the following variables are assigned:\n"++get_context(InfoVars);
 transform_label({case_if_clause,{_, _,ClauseNumber,guard,SuccFail,_,_}, _}) ->
 	"Guard of the " ++ get_ordinal(ClauseNumber)  ++ " clause " ++ atom_to_list(SuccFail) ++ ".\nIs this correct";
 transform_label({case_if_clause,{{ACase,Type}, ArgValue, ClauseNumber,PatGuard,SuccFail,Bindings,GuardsDeps}, _}) ->

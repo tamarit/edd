@@ -113,7 +113,7 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) ->
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G,NotCorrectVertex,
 	               		"Call to a function that contains an error"),
-	               	case get_answer("Do you want to follow the debugging session"
+	               	case get_answer("Do you want to continue the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
 					     	edd_zoom:zoom_graph(get_call_string(G,NotCorrectVertex),Graph);
