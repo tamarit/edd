@@ -25,7 +25,11 @@ console:
     $ git clone https://github.com/tamarit/edd
 
 This will create a folder called 'edd' in your current directory containing the
-files of the Erlang Declarative Debugger.
+files of the Erlang Declarative Debugger. If you do not have **git** installed
+in your system (or you are using Windows) you can also download a copy of the
+repository in a ZIP file using the button **Download ZIP** in the upper right 
+part of the https://github.com/tamarit/edd page, or following the link 
+https://github.com/tamarit/edd/archive/master.zip.
 
 
 Compiling edd
