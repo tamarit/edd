@@ -23,7 +23,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd_comp).
--export([compile/0]).
+-export([compile/0, load/0]).
 
 %%------------------------------------------------------------------------------
 %% @doc Compiles all the files of the Erlang Declarative Debugger (edd) and 
@@ -37,8 +37,28 @@ compile() ->
   comp_aux( 'src/edd.erl' ),
   comp_aux( 'src/edd_zoom_lib.erl'),
   comp_aux( 'src/edd_zoom.erl'),
+  comp_aux( 'src/edd_con.erl'),
+  comp_aux( 'src/edd_con_lib.erl'),
+  comp_aux( 'src/edd_trace.erl'),
   edoc:files(['src/edd.erl','src/edd_lib.erl','src/smerl.erl', 'edd_comp.erl',
-  'src/edd_zoom.erl', 'src/edd_zoom_lib.erl'],[{dir,doc}]).
+  'src/edd_zoom.erl', 'src/edd_zoom_lib.erl', 'src/edd_con.erl', 
+  'src/edd_con_lib.erl', 'src/edd_trace.erl'],[{dir,doc}]).
+
+%%------------------------------------------------------------------------------
+%% @doc Load all the files of the Erlang Declarative Debugger (edd).
+%% @end
+%%------------------------------------------------------------------------------
+-spec load() -> ok.
+load() ->
+  code:load_abs("ebin/smerl"),
+  code:load_abs("ebin/edd_lib"),
+  code:load_abs("ebin/edd"),
+  code:load_abs("ebin/edd_zoom_lib"),
+  code:load_abs("ebin/edd_zoom"),
+  code:load_abs("ebin/edd_con"),
+  code:load_abs("ebin/edd_con_lib"),
+  code:load_abs("ebin/edd_trace"),
+  ok.
 
 comp_aux( File ) ->
   case compile:file( File, [{outdir, ebin}]) of

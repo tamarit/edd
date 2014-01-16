@@ -27,7 +27,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd).
--export([dd/1,dd/2,dd/3]).
+-export([dd/1,dd/2,dd/3, ddc/2]).
 
 
 %%------------------------------------------------------------------------------
@@ -69,6 +69,19 @@ dd(Expr,tree) ->
 	dd_internal(Expr,divide_query,true);
 dd(Expr,_) ->
 	dd(Expr).
+
+
+%%------------------------------------------------------------------------------
+%% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
+%%      whose evaluation yields an incorrect value. This function allow to debug
+%%		concurrent programs. The second argument is the time (in miliseconds) to
+%%		trace the program.
+%% @end
+%%------------------------------------------------------------------------------
+-spec ddc(Expr::string(), TraceTimeout :: integer()) -> ok.	
+ddc(Expr,TraceTimeout) ->
+	edd_con:ddc(Expr,TraceTimeout).
+
 
 %%------------------------------------------------------------------------------
 %% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'

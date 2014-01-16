@@ -72,22 +72,17 @@ Using edd
 
 To debug an expression that is returning an incorrect value, simply call the
 *edd:dd/1* function with the string of the problematic expression. For that, the
-module edd must be loaded. To easiest way is including the *ebin* directory to the
-code path when running the Erlang emulator. For example, if the edd folder is in
-*/home/john/edd/* the command will be:
+modules of edd must be loaded. The 'edd_comp:load()' function load all the needed
+modules. You can call it when the shell is initialized using:
 
-    $ erl -pa /home/john/edd/ebin
-    Erlang R15B02 (erts-5.9.2) [source] [smp:4:4] [async-threads:0] [hipe] [kernel-poll:false]
-    
-    Eshell V5.9.2  (abort with ^G)
-    1> l(edd).
-    {module,edd}
-    >
+        $ erl -run edd_comp load
  
 The 'edd' directory contains a 'examples' folder with some buggy programs to 
 debug. For example, if you compile and load the 'merge.erl' program you can observe 
 that the mergesort/2 function is buggy:
 
+    > cd("examples/mergesort"), c(merge).
+    {ok,merge}
     > merge:mergesort([b,a], fun merge:comp/2).
     [b,a]
 
@@ -178,6 +173,15 @@ erroneous behavior. In the 'merge.erl' example, the session continues as follows
 In this second step of debuggind, the debugger will not ask about function/fun
 applications but about the evaluation of different constructions like guards,
 case/if expressions, bindings, etc. 
+
+edd for concurrent programs
+---------------------------
+
+The Erlang Declarative Debugger allow the user to debug concurrent programs in
+a similar way that sequential ones. To debug a function with concurrent feautures, 
+the user would use 'edd:ddc/2', where the first parameter is the call to the
+buggy function, and the second is the timeout (in miliseconds) for the tracing 
+process needed in this kind of debugging. 
     
 
 Options for edd
