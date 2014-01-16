@@ -177,7 +177,7 @@ case/if expressions, bindings, etc.
 edd for concurrent programs
 ---------------------------
 
-The Erlang Declarative Debugger allow the user to debug concurrent programs in
+The Erlang Declarative Debugger allows the user to debug concurrent programs in
 a similar way that sequential ones. To debug a function with concurrent features, 
 the user would use 'edd:ddc/2', where the first parameter is the call to the
 buggy function, and the second is the timeout (in miliseconds) for the tracing 
