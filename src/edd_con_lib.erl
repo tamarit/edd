@@ -428,6 +428,7 @@ asking_loop(State0) ->
 ask_question(G,V)->
 	{V,Label} = digraph:vertex(G,V),
 	%build_question(Label),
+	io:format("\n"),
 	{Question,Dict} = build_question(Label),
 	%io:format("\nVertex: ~p\n~s",[V, Question]),
 	io:format("~s",[Question]),

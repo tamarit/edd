@@ -48,19 +48,20 @@ trace(Call,Timeout) ->
   %io:format("~p\n",[Trace]),
   Dict = dict:new(),
   NDict = separate_by_pid(Trace,Dict),
-  FirstPid = 
-    case Trace of 
-      [{trace,1,FirstPid_,_,_}|_] ->
-        FirstPid_;
-      [{trace,1,FirstPid_,_,_,_}|_] ->
-        FirstPid_;
-      _ ->
-        no_pid
-    end,
+  % FirstPid = 
+  %   case Trace of 
+  %     [{trace,1,FirstPid_,_,_}|_] ->
+  %       FirstPid_;
+  %     [{trace,1,FirstPid_,_,_,_}|_] ->
+  %       FirstPid_;
+  %     _ ->
+  %       no_pid
+  %   end,
   [exit(Key, kill) || Key <- dict:fetch_keys(NDict)],
   %io:format("~p\n",[dict:to_list(NDict)]),
   %io:format("First PID: ~p\n",[FirstPid]),
-  {{first_pid,FirstPid},{traces,NDict}}.
+  %io:format("First PID: ~p\n",[Pid]),
+  {{first_pid,Pid},{traces,NDict}}.
 
 handler(M,Pid) ->
   Pid!M,
@@ -90,6 +91,8 @@ clean_trace([{trace,_,'receive',{code_server,_}}|T],Pids,Acc,CurrentId) ->
 clean_trace([{trace,_,send,{io_request,_,_,_},_}|T],Pids,Acc,CurrentId) ->
   clean_trace(T,Pids,Acc,CurrentId);
 clean_trace([{trace,_,'receive',{io_reply,_,ok}}, {trace,_,'receive',timeout} |T],Pids,Acc,CurrentId) ->
+  clean_trace(T,Pids,Acc,CurrentId);
+clean_trace([{trace,_,'receive',{io_reply,_,ok}} |T],Pids,Acc,CurrentId) ->
   clean_trace(T,Pids,Acc,CurrentId);
 clean_trace([{trace,Pid,Info1,Info2}|T],Pids,Acc,CurrentId) ->
   clean_trace(T,Pids, Acc ++ [{trace,CurrentId,Pid,Info1,Info2}],CurrentId + 1);

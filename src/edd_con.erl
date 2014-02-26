@@ -30,7 +30,8 @@
 -record(scheduler_state, 
 	{mnf, funs_initial_call, case_id, cases, traces, 
 	 free_v, g, main_pid, first_call, first_pid, 
-	 main_pid_answer, main_result, pid_info}).
+	 main_pid_answer, main_result, pid_info,
+	 iteration}).
 
 -record(tree_state, 
 	{expr, env, core, trusted, scheduler_pid, 
@@ -71,6 +72,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	%TO CHANGE
 	%io:format("FunsInitialCall: ~p\n",[FunsInitialCall]),
 	Self = self(),
+	%io:format("Traces: ~p\n",[dict:to_list(Traces)]),
 	% put(funs_initial_call,FunsInitialCall),
 	% put(case_id,0),
 	% put(traces,Traces),
@@ -88,6 +90,11 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 			pid_trace = FirstPid,
 			parent = 0
 		},
+	TraceFirst = 
+		case dict:find(FirstPid,Traces) of 
+			error -> [];
+			{ok, TraceFirst_} -> TraceFirst_
+		end,
 	FirstState = 
 		#scheduler_state{
 			mnf=[FirstTreeState],
@@ -102,7 +109,8 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 			first_pid = FirstPid,
 			main_pid_answer = 0,
 			main_result = [],
-			pid_info = dict:store(FirstPid, #pid_state{trace = dict:fetch(FirstPid,Traces)}, dict:new())
+			pid_info = dict:store(FirstPid, #pid_state{trace = TraceFirst}, dict:new()),
+			iteration = 0
 		},
 	PidScheduler = 
 		spawn(
@@ -120,7 +128,6 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 			ok
 	end,
 	%io:format("despues result\n"),
-	ets:delete(Env),
 	%Caso especial si la llamada inicial tiene funciones anidadas como f(g(3)), que
 	%será traducido a CORE con un let x = g(3) in f(x)
 	%io:format("InitialCall: ~p\n",[InitialCall]),
@@ -182,6 +189,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
     %edd_lib:ask(G,{top_down,old}),
     %edd_lib:ask(G,{top_down,new}),
     PidG!stop,
+    %ets:delete(Env),
     ok.
 
 digraph_server() ->
@@ -235,9 +243,11 @@ get_from_scheduler(PidScheduler,Msg) ->
 % 	{expr, env, core, trusted, scheduler_pid, 
 % 	 pid_trace, parent}).
 
-scheduler(State) ->
+scheduler(State0) ->
 	%io:format("State: ~p\n",[State]),
 	%io:format("State: ~p\n",[dict:to_list(State#scheduler_state.pid_info)]),
+	State = State0#scheduler_state{iteration = State0#scheduler_state.iteration + 1},
+	%io:format("Scheduler iteration: ~p\n",[State#scheduler_state.iteration]),
 	receive 
 		next_mnf -> 
 			%io:format("antes1\n"),
@@ -246,6 +256,10 @@ scheduler(State) ->
 			case cerl:type(TreeState#tree_state.expr) of 
 				'receive' ->
 					Pid_info = dict:fetch(TreeState#tree_state.pid_trace, State#scheduler_state.pid_info),
+					%io:format("Trace: ~p\n",[Pid_info#pid_state.trace]),
+					%io:format("Trace: ~p\n",[Pid_info#pid_state.pid_continue]),
+					%io:format("Trace: ~p\n",[Pid_info#pid_state.trace]),
+					%io:format("mnf: ~p\n",[State#scheduler_state.mnf]),
 					Pid_info#pid_state.pid_continue!continue,
 					scheduler(State#scheduler_state{
 						mnf = tl(State#scheduler_state.mnf)});
@@ -283,11 +297,16 @@ scheduler(State) ->
 						trace = NTracePidWhoSpawn,
 						temp_spawned = Pid_Info_WhoSpawn#pid_state.temp_spawned ++ [{TreeState#tree_state.pid_trace,ParentStack}]},
 					State#scheduler_state.pid_info),
+			Pid_trace_start_trace = 
+				case dict:find(TreeState#tree_state.pid_trace,State#scheduler_state.traces) of 
+					error -> [];
+					{ok,Pid_trace_start_trace_} -> Pid_trace_start_trace_
+				end,
 			scheduler(State#scheduler_state{
 				mnf = State#scheduler_state.mnf ++ [MNF_item], 
 				pid_info = dict:store(
 						TreeState#tree_state.pid_trace,
-						#pid_state{trace = dict:fetch(TreeState#tree_state.pid_trace,State#scheduler_state.traces)},
+						#pid_state{trace = Pid_trace_start_trace},
 						NPidInfo)});
 		{add_receive,MNF_item = TreeState,PidContinue} ->
 			%io:format("antes3\n"),
@@ -340,6 +359,11 @@ scheduler(State) ->
 				end,
 			Pid_info_to = 
 				dict:fetch(To, State#scheduler_state.pid_info),
+			NTrace = 
+				case get_next_sent(Pid_info_from#pid_state.trace,[]) of 
+					not_found -> Pid_info_from#pid_state.trace;
+					NTrace_ -> NTrace_
+				end,
 			NPidInfo1 = 
 				case From of 
 					To -> 
@@ -347,13 +371,16 @@ scheduler(State) ->
 							To,
 							Pid_info_to#pid_state{
 								receipt = Pid_info_to#pid_state.receipt ++ [{From,Msg}],
-								temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}]},
+								temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}],
+								trace = NTrace},
 							State#scheduler_state.pid_info);
 					_ ->
 						NPidInfo0 = 
 							dict:store(
 									From,
-									Pid_info_from#pid_state{temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}]},
+									Pid_info_from#pid_state{
+										temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}],
+										trace = NTrace},
 									State#scheduler_state.pid_info),
 						dict:store(
 								To,
@@ -538,7 +565,7 @@ scheduler(State) ->
 							temp_sent = [],
 							temp_receipt = []},
 						State#scheduler_state.pid_info)});
-		{result, PidFrom, Result} ->
+		{result, PidFrom, Result,Env} ->
 			%io:format("rep result\n"),
 			case {State#scheduler_state.main_pid_answer, State#scheduler_state.mnf} of 
 				{PidFrom,[]} -> 
@@ -546,6 +573,7 @@ scheduler(State) ->
 					%Clause = hd([Clause_ ||{0,Clause_} <- State#scheduler_state.cases]),
 					%Sent = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.sent,
 					%Spawned = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.spawned,
+					catch ets:delete(Env),
 					Summary = 
 						[{Pid,PidInfo#pid_state.first_call,PidInfo#pid_state.spawned,PidInfo#pid_state.sent} 
 						 || {Pid,PidInfo} <- dict:to_list(State#scheduler_state.pid_info)],
@@ -555,16 +583,19 @@ scheduler(State) ->
 					%Clause = hd([Clause_ ||{0,Clause_} <- State#scheduler_state.cases]),
 					%Sent = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.sent,
 					%Spawned = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.spawned,
+					catch ets:delete(Env),
 					Summary = 
 						[{Pid,PidInfo#pid_state.first_call,PidInfo#pid_state.spawned,PidInfo#pid_state.sent} 
 						 || {Pid,PidInfo} <- dict:to_list(State#scheduler_state.pid_info)],
 					State#scheduler_state.main_pid!{result,State#scheduler_state.main_result,Summary};
 				{PidFrom,_} -> 
 					%io:format("despues3\n"),
+					catch ets:delete(Env),
 					self()!next_mnf,
 					scheduler(State#scheduler_state{main_result = Result});
-				_ -> 
+				{_,_} -> 
 					%io:format("despues4\n"),
+					catch ets:delete(Env),
 					self()!next_mnf,
 					scheduler(State)
 			end;
@@ -609,7 +640,7 @@ get_tree(State) ->
 	Self = self(),
 	Pid = spawn(fun() -> get_tree(State,Self) end),
 	receive 
-		{result, Pid, Result} ->
+		{result, Pid, Result,_} ->
 			%io:format("Recibido ~p\n",[Result]),
 			Result
 	end.
@@ -633,12 +664,20 @@ get_tree(State,Pid) ->
 				LetArg = cerl:let_arg(Expr),
 				ValueArg =
 				   get_tree(State#tree_state{expr = LetArg}),
+				%io:format("Vars: ~p\n",[Vars]),
 				%io:format("ValueArg: ~p\n",[ValueArg]),
 				case check_errors(ValueArg) of
 				     true -> 
 				     	ValueArg;
 				     _ -> 
-						lists:map(fun(Var) -> add_bindings_to_env([{Var,ValueArg}],Env) end,Vars),
+				     	case ValueArg of 
+				     		{c_values,_,ValuesArg} ->
+				     			VarsValues = lists:zip(Vars,ValuesArg),
+				     			add_bindings_to_env(VarsValues,Env);
+				     		_ -> 
+								lists:map(fun(Var) -> add_bindings_to_env([{Var,ValueArg}],Env) end,Vars)
+						end,
+						%io:format("Env: ~p\n",[ets:tab2list(Env)]),
 						LetBody = cerl:let_body(Expr),
 						get_tree(State#tree_state{expr = LetBody})
 				% Se devuelven las raices de los árboles de cómputo de cada expresión
@@ -789,7 +828,7 @@ get_tree(State,Pid) ->
 				throw({error,"Non treated expression",Expr}),
 			    Expr
 		end,
-	Pid!{result,self(),Result}.
+	Pid!{result,self(),Result,Env}.
 
 get_tree_list(State) ->
 	case State#tree_state.expr of 
@@ -839,6 +878,7 @@ get_tree_apply(State)->
 					     	        %         get_anon_func(EnvAF,FunName,FunCore),
 					           get_tree_applyFun(State#tree_state{expr = FunBody}, Args, NPars, FunVar, BFunVar);
 					     	     _ -> % Caso de un make_fun
+					     	     %io:format("antes1\n"),
 						     	{ModName,FunName,_} = get_MFA(BFunVar),
 						     	NEnv = get_from_scheduler(SchedulerPid,{create_env,self()}),
 						     	Return = 
@@ -851,6 +891,7 @@ get_tree_apply(State)->
 							end
 					end;
 				_ -> 
+					%io:format("antes2\n"),
 					{ModName,FunName,_} = get_MFA(FunVar),
 					NEnv = get_from_scheduler(SchedulerPid,{create_env,self()}),
 					Return = 
@@ -1013,7 +1054,7 @@ get_tree_applyFun(State,Args,NPars,FunVar,FunName) ->
 			% [digraph:add_edge(G,NFreeV,Root) || Root <- Roots],
 			%Value
 	end,
-	ets:delete(Env),
+	%ets:delete(Env),
 	Value.
 
 get_tree_call(State) -> 
@@ -1109,6 +1150,7 @@ get_tree_call(State) ->
 			                case BArgs of
 			                     [Function = {c_call,_,{c_literal,_,erlang},
 			                      {c_literal,_,make_fun},_} | MayBeArity] ->
+			                      	   %io:format("antes3\n"),
 				                       {_,_,CFunArity} = get_MFA(Function),
 				                       case lists:map(fun cerl:concrete/1,MayBeArity) of
 		     	                            [] ->  {c_literal,[],true};
@@ -1237,7 +1279,6 @@ get_clause_body([Clause | Clauses],BArgs,State,DepsBefore,InfoFails,NumClause) -
 get_clause_body([],_,_,_,InfoFails,_) -> {none,InfoFails}.
 
 get_tree_receive(State) ->
-	%io:format("arriba\n"),
 	Expr = State#tree_state.expr,
 	SchedulerPid = State#tree_state.scheduler_pid,
 	PidTrace = State#tree_state.pid_trace,
@@ -1273,6 +1314,7 @@ get_tree_receive(State) ->
 			AExpr = none,
 			{Line,File} = {0,0}
 	end,
+	%io:format("ANTES_1\n"),
 	wait_for_scheduling(SchedulerPid,State),
 	%PidTraces = get_from_scheduler(SchedulerPid,{get_traces_pid,PidTrace,self()}),
 	CurrentTrace = get_from_scheduler(SchedulerPid,{get_trace,PidTrace,self()}),
@@ -1316,7 +1358,12 @@ get_tree_receive(State) ->
 					stuck_receive -> 
 						Value;
 					_ ->
-						get_abstract_form(Value,SchedulerPid)
+						case Value of 
+							{c_values,_,[FirstValue,_]} ->
+								get_abstract_form(FirstValue,SchedulerPid);
+							_ ->
+								get_abstract_form(Value,SchedulerPid)
+						end
 				end,
 			case AExpr of 
 					none ->
@@ -1360,7 +1407,11 @@ get_tree_receive(State) ->
 	% 	get_clause_body_receive(CurrentTrace,Receipt,Clauses,SchedulerPid,State),
 
 
+%There is not a register of recepit messages
 get_clause_body_receive(_,[],_,_,_,_,InfoFails) ->
+	{stuck_receive,InfoFails};
+%There is a register of recepit messages, but the trace is empty, so it is not read
+get_clause_body_receive([],_,_,_,_,_,InfoFails) ->
 	{stuck_receive,InfoFails};
 	%throw({error,"Something bad has happened while receiving messages."});
 get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails) ->
@@ -1371,6 +1422,7 @@ get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,
 	case NTrace of 
 		not_found ->
 			%io:format("\n\nEspera!!\n\n"),
+			%io:format("ANTES_2\n"),
 			wait_for_scheduling(SchedulerPid,State),
 			get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails);
 		_ -> 
@@ -1397,6 +1449,7 @@ get_receipt(PidTrace,Trace,SchedulerPid,State) ->
 				not_found ->
 					[];
 				_ ->
+					%io:format("ANTES 3\n"),
 					wait_for_scheduling(SchedulerPid,State),
 					get_receipt(PidTrace,Trace,SchedulerPid,State)
 			end;
@@ -1407,6 +1460,7 @@ get_receipt(PidTrace,Trace,SchedulerPid,State) ->
 wait_for_scheduling(SchedulerPid,State) ->
 	SchedulerPid!{add_receive,State,self()},
 	SchedulerPid!next_mnf,
+	%io:format("WAITING\n"),
 	receive 
 		continue -> ok
 	end.
@@ -1568,10 +1622,11 @@ get_abstract_form(stuck_receive,_) ->
 	get_abstract_from_core_literal(cerl:abstract(stuck_receive));
 get_abstract_form(Par_,_) -> 
 	Par = cerl:fold_literal(Par_),
-	case cerl:is_literal(Par) of
+	case cerl:is_literal(Par) or is_pid(Par) of
 		true -> 
 			get_abstract_from_core_literal(Par);
 		_ -> 
+			%io:format("antes4 ~p\n",[Par]),
 			{ModName_,FunName_,FunArity_} = get_MFA(Par),
 			{'fun',1,
 				{function,
@@ -1644,6 +1699,8 @@ bind_vars(Expr,Env) ->
           		             {c_literal,[],Arity}],
 		     	     	{c_call,[],{c_literal,[],erlang},{c_literal,[],make_fun},MFArgs};
 		     	     _ ->
+		     	     	%io:format("~p\n",[VarName]),
+		     	     	%io:format("Env: ~p\n",[ets:tab2list(Env)]),
 		     	     	case ets:lookup(Env,VarName) of 
 		     	     		[{VarName,Value}|_] ->
 				     			case Value of
@@ -1856,6 +1913,16 @@ get_next_spawned([H|T],Acc) ->
 			{SpawnPid_,Acc ++ T};
 		_ ->
 			get_next_spawned(T,Acc ++ [H])
+	end.
+
+get_next_sent([], _) ->
+	not_found;
+get_next_sent([H|T],Acc) ->
+	case H of 
+		 {trace,_,_,send,_,_} ->
+			Acc ++ T;
+		_ ->
+			get_next_sent(T, Acc ++ [H])
 	end.
 
 get_next_receipt([], _) ->
