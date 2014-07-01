@@ -1,0 +1,8 @@
+io_lib_format (from OTP/Erlang)
+Real bug extracted from the commit that solved it. 
+https://github.com/nox/otp/commit/a10a7979887403ea61c30155cef18aa7324420a6#diff-0
+
+Example of buggy call:
+lists:flatten(io_lib_format_old:fwrite("~6.7w\n",[11111]))
+
+Thanks to Anthony Ramine for provide it.
