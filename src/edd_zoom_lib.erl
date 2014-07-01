@@ -364,7 +364,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 		        		(top_down)-> "Top Down";
 		        		(divide_query) -> "Didide & Query"
 		        	end,
-	        	io:format("The current strategy is "++ PrintStrategy(Strategy) ++ "."),
+	        	io:format("The current strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
 	        	SelectedStrategy = 
 	        	case get_answer("Select the new strategy (Didide & Query or "
 	                  ++"Top Down): [d/t] ",[d,t]) of
@@ -373,7 +373,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	                  d -> 
 	                     divide_query
 	             end,
-	             io:format("Strategy is set to "++ PrintStrategy(Strategy) ++ "."),
+	             io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
 	             {Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy,PreSelected};
 	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy,-1};
 	        c -> StateQuestion;
