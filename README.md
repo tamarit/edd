@@ -73,7 +73,7 @@ Using edd
 To debug an expression that is returning an incorrect value, simply call the
 *edd:dd/1* function with the string of the problematic expression. For that, the
 modules of edd must be loaded. The 'edd_comp:load()' function load all the needed
-modules. You can call it when the shell is initialized using:
+modules. One can call it when the shell is initialized using:
 
         $ erl -run edd_comp load
  
