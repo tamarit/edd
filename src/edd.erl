@@ -175,6 +175,11 @@ dd_internal(Expr,Strategy,Graph) ->
 	     false -> 
 	       ok
 	end,
+	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	[_,{memory,Words},_] = digraph:info(G),
+	io:format("Tree size : ~p words\n", [Words]),
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     edd_lib:ask(G,Strategy,Graph).
 
 

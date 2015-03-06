@@ -96,8 +96,6 @@ get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph) ->
 	digraph:add_vertex(G,FreeV,RootInfo),
 	add_graphs_to_graph(G,Graphs),
 	[digraph:add_edge(G,FreeV,edd_zoom_lib:look_for_root(G_)) || G_ <- Graphs],
-	%TO BE REMOVED
-	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
 	ets:delete(Env),
 	case Graph of 
 		true ->
@@ -105,6 +103,11 @@ get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph) ->
 		false ->
 			ok 
 	end,
+	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	[_,{memory,Words},_] = digraph:info(G),
+	io:format("Tree size : ~p words\n", [Words]),
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	edd_zoom_lib:ask(G,top_down),
 	%io:format("Env final:\n~p\n",[ets:tab2list(Env)]),
 	ok.
