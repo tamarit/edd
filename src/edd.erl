@@ -178,7 +178,7 @@ dd_internal(Expr,Strategy,Graph) ->
 	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
 	[_,{memory,Words},_] = digraph:info(G),
-	io:format("Tree size : ~p words\n", [Words]),
+	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     edd_lib:ask(G,Strategy,Graph).
 
@@ -459,8 +459,8 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	FunName = cerl:concrete(bind_vars(cerl:call_name(Call),Env0)),
 	FunArity = cerl:call_arity(Call),
 	Args = cerl:call_args(Call),
-	%io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
-%	io:format("~p\n",[Call]),
+	% io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
+	% io:format("~p\n",[Call]),
 	FileAdress = code:where_is_file(atom_to_list(ModName)++".erl"),
 	% Busca el erl. Si no está, busca el beam (libreria de sistema) y tunea la ruta
 	% para apuntar al ebin/ correspondiente
@@ -487,7 +487,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	        $. -> false;
 	        _ -> true
 	   end,
-	%io:format("Current module: ~p\n",[cerl:module_name(Core)]),
+	% io:format("Current module: ~p\n",[{cerl:concrete(cerl:module_name(Core)),Trusted}]),
 	case {cerl:concrete(cerl:module_name(Core)),Trusted} of
 	     {ModName,false} -> % Call de una función en el mismo módulo
 	     	get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
@@ -500,6 +500,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	                     Env0,G,ModCore,FreeV,false);
 	     _ -> % Es trusted
 	     	BArgs = lists:map(fun(Arg) -> bind_vars(Arg,Env0) end,Args),
+	     	% io:format("Args: ~p\nBArgs: ~p\n",[Args, BArgs]),
 	     	NoLits = 
 		     	case [BArg || BArg = {anonymous_function,_,_,_,_,_} <- BArgs] of
 		     	     [] ->
@@ -735,6 +736,7 @@ bind_vars(Expr,Env) ->
 
 get_abstract_from_core_literal(Lit) ->
 	{c_literal,_,Lit_} = Lit, 
+	% io:format("Lit: ~p\n",[Lit]),
 	{ok,[ALit|_]} = edd_lib:parse_expr(lists:flatten(io_lib:format("~w",[Lit_])++".")),
 	ALit.
 

@@ -106,7 +106,7 @@ get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph) ->
 	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
 	[_,{memory,Words},_] = digraph:info(G),
-	io:format("Tree size : ~p words\n", [Words]),
+	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	edd_zoom_lib:ask(G,top_down),
 	%io:format("Env final:\n~p\n",[ets:tab2list(Env)]),

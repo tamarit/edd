@@ -269,7 +269,7 @@ look_for_root(G)->
 
 asking_loop(_,Strategy,[],Correct,NotCorrect,Unknown,State) -> 
 	{Correct,NotCorrect,Unknown,State,Strategy};
-asking_loop(_,Strategy,[-1],_,_,_,_) -> {[-1],[-1],[-1],[],Strategy};
+asking_loop(_,Strategy,[-1],_,_,_,_) -> {[-1],[-1],[-1],[],Strategy};
 asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	VerticesWithValues = 
 	  case Strategy of 
@@ -325,13 +325,23 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	                                  get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)]),
 	             {Vertices -- NewCorrect,NewCorrect ++ Correct,NotCorrect,Unknown,
 	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
-	        s -> case get_answer("Select a strategy (Didide & Query or "
-	                  ++"Top Down): [d/t] ",[t,d]) of
-	                  t -> 
-	                     {Vertices,Correct,NotCorrect,Unknown,State,top_down};
-	                  d -> 
-	                     {Vertices,Correct,NotCorrect,Unknown,State,divide_query}
-	             end;
+	        s -> 
+	            PrintStrategy = 
+		        	fun
+		        		(top_down) -> "Top Down";
+		        		(divide_query) -> "Didide & Query"
+		        	end,
+	            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
+	        	SelectedStrategy = 
+		        	case get_answer("Select the new strategy (Didide & Query or "
+		                  ++"Top Down): [d/t] ",[d,t]) of
+		                  t -> 
+		                     top_down;
+		                  d -> 
+		                     divide_query
+		             end,
+	            io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
+	        	{Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy};
 	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy};
 	        _ -> {Vertices,Correct,NotCorrect,Unknown,State,Strategy}
 	   end, 
@@ -339,6 +349,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	
 ask_question(G,V)->
 	{V,{Label,_,File,Line}} = digraph:vertex(G,V),
+	% io:format("Label: ~p\n", [Label]),
 	NLabel = transform_label(lists:flatten(Label),[]),
 	case File of 
 		none ->
