@@ -713,9 +713,9 @@ build_question(Info) ->
 %falta tratar el case_if_failed
 transform_label({'let',{VarName,Value,_},_}) -> 
 	"the following variable is assigned:\n"
-	++atom_to_list(VarName) ++ " = " ++ transform_value(Value);
+	++atom_to_list(VarName) ++ " = " ++ transform_value(Value)++ ".\nIs this correct";
 transform_label({'let_multiple',{InfoVars,_},_}) -> 
-	"the following variables are assigned:\n"++get_context(InfoVars);
+	"the following variables are assigned:\n"++get_context(InfoVars)++ ".\nIs this correct";
 transform_label({case_if_clause,{_, _,ClauseNumber,guard,SuccFail,_,_}, _}) ->
 	"Guard of the " ++ get_ordinal(ClauseNumber)  ++ " clause " ++ atom_to_list(SuccFail) ++ ".\nIs this correct";
 transform_label({case_if_clause,{{ACase,Type}, ArgValue, ClauseNumber,PatGuard,SuccFail,Bindings,GuardsDeps}, _}) ->
