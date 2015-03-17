@@ -1,0 +1,88 @@
+TOP_DOWN: 1
+===========
+3> edd_zoom:zoom_graph("miller_rabin:pow_mod(2, 1, 9)").
+Total number of tree nodes: 7
+Tree size:
+        3397 words
+        27176 bytes
+
+For the case expression:
+case trunc(E) rem 2 == 0 of
+  true ->
+      trunc(math:pow(pow_mod(B, trunc(E / 2), M), 2)) rem M;
+  false -> trunc(pow_mod(B, E - 1, M)) rem M
+end
+Is there anything incorrect?
+1.- The context:
+        B = 2
+        E = 1
+        M = 9
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: 1.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 3 (bindings) + 1 (base) = 4
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 1 (base)
+Total complexity: 9
+Max complexity: 4
+
+This is the reason for the error:
+Value 1 for the final expression trunc(pow_mod(B, E - 1, M)) rem M (Line 25) is not correct.
+ok
+
+
+DIVIDE & QUERY: 1
+=================
+4> edd_zoom:zoom_graph("miller_rabin:pow_mod(2, 1, 9)").
+Total number of tree nodes: 7
+For the case expression:
+case trunc(E) rem 2 == 0 of
+  true ->
+      trunc(math:pow(pow_mod(B, trunc(E / 2), M), 2)) rem M;
+  false -> trunc(pow_mod(B, E - 1, M)) rem M
+end
+Is there anything incorrect?
+1.- The context:
+        B = 2
+        E = 1
+        M = 9
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: 1.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+For the case expression:
+case trunc(E) rem 2 == 0 of
+  true ->
+      trunc(math:pow(pow_mod(B, trunc(E / 2), M), 2)) rem M;
+  false -> trunc(pow_mod(B, E - 1, M)) rem M
+end
+Is there anything incorrect?
+1.- The context:
+        B = 2
+        E = 1
+        M = 9
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: 1.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 3 (bindings) + 1 (base) = 4
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 1 (base)
+Total complexity: 9
+Max complexity: 4
+
+
+This is the reason for the error:
+Value 1 for the final expression trunc(pow_mod(B, E - 1, M)) rem M (Line 25) is not correct.
+ok
+
+

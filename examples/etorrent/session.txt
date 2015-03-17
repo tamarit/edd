@@ -1,0 +1,149 @@
+Divide & Query
+==============
+3> edd:dd("etorrent_dht_net:decode_msg(\"e\")",tree).
+Total number of tree nodes: 4
+Tree size:
+        1552 words
+        12416 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+etorrent_bcoding:decode("e") = {ok, end_of_data}? [y/n/t/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+etorrent_bcoding:decode("e") = {ok, end_of_data}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 1 (base) = 4
+
+etorrent_bcoding:get_value(<<116>>, {ok, end_of_data}) = {error, function_clause}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 8 (data structures) + 1 (base) = 9
+Total complexity: 13
+Max complexity: 9
+
+Call to a function that contains an error:
+etorrent_dht_net:decode_msg("e") = {error, function_clause}
+Please, revise the first clause:
+decode_msg(InMsg) ->
+    Msg = etorrent_bcoding:decode(InMsg),
+    MsgID = get_value(<<"t">>, Msg),
+    case get_value(<<"y">>, Msg) of
+      <<"q">> ->
+          MString = get_value(<<"q">>, Msg),
+          Method = string_to_method(MString),
+          Params = get_value(<<"a">>, Msg),
+          {Method, MsgID, Params};
+      <<"r">> ->
+          Values = get_value(<<"r">>, Msg),
+          {response, MsgID, Values};
+      <<"e">> ->
+          [ECode, EMsg] = get_value(<<"e">>, Msg),
+          {error, MsgID, ECode, EMsg}
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 4
+Tree size:
+        1765 words
+        14120 bytes
+Given the context:
+        Msg = {ok,end_of_data},
+the following variable is assigned:
+MsgID = ** function_clause **? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+Given the context:
+        Msg = {ok,end_of_data},
+the following variable is assigned:
+MsgID = ** function_clause **? [y/n/d/i/s/u/a]: i
+
+Complexity: 3 (data structures) + 2 (bindings) + 1 (base) = 6
+
+Given the context:
+        InMsg = "e",
+the following variable is assigned:
+Msg = {ok,end_of_data}? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 2 (bindings) + 1 (base) = 6
+Total complexity: 12
+Max complexity: 6
+
+This is the reason for the error:
+Variable Msg is badly assigned {ok,end_of_data} in the expression:
+Msg = etorrent_bcoding:decode(InMsg) (line 619).
+ok
+
+
+
+------------------
+Top Down
+========
+4> edd:dd("etorrent_dht_net:decode_msg(\"e\")",tree).
+Total number of tree nodes: 4
+Tree size:
+        1552 words
+        12416 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+etorrent_bcoding:decode("e") = {ok, end_of_data}? [y/n/t/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] t
+etorrent_bcoding:decode("e") = {ok, end_of_data}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 1 (base) = 4
+
+etorrent_bcoding:get_value(<<116>>, {ok, end_of_data}) = {error, function_clause}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 8 (data structures) + 1 (base) = 9
+Total complexity: 13
+Max complexity: 9
+
+Call to a function that contains an error:
+etorrent_dht_net:decode_msg("e") = {error, function_clause}
+Please, revise the first clause:
+decode_msg(InMsg) ->
+    Msg = etorrent_bcoding:decode(InMsg),
+    MsgID = get_value(<<"t">>, Msg),
+    case get_value(<<"y">>, Msg) of
+      <<"q">> ->
+          MString = get_value(<<"q">>, Msg),
+          Method = string_to_method(MString),
+          Params = get_value(<<"a">>, Msg),
+          {Method, MsgID, Params};
+      <<"r">> ->
+          Values = get_value(<<"r">>, Msg),
+          {response, MsgID, Values};
+      <<"e">> ->
+          [ECode, EMsg] = get_value(<<"e">>, Msg),
+          {error, MsgID, ECode, EMsg}
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 4
+Tree size:
+        1765 words
+        14120 bytes
+
+Given the context:
+        Msg = {ok,end_of_data},
+the following variable is assigned:
+MsgID = ** function_clause **? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+Given the context:
+        Msg = {ok,end_of_data},
+the following variable is assigned:
+MsgID = ** function_clause **? [y/n/d/i/s/u/a]: i
+
+Complexity: 3 (data structures) + 2 (bindings) + 1 (base) = 6
+
+Given the context:
+        InMsg = "e",
+the following variable is assigned:
+Msg = {ok,end_of_data}? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 2 (bindings) + 1 (base) = 6
+Total complexity: 12
+Max complexity: 6
+
+
+This is the reason for the error:
+Variable Msg is badly assigned {ok,end_of_data} in the expression:
+Msg = etorrent_bcoding:decode(InMsg) (line 619).
+ok
+

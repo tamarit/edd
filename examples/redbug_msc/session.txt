@@ -1,0 +1,175 @@
+--------------------------------------------------------------------
+------------------------- Divide and query -------------------------
+--------------------------------------------------------------------
+
+2> edd:dd( "redbug_msc:transform(\"lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)\")", tree).
+Tree size:
+        35378 words
+        283024 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+redbug_msc:assert(fun () ->
+                          case "(A == 1) or (A == 3) or (B == 5)" of
+                            "" -> [];
+                            _ -> {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "(A == 1) or (A == 3) or (B == 5)" ++ ". ", 1), {ok, Guards} = erl_parse:parse_exprs(Toks), [guard(G) || G <- Guards]
+                          end
+                  end,
+                  {parse_guards, "lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)"}) =
+    [{'or', {'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 2 clauses + 45 (data structures) + 1 (lambda) + 1 (base) = 49
+
+redbug_msc:parse("lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)") = {lists, seq, [{var, 'A'}, {var, 'B'}],
+              [{'or', {'==', {var, 'A'}, {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}], []}? [y/n/t/d/i/s/u/a]: y
+
+redbug_msc:compile_args([{var, 'A'}, {var, 'B'}]) = {[{'B', '$2'}, {'A', '$1'}], ['$1', '$2']}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 17 (data structures) + 1 (base) = 18
+
+redbug_msc:compile_guards([{'or', {'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'},
+                           {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}], [{'B', '$2'}, {'A', '$1'}]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 38 (data structures) + 1 (base) = 39
+
+redbug_msc:unpack_var({'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}},
+                      [{'B', '$2'}, {'A', '$1'}]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 28 (data structures) + 1 (base) = 29
+Total complexity: 135
+Max complexity: 49
+
+Call to a function that contains an error:
+redbug_msc:unpack_var({'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}}, [{'B', '$2'}, {'A', '$1'}]) = {error, match_fail}
+There is no clause matching.
+Do you want to continue the debugging session inside this function? [y/n]: y
+
+Total number of tree nodes: 6
+Tree size:
+        4324 words
+        34592 bytes
+
+In the function:
+unpack_var({Type, Val}, _) ->
+    assert_type(Type, Val), Val.
+matching with fifth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+In the function:
+unpack_var({var, Var}, Vars) ->
+    case proplists:get_value(Var, Vars) of
+      undefined -> exit({unbound_variable, Var});
+      V -> V
+    end.
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 6 (data structures) + 3 (clauses) + 1 (base) = 10
+
+In the function:
+unpack_var({Type, Val}, _) ->
+    assert_type(Type, Val), Val.
+matching with fifth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 5 (clauses) + 1 (base) = 9
+
+In the function:
+unpack_var({list, Es}, Vars) ->
+    [unpack_var(E, Vars) || E <- Es].
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 2 (clauses) + 1 (base) = 6
+
+In the function:
+unpack_var({Op, As}, Vars) when is_list(As) ->
+    unpack_op(Op, As, Vars).
+matching with fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 4 (clauses) + 1 (base) = 8
+Total complexity: 33
+Max complexity: 10
+
+This is the reason for the error:
+The pattern of the fourth clause of  function definition:
+unpack_var({Op, As}, Vars) when is_list(As) ->
+    unpack_op(Op, As, Vars).
+ok
+
+
+--------------------------------------------------------------------
+----------------------------- Top-down -----------------------------
+--------------------------------------------------------------------
+
+2> edd:dd( "redbug_msc:transform(\"lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)\")", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+redbug_msc:assert(fun () ->
+                          case "(A == 1) or (A == 3) or (B == 5)" of
+                            "" -> [];
+                            _ -> {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "(A == 1) or (A == 3) or (B == 5)" ++ ". ", 1), {ok, Guards} = erl_parse:parse_exprs(Toks), [guard(G) || G <- Guards]
+                          end
+                  end,
+                  {parse_guards, "lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)"}) =
+    [{'or', {'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}]? [y/n/t/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] t
+
+redbug_msc:parse("lists:seq(A, B) when (A == 1) or (A == 3) or (B == 5)") = {lists, seq, [{var, 'A'}, {var, 'B'}],
+                         [{'or', {'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}},
+                            {'==', {var, 'B'}, {integer, 5}}}], []}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 40 (data structures) + 1 (base) = 41
+
+redbug_msc:compile({lists, seq, [{var, 'A'}, {var, 'B'}], [{'or', {'or', {'==', {var, 'A'}, {integer, 1}},
+                   {'==', {var, 'A'}, {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}], []}) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 42 (data structures) + 1 (base) = 43
+
+redbug_msc:compile_guards([{'or', {'or', {'==', {var, 'A'}, {integer, 1}},
+                           {'==', {var, 'A'}, {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}], [{'B', '$2'}, {'A', '$1'}])
+                           = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 39 (data structures) + 1 (base) = 40
+
+redbug_msc:gd_fun({'or', {'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'},
+                  {integer, 3}}}, {'==', {var, 'B'}, {integer, 5}}}, {[{'B', '$2'}, {'A', '$1'}], []})
+                  = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 40 (data structures) + 1 (base) = 41
+
+redbug_msc:unpack_var({'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}}, [{'B', '$2'}, {'A', '$1'}])
+                  = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 28 (data structures) + 1 (base) = 29
+Total complexity: 194
+Max complexity: 43
+
+Call to a function that contains an error:
+redbug_msc:unpack_var({'or', {'==', {var, 'A'}, {integer, 1}}, {'==', {var, 'A'}, {integer, 3}}}, [{'B', '$2'}, {'A', '$1'}]) = {error, match_fail}
+There is no clause matching.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 6
+In the function:
+unpack_var({Type, Val}, _) ->
+    assert_type(Type, Val), Val.
+matching with fifth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 5 (clauses) + 1 (base) = 9
+
+In the function:
+unpack_var({Op, As}, Vars) when is_list(As) ->
+    unpack_op(Op, As, Vars).
+matching with fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 4 (clauses) + 1 (base) = 8
+Total complexity: 17
+Max complexity: 9
+
+This is the reason for the error:
+The pattern of the fourth clause of  function definition:
+unpack_var({Op, As}, Vars) when is_list(As) ->
+    unpack_op(Op, As, Vars).
+ok

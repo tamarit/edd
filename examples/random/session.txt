@@ -1,0 +1,182 @@
+We are debugging because we know the function is not working due to
+the frequency of the numbers appearing. Since there is only
+one function call, we are interested in zoon debugging.
+
+--------------------------------------------------------------------
+------------------------- Divide and query -------------------------
+--------------------------------------------------------------------
+
+2> edd:dd( "random:uniform(200)", tree).
+Total number of tree nodes: 3
+Tree size:
+        1225 words
+        9800 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+random:uniform() = 9.23008927933484102368e-2? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+random:seed0() = {3172, 9814, 20125}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 1 (base) = 5
+Total complexity: 6
+Max complexity: 5
+
+Call to a function that contains an error:
+random:uniform() = 9.23008927933484102368e-2
+Please, revise the first clause:
+uniform() ->
+    {A1, A2, A3} = case get(random_seed) of
+                     undefined -> seed0();
+                     Tuple -> Tuple
+                   end,
+    B1 = A1 * 171 rem 30269,
+    B2 = A2 * 172 rem 30307,
+    B3 = A3 * 170 rem 30323,
+    put(random_seed, {B1, B2, B3}),
+    R = A1 / 30269 + A2 / 30307 + A3 / 30323,
+    R - trunc(R).
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 11
+Tree size:
+        2616 words
+        20928 bytes
+
+Given the context:
+        Tuple = {15982,2799,9869},
+the following variables are assigned:
+        A1 = 15982
+        A2 = 2799
+        A3 = 9869? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+Given the context:
+        Tuple = {15982,2799,9869},
+the following variables are assigned:
+        A1 = 15982
+        A2 = 2799
+        A3 = 9869? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 4 (bindings) + 1 (base) = 9
+
+For the case expression:
+case get(random_seed) of
+  undefined -> seed0();
+  Tuple -> Tuple
+end
+Is there anything incorrect?
+1.- The argument value: {15982,2799,9869}.
+2.- Enter in the second clause.
+3.- The bindings:
+        Tuple = {15982,2799,9869}
+4.- The final value: {15982,2799,9869}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 5
+
+Complexity (I): 4 (data structures) + 1 (base) = 5
+Complexity (II): 2 (clauses) + 1 (base) = 3
+Complexity (III): 4 (data structures) + 1 (bindings) + 1 (base) = 6
+Complexity (IV): 4 (data structures) + 1 (base) = 5
+
+Given the context:
+        A3 = 9869,
+the following variable is assigned:
+B3 = 9965? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (bindings) + 1 (base) = 3
+
+Given the context:
+        A2 = 2799,
+the following variable is assigned:
+B2 = 26823? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (bindings) + 1 (base) = 3
+
+Given the context:
+        A1 = 15982,
+the following variable is assigned:
+B1 = 8712? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (bindings) + 1 (base) = 3
+
+Given the context:
+        A1 = 15982
+        A2 = 2799
+        A3 = 9869,
+the following variable is assigned:
+R = 0.94581636451987? [y/n/d/i/s/u/a]: n
+
+Complexity: 4 (bindings) + 1 (base) = 5
+Total complexity: 42
+Max complexity: 9
+
+This is the reason for the error:
+Variable R is badly assigned 0.94581636451987 in the expression:
+R = A1 / 30269 + A2 / 30307 + A3 / 30323 (line 89).
+ok
+
+
+
+
+
+
+--------------------------------------------------------------------
+----------------------------- Top-down -----------------------------
+--------------------------------------------------------------------
+
+2> edd:dd( "random:uniform(200)", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+random:uniform() = 9.23008927933484102368e-2? [y/n/t/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] t
+random:uniform() = 9.23008927933484102368e-2? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+random:seed0() = {3172, 9814, 20125}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 1 (base) = 5
+Total complexity: 6
+Max complexity: 5
+
+Call to a function that contains an error:
+random:uniform() = 9.23008927933484102368e-2
+Please, revise the first clause:
+uniform() ->
+    {A1, A2, A3} = case get(random_seed) of
+                     undefined -> seed0();
+                     Tuple -> Tuple
+                   end,
+    B1 = A1 * 171 rem 30269,
+    B2 = A2 * 172 rem 30307,
+    B3 = A3 * 170 rem 30323,
+    put(random_seed, {B1, B2, B3}),
+    R = A1 / 30269 + A2 / 30307 + A3 / 30323,
+    R - trunc(R).
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 11
+Given the context:
+        Tuple = {27839,21123,25074},
+the following variables are assigned:
+        A1 = 27839
+        A2 = 21123
+        A3 = 25074? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 4 (bindings) + 1 (base) = 9
+
+Given the context:
+        A1 = 27839
+        A2 = 21123
+        A3 = 25074,
+the following variable is assigned:
+R = 2.4435846174457203? [y/n/d/i/s/u/a]: n
+
+Complexity: 4 (bindings) + 1 (base) = 5
+Total complexity: 14
+Max complexity: 9
+
+This is the reason for the error:
+Variable R is badly assigned 2.4435846174457203 in the expression:
+R = A1 / 30269 + A2 / 30307 + A3 / 30323 (line 89).
+ok

@@ -1,0 +1,171 @@
+erlson:list_to_json_array([{}]).
+
+edd:dd( "erlson:list_to_json_array([{}])", tree).
+
+--------------------------------------------------------------------
+------------------------- Divide and query -------------------------
+--------------------------------------------------------------------
+
+14> edd:dd( "erlson:list_to_json_array([{}])", tree).
+Tree size:
+        3158 words
+        25264 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+mochijson2:json_encode([{throw, erlson_bad_json}], {encoder, null, false}) =
+                       [91, {exit, {json_encode, {bad_term, {throw, erlson_bad_json}}}}, 93]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 20 (data structures) + 1 (base) = 21
+
+erlson:list_to_json_term([{}]) = [{throw, erlson_bad_json}]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 6 (data structures) + 1 (base) = 7
+
+erlson:encode_json_term({}) = {throw, erlson_bad_json}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 5 (data structures) + 1 (base) = 6
+Total complexity: 34
+Max complexity: 21
+
+Call to a function that contains an error:
+erlson:encode_json_term({}) = {throw, erlson_bad_json}
+Please, revise the fifth clause:
+encode_json_term(_) -> throw(erlson_bad_json).
+
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 8
+Tree size:
+        3566 words
+        28528 bytes
+In the function:
+encode_json_term(L) when is_list(L) ->
+    try to_json_struct(L) catch
+      erlson_bad_json -> [encode_json_term(X) || X <- L]
+    end.
+matching with fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 5 (clauses) + 1 (base) = 8
+
+In the function:
+encode_json_term(X)
+    when is_binary(X);
+         is_atom(X);
+         is_integer(X);
+         is_float(X);
+         is_boolean(X) ->
+    X.
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (clauses) + 1 (base) = 3
+
+In the function:
+encode_json_term(X)
+    when is_binary(X);
+         is_atom(X);
+         is_integer(X);
+         is_float(X);
+         is_boolean(X) ->
+    X.
+guard of second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (clauses) + 1 (base) = 3
+
+In the function:
+encode_json_term([]) -> [].
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 3 (clauses) + 1 (base)
+
+In the function:
+encode_json_term(_) -> throw(erlson_bad_json).
+matching with fifth clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 5 (clauses) + 1 (base) = 6
+Total complexity: 21
+Max complexity: 8
+
+This is the reason for the error:
+The pattern of the fifth clause of  function definition:
+encode_json_term(_) -> throw(erlson_bad_json).
+ok
+
+--------------------------------------------------------------------
+----------------------------- Top-down -----------------------------
+--------------------------------------------------------------------
+
+16> edd:dd( "erlson:list_to_json_array([{}])", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+mochijson2:json_encode([{throw, erlson_bad_json}], {encoder, null, false}) = [91, {exit, {json_encode, {bad_term, {throw, erlson_bad_json}}}}, 93]? [y/n/t/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] t
+mochijson2:encode([{throw, erlson_bad_json}]) = [91, {exit, {json_encode, {bad_term, {throw, erlson_bad_json}}}}, 93]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 16 (data structures) + 1 (base) = 17
+
+erlson:list_to_json_term([{}]) = [{throw, erlson_bad_json}]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 6 (data structures) + 1 (base) = 7
+
+erlson:encode_json_term({}) = {throw, erlson_bad_json}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 5 (data structures) + 1 (base) = 6
+Total complexity: 30
+Max complexity: 17
+
+Call to a function that contains an error:
+erlson:encode_json_term({}) = {throw, erlson_bad_json}
+Please, revise the fifth clause:
+encode_json_term(_) -> throw(erlson_bad_json).
+
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 8
+In the function:
+encode_json_term(L) when is_list(L) ->
+    try to_json_struct(L) catch
+      erlson_bad_json -> [encode_json_term(X) || X <- L]
+    end.
+matching with fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+In the function:
+encode_json_term(L) when is_list(L) ->
+    try to_json_struct(L) catch
+      erlson_bad_json -> [encode_json_term(X) || X <- L]
+    end.
+matching with fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 5 (clauses) + 1 (base) = 8
+
+In the function:
+encode_json_term(X)
+    when is_binary(X);
+         is_atom(X);
+         is_integer(X);
+         is_float(X);
+         is_boolean(X) ->
+    X.
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (clauses) + 1 base = 3
+
+In the function:
+encode_json_term(_) -> throw(erlson_bad_json).
+matching with fifth clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 5 (clauses) + 1 (base) = 6
+Total complexity: 17
+Max complexity: 8
+
+This is the reason for the error:
+The pattern of the fifth clause of  function definition:
+encode_json_term(_) -> throw(erlson_bad_json).
+ok

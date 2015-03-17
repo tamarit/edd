@@ -1,0 +1,220 @@
+Divide & Query
+==============
+> edd:dd("io_lib_format_old:fwrite(\"~6.7w\n\",[11111])",tree).
+Total number of tree nodes: 25
+Tree size:
+        6127 words
+        49016 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+io_lib_format_old:collect_cseq([54, 46, 55, 119, 10], [11111])
+               = {{119, [11111], 6, right, 7, 32, latin1, true}, [10], []}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 22 (data structures) + 1 (base) = 23
+
+io_lib_format_old:pcount([{119, [11111], 6, right, 7, 32, latin1, true}, 10])
+               = 0? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 12 (data structures) + 1 (base) = 23
+
+io_lib_format_old:collect([126, 54, 46, 55, 119, 10], [11111])
+               = [{119, [11111], 6, right, 7, 32, latin1, true}, 10]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+io_lib_format_old:control(119, [11111], 6, right, 7, 32, latin1, true, 0)
+               = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 5 (data structures) + 1 (base) = 6
+
+io_lib_format_old:term("11111", 6, right, 7, 32)
+               = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 1 (base) = 4
+Total complexity: 78
+Max complexity: 23
+
+Call to a function that contains an error:
+io_lib_format_old:term("11111", 6, right, 7, 32)
+               = {error, match_fail}
+Please, revise the third clause:
+term(T, F, Adj, P0, Pad) ->
+    L = lists:flatlength(T),
+    P = case P0 of
+          none -> erlang:min(L, F);
+          _ -> P0
+        end,
+    if L > P ->
+           adjust(chars($*, P), chars(Pad, F - P), Adj);
+       F >= P -> adjust(T, chars(Pad, F - L), Adj)
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 15
+Tree size:
+        4907 words
+        39256 bytes
+For the if expression:
+if L > P ->
+       adjust(chars($*, P), chars(Pad, F - P), Adj);
+   F >= P -> adjust(T, chars(Pad, F - L), Adj)
+end
+Is there anything incorrect?
+1.- The context:
+        F = 6
+        L = 5
+        P = 7
+2.- Does not enter in any clause.
+3.- Nothing.
+[1/2/3/d/s/u/a]? 1
+Related variables:
+        1.- F = 6
+        2.- L = 5
+        3.- P = 7
+What value is wrong? 3
+
+Complexity (just one question in two steps): 3 (binginds) + 1 (base) = 4
+
+Given the context:
+        F = 6
+        L = 5
+        P0 = 7,
+the following variable is assigned:
+P = 7? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (bindings) + 1 (base) = 4
+
+For the case expression:
+case P0 of
+  none -> erlang:min(L, F);
+  _ -> P0
+end
+Is there anything incorrect?
+1.- The context:
+        P0 = 7
+2.- The argument value: 7.
+3.- Enter in the second clause.
+4.- The final value: 7.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 1 (bindings) + 1 (base) = 2
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 1 (base)
+Total complexity: 15
+Max complexity: 4
+
+This is the reason for the error:
+Value 7 for the final expression P0 (line 259) is not correct.
+ok
+
+------------------
+Top Down
+========
+
+>  edd:dd("io_lib_format_old:fwrite(\"~6.7w\n\",[11111])",tree,top_down).
+Total number of tree nodes: 25
+Tree size:
+        6127 words
+        49016 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+io_lib_format_old:collect([126, 54, 46, 55, 119, 10], [11111])
+           = [{119, [11111], 6, right, 7, 32, latin1, true}, 10]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+io_lib_format_old:pcount([{119, [11111], 6, right, 7, 32, latin1, true}, 10])
+           = 0? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 12 (data structures) + 1 (base) = 13
+
+io_lib_format_old:build([{119, [11111], 6, right, 7, 32, latin1, true}, 10], 0, 0)
+           = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 15 (data structures) + 1 (base) = 16
+
+io_lib_format_old:control(119, [11111], 6, right, 7, 32, latin1, true, 0)
+           = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 13 (data structures) + 1 (base) = 14
+
+io_lib_format_old:term("11111", 6, right, 7, 32)
+           = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 1 (base) = 4
+Total complexity: 69
+Max complexity: 22
+
+Call to a function that contains an error:
+io_lib_format_old:term("11111", 6, right, 7, 32)
+           = {error, match_fail}
+Please, revise the third clause:
+term(T, F, Adj, P0, Pad) ->
+    L = lists:flatlength(T),
+    P = case P0 of
+          none -> erlang:min(L, F);
+          _ -> P0
+        end,
+    if L > P ->
+           adjust(chars($*, P), chars(Pad, F - P), Adj);
+       F >= P -> adjust(T, chars(Pad, F - L), Adj)
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 15
+Tree size:
+        4907 words
+        39256 bytes
+For the if expression:
+if L > P ->
+       adjust(chars($*, P), chars(Pad, F - P), Adj);
+   F >= P -> adjust(T, chars(Pad, F - L), Adj)
+end
+Is there anything incorrect?
+1.- The context:
+        F = 6
+        L = 5
+        P = 7
+2.- Does not enter in any clause.
+3.- Nothing.
+[1/2/3/d/s/u/a]? 1
+Related variables:
+        1.- F = 6
+        2.- L = 5
+        3.- P = 7
+What value is wrong? 3
+
+Complexity (just one question in two steps): 3 (binginds) + 1 (base) = 4
+
+Given the context:
+        F = 6
+        L = 5
+        P0 = 7,
+the following variable is assigned:
+P = 7? [y/n/d/i/s/u/a]: n
+
+Complexity: 3 (bindings) + 1 (base) = 4
+
+For the case expression:
+case P0 of
+  none -> erlang:min(L, F);
+  _ -> P0
+end
+Is there anything incorrect?
+1.- The context:
+        P0 = 7
+2.- The argument value: 7.
+3.- Enter in the second clause.
+4.- The final value: 7.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 1 (bindings) + 1 (base) = 2
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 1 (base)
+Total complexity: 15
+Max complexity: 4
+
+
+This is the reason for the error:
+Value 7 for the final expression P0 (line 259) is not correct.
+ok

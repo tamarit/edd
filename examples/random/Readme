@@ -1,0 +1,7 @@
+random (from OTP/Erlang)
+========================
+Bug: https://github.com/erlang/otp/commit/9f78db422a8facfaad909a656ffabeb27f8fe2fd
+Fix: https://github.com/erlang/otp/commit/c50f179a15ad8c8bcbc7a71101a9ca23f19f6e8f
+
+Files involved:
+  115 random.erl

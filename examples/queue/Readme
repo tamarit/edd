@@ -1,0 +1,7 @@
+queue (from OTP/Erlang)
+=======================
+Bug: https://github.com/erlang/otp/commit/1cbd897c43f0dab1275392a3736e4629c1f80243
+Fix: https://github.com/erlang/otp/commit/f4916887e09a2bc9b0301ce0751e2e5b057cb592
+
+Files involved:
+  487 queue.erl

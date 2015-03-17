@@ -1,0 +1,149 @@
+DIVIDE AND QUERY
+----------------
+7> edd:dd("luerl_lib_basic:first_key({empty,<<\"key\">>,nil,empty})", tree).
+Total number of tree nodes: 3
+Tree size:
+        1425 words
+        11400 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+ttdict:first({empty, <<107, 101, 121>>, nil, empty}) = {ok, {<<107, 101, 121>>, nil}}? [y/n/t/d/i/s/u/a]: s
+
+Current strategy is Didide & Query.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+ttdict:first({empty, <<107, 101, 121>>, nil, empty}) = {ok, {<<107, 101, 121>>, nil}}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+Total complexity: 16
+Max complexity: 16
+
+Call to a function that contains an error:
+luerl_lib_basic:first_key({empty, <<107, 101, 121>>, nil, empty}) = [<<107, 101, 121>>, nil]
+Please, revise the first clause:
+first_key(Tab) ->
+    case ttdict:first(Tab) of
+      {ok, {K, V}} -> [K, V];
+      error -> [nil]
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 5
+Tree size:
+        2051 words
+        16408 bytes
+For the case expression:
+case ttdict:first(Tab) of
+  {ok, {K, V}} -> [K, V];
+  error -> [nil]
+end
+Is there anything incorrect?
+1.- The context:
+        Tab = {empty,<<"key">>,nil,empty}
+2.- The argument value: {ok,{<<"key">>,nil}}.
+3.- Enter in the first clause.
+4.- The bindings:
+        V = nil
+        K = <<"key">>
+5.- The final value: [<<"key">>,nil].
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? s
+
+Current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+For the case expression:
+case ttdict:first(Tab) of
+  {ok, {K, V}} -> [K, V];
+  error -> [nil]
+end
+Is there anything incorrect?
+1.- The context:
+        Tab = {empty,<<"key">>,nil,empty}
+2.- The argument value: {ok,{<<"key">>,nil}}.
+3.- Enter in the first clause.
+4.- The bindings:
+        V = nil
+        K = <<"key">>
+5.- The final value: [<<"key">>,nil].
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 6 (data structures) + 1 (bindings) + 1 (base) = 8
+Complexity (II): 6 (data structures) + 1 (bindings) + 1 (base) = 8
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 2 (data structures) + 2 (bindings) + 1 (base) = 5
+Complexity (V): 4 (data structures) + 1 (base) = 5
+Total complexity: 28
+Max complexity: 8
+
+This is the reason for the error:
+Value [<<"key">>,nil] for the final expression [K, V] (line 183) is not correct.
+ok
+
+
+
+
+
+
+-------------------------
+TOP DOWN
+-------------------------
+8> edd:dd("luerl_lib_basic:first_key({empty,<<\"key\">>,nil,empty})", tree).
+Total number of tree nodes: 3
+Tree size:
+        1425 words
+        11400 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+ttdict:first({empty, <<107, 101, 121>>, nil, empty}) = {ok, {<<107, 101, 121>>, nil}}? [y/n/t/d/i/s/u/a]: s
+
+Current strategy is Didide & Query.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+ttdict:first({empty, <<107, 101, 121>>, nil, empty}) = {ok, {<<107, 101, 121>>, nil}}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+Total complexity: 16
+Max complexity: 16
+
+Call to a function that contains an error:
+luerl_lib_basic:first_key({empty, <<107, 101, 121>>, nil, empty}) = [<<107, 101, 121>>, nil]
+Please, revise the first clause:
+first_key(Tab) ->
+    case ttdict:first(Tab) of
+      {ok, {K, V}} -> [K, V];
+      error -> [nil]
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 5
+Tree size:
+        2051 words
+        16408 bytes
+For the case expression:
+case ttdict:first(Tab) of
+  {ok, {K, V}} -> [K, V];
+  error -> [nil]
+end
+Is there anything incorrect?
+1.- The context:
+        Tab = {empty,<<"key">>,nil,empty}
+2.- The argument value: {ok,{<<"key">>,nil}}.
+3.- Enter in the first clause.
+4.- The bindings:
+        V = nil
+        K = <<"key">>
+5.- The final value: [<<"key">>,nil].
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 6 (data structures) + 1 (bindings) + 1 (base) = 8
+Complexity (II): 6 (data structures) + 1 (bindings) + 1 (base) = 8
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 2 (data structures) + 2 (bindings) + 1 (base) = 5
+Complexity (V): 4 (data structures) + 1 (base) = 5
+Total complexity: 28
+Max complexity: 8
+
+
+This is the reason for the error:
+Value [<<"key">>,nil] for the final expression [K, V] (line 183) is not correct.
+ok
+

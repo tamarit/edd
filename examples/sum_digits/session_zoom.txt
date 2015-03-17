@@ -1,0 +1,57 @@
+TOP_DOWN: 2
+===========
+3> edd_zoom:zoom_graph("sum_digits:sum_digits(1, 10, 18)").
+Total number of tree nodes: 4
+Tree size:
+        1644 words
+        13152 bytes
+In the function:
+sum_digits(N, B, Acc) when N < B -> Acc.
+pattern of second clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (clauses) + 1 (base) = 3
+
+In the function:
+sum_digits(0, _, Acc) -> Acc.
+pattern of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clauses) + 1 (base) = 2
+Total complexity: 5
+Max complexity: 3
+
+This is the reason for the error:
+Value 18 for the final expression Acc (Line 14) is not correct.
+ok
+
+
+DIVIDE & QUERY: 2
+=================
+4> edd_zoom:zoom_graph("sum_digits:sum_digits(1, 10, 18)").
+Total number of tree nodes: 4
+In the function:
+sum_digits(N, B, Acc) when N < B -> Acc.
+pattern of second clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+In the function:
+sum_digits(N, B, Acc) when N < B -> Acc.
+pattern of second clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (clauses) + 1 (base) = 3
+
+In the function:
+sum_digits(0, _, Acc) -> Acc.
+pattern of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clauses) + 1 (base) = 2
+Total complexity: 5
+Max complexity: 3
+
+This is the reason for the error:
+Value 18 for the final expression Acc (Line 14) is not correct.
+ok
+

@@ -1,0 +1,11 @@
+ETORRENT
+========
+Bug: https://github.com/edwardw/etorrent/commit/2e17a39126aec85211dbb49e7e32429997916a3b
+Fix: https://github.com/edwardw/etorrent/commit/d9d8cc13bab2eaa1ce282971901b7a29bf9bc942
+
+Files involved:
+  219 etorrent_bcoding.erl
+  886 etorrent_dht_net.erl
+   11 log.hrl
+   44 types.hrl
+ 1160 total

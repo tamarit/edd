@@ -1,0 +1,21 @@
+> edd:dd("g24:test([9,2,2,3],\"(9*2)+(2*3)\")").
+Your digits     [9,2,2,3]
+Your expression "(9*2)+(2*3)"
+The following numbers are wrong: []
+Total number of tree nodes: 19
+Tree size:
+        3759 words
+        30072 bytes
+
+You Lose with 12!
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: 
+g24:eval("+(2*3)", 18) = {12, []}? [y/n/t/d/i/s/u/a]: n
+g24:eval("*3)", 2) = {6, []}? [y/n/t/d/i/s/u/a]: y
+g24:eval("(2*3)", 0) = {6, []}? [y/n/t/d/i/s/u/a]: y
+g24:eval([], 12) = {12, []}? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+g24:eval("+(2*3)", 18) = {12, []}
+Please, revise the sixth clause:
+eval([$+ | Rest], Val) ->
+    {NewOperand, Exp} = eval(Rest, 0),
+    eval(Exp, Val - NewOperand).

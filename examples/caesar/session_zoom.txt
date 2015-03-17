@@ -1,0 +1,88 @@
+TOP_DOWN: 3
+============
+3> edd_zoom:zoom_graph("caesar:rot(109, 23)").
+Total number of tree nodes: 5
+Tree size:
+        1776 words
+        14208 bytes
+In the function:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+pattern of first clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+
+Given the context:
+        Char = 109
+        Offset = 97,
+the following variable is asigned:
+N = 12? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (bindings) + 1 (base) = 4
+
+Given the context:
+        Char = 109,
+the following variable is asigned:
+Offset = 97? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (bindings) + 1 (base) = 3
+Total complexity: 9
+Max complexity: 4
+
+This is the reason for the error:
+Value 86 for the final expression Offset + (N - Key) rem 26 (Line 14) is not correct.
+ok
+
+
+
+DIVIDE & QUERY: 3
+==================
+4> edd_zoom:zoom_graph("caesar:rot(109, 23)").
+Total number of tree nodes: 5
+In the function:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+pattern of first clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+In the function:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+pattern of first clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+
+Given the context:
+        Char = 109,
+the following variable is asigned:
+Offset = 97? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (bindings) + 1 (base) = 3
+
+Given the context:
+        Char = 109
+        Offset = 97,
+the following variable is asigned:
+N = 12? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (bindings) + 1 (base) = 4
+Total complexity: 9
+Max complexity: 4
+
+This is the reason for the error:
+Value 86 for the final expression Offset + (N - Key) rem 26 (Line 14) is not correct.
+ok

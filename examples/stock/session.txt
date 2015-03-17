@@ -1,0 +1,193 @@
+DIVIDE & QUERY
+==============
+
+6> edd:dd( "stock:test()", tree ).
+Total number of tree nodes: 14
+Tree size:
+        4166 words
+        33328 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+stock:unify_orders([{item, water, 3}, {item, rice, 3}, {item, rice, 4}]) = [{item, water, 3}, {item, rice, 7}]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 22 (data structures) + 1 (base) = 23
+
+stock:check_order([{item, water, 3}, {item, rice, 7}], [{item, rice, 5}, {item, bajoqueta, 8}]) = [{item, water, 3}, {item, rice, 7}]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 27 (data structures) + 1 (base) = 28
+
+fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, water, 3}) = {true, {item, water, 3}}
+fun location: (stock.erl, line 28)? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 19 (data structures) + 1 (lambda) + 1 (base) = 21
+
+fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, rice, 7}) = {true, {item, rice, 7}}
+fun location: (stock.erl, line 28)? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 19 (data structures) + 1 (lambda) + 1 (base) = 21
+
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 19 (data structures) + 1 (base) = 20
+Total complexity: 113
+Max complexity: 28
+
+Call to a function that contains an error:
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}
+Please, revise the first clause:
+check_item(Needed = {item, Name, Q1}, Stock) ->
+    ItemStock = lists:keyfind(Name, 1, Stock),
+    case ItemStock of
+      {item, Name, Q2} ->
+          if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+             true -> false
+          end;
+      false -> {true, Needed}
+    end.
+
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 7
+Tree size:
+        2616 words
+        20928 bytes
+
+For the case expression:
+case ItemStock of
+  {item, Name, Q2} ->
+      if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+         true -> false
+      end;
+  false -> {true, Needed}
+end
+Is there anything incorrect?
+1.- The context:
+        ItemStock = false
+        Needed = {item,rice,7}
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: {true,{item,rice,7}}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? s
+The current strategy is Didide & Query.Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Didide & Query.
+
+For the case expression:
+case ItemStock of
+  {item, Name, Q2} ->
+      if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+         true -> false
+      end;
+  false -> {true, Needed}
+end
+Is there anything incorrect?
+1.- The context:
+        ItemStock = false
+        Needed = {item,rice,7}
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: {true,{item,rice,7}}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 5
+
+Complexity (I): 4 (data structures) + 2 (bindings) + 1 (base) = 7
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 6 (data structures) + 1 (base) = 7
+
+Given the context:
+        Name = rice
+        Stock = [{item,rice,5},{item,bajoqueta,8}],
+the following variable is assigned:
+ItemStock = false? [y/n/d/i/s/u/a]: n
+
+Complexity: 9 (data structures) + 3 (bindings) + 1 (base) = 13
+Total complexity: 31
+Max complexity: 13
+
+This is the reason for the error:
+Variable ItemStock is badly assigned false in the expression:
+ItemStock = lists:keyfind(Name, 1, Stock) (line 38).
+ok
+
+
+TOP DOWN
+========
+8> edd:dd( "stock:test()", tree, top_down ).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+stock:check_orders([[{item, water, 3}, {item, rice, 3}], [{item, rice, 4}]],
+                   [{item, rice, 5}, {item, bajoqueta, 8}]) = [{item, water, 3}, {item, rice, 7}]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 33 (data structures) + 1 (base) = 34
+
+stock:unify_orders([{item, water, 3}, {item, rice, 3}, {item, rice, 4}])
+                    = [{item, water, 3}, {item, rice, 7}]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 22 (data structures) + 1 (base) = 23
+
+stock:check_order([{item, water, 3}, {item, rice, 7}], [{item, rice, 5}, {item, bajoqueta, 8}])
+                    = [{item, water, 3}, {item, rice, 7}]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 27 (data structures) + 1 (base) = 28
+
+fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, rice, 7}) = {true, {item, rice, 7}}
+fun location: (stock.erl, line 28)? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 19 (data structures) + 1 (lambda) + 1 (base) = 21
+
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}])
+                   = {true, {item, rice, 7}}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 19 (data structures) + 1 (base) = 20
+Total complexity: 127
+Max complexity: 34
+
+Call to a function that contains an error:
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}
+Please, revise the first clause:
+check_item(Needed = {item, Name, Q1}, Stock) ->
+    ItemStock = lists:keyfind(Name, 1, Stock),
+    case ItemStock of
+      {item, Name, Q2} ->
+          if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+             true -> false
+          end;
+      false -> {true, Needed}
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 7
+For the case expression:
+case ItemStock of
+  {item, Name, Q2} ->
+      if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+         true -> false
+      end;
+  false -> {true, Needed}
+end
+Is there anything incorrect?
+1.- The context:
+        ItemStock = false
+        Needed = {item,rice,7}
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: {true,{item,rice,7}}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 5
+
+Complexity (I): 4 (data structures) + 2 (bindings) + 1 (base) = 7
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 6 (data structures) + 1 (base) = 7
+
+Given the context:
+        Name = rice
+        Stock = [{item,rice,5},{item,bajoqueta,8}],
+the following variable is assigned:
+ItemStock = false? [y/n/d/i/s/u/a]: n
+
+Complexity: 9 (data structures) + 3 (bindings) + 1 (base) = 13
+
+This is the reason for the error:
+Variable ItemStock is badly assigned false in the expression:
+ItemStock = lists:keyfind(Name, 1, Stock) (line 38).
+ok
+

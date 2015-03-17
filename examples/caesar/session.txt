@@ -1,0 +1,86 @@
+> edd:dd("caesar:test()").
+Plaintext ----> The five boxing wizards jump quickly
+Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
+Total number of tree nodes: 148
+Tree size:
+        19052 words
+        152416 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+caesar:rot(122, 3) = 119? [y/n/t/d/i/s/u/a]: n
+Call to a function that contains an error:
+caesar:rot(122, 3) = 119
+Please, revise the first clause:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+
+
+
+
+
+
+
+DIVIDE AND QUERY: 2 questions
+=================================
+8> edd:dd("caesar:test()", tree).
+Plaintext ----> The five boxing wizards jump quickly
+Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+fun (Char) -> rot(Char, 23) end(109) = 86
+fun location: (caesar.erl, line 35)? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (lambda) + 1 (base) = 2
+
+caesar:rot(109, 23) = 86? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+Total complexity: 3
+Max complexity: 2
+
+Call to a function that contains an error:
+caesar:rot(109, 23) = 86
+Please, revise the first clause:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+ok
+
+TOP DOWN: 3 questions
+=====================
+9> edd:dd("caesar:test()", tree, top_down).
+Plaintext ----> The five boxing wizards jump quickly
+Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+caesar:main("The five boxing wizards jump quickly", 3) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 1 (base) = 4
+
+fun (Char) -> rot(Char, 23) end(118) = 95
+fun location: (caesar.erl, line 35)? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (lambda) + 1 (base) = 2
+
+caesar:rot(118, 23) = 95? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+Total complexity: 4
+Max complexity: 7
+
+Call to a function that contains an error:
+caesar:rot(118, 23) = 95
+Please, revise the first clause:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+           (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+ok
+

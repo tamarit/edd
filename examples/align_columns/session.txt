@@ -1,0 +1,129 @@
+> edd:dd("align_columns:align_left()").
+Given     a         text      file  of    many     lines     where   fields within a     line
+are       delineatedby        a     single'dollar' character,write   a      program
+that      aligns    each      columnof    fields   by        ensuringthat   words  in    each
+column    are       separated by    at    least    one       space.
+Further,  allow     for       each  word  in       a         column  to     be     eitherleft
+justified,right     justified,or    centerjustifiedwithin    its     column.
+
+Total number of tree nodes: 32
+Tree size:
+        42552 words
+        340416 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+align_columns:max_length(["column", "are", "separated", "by", "at", "least", "one", "space."], [5, 10, 4, 6, 6, 8, 10, 8, 6, 7, 2, 4]) = [6, 10, 9, 6, 6, 8, 10, 8, 6, 7, 2, 4]? [y/n/t/d/i/s/u/a]: t
+align_columns:prepare_line(["are", "delineated", "by", "a", "single", "'dollar'", "character,", "write", "a", "program"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["are       ", "delineated", "by        ", "a     ", "single", "'dollar' ", "character,",
+     "write   ", "a      ", "program", "      ", "    "]? [y/n/t/d/i/s/u/a]: n
+align_columns:adjust_list(["are", "delineated", "by", "a", "single", "'dollar'", "character,", "write", "a", "program"],
+                          12, []) =
+    ["are", "delineated", "by", "a", "single", "'dollar'", "character,", "write", "a", "program", [], []]? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+align_columns:prepare_line(["are", "delineated", "by", "a", "single", "'dollar'", "character,", "write", "a", "program"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["are       ", "delineated", "by        ", "a     ", "single", "'dollar' ", "character,",
+     "write   ", "a      ", "program", "      ", "    "]
+Please, revise the first clause:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length), ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length, $\s])
+     || {Word, Length} <- Zipped].
+
+
+
+
+DIVIDE & QUERY: 3
+=================
+> edd:dd("align_columns:align_left()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+align_columns:max_length(["that", "aligns", "each", "column", "of", "fields",
+                          "by", "ensuring", "that", "words", "in", "each"], [5, 10, 4, 4, 6, 8, 10, 5, 6, 7, 1, 4])
+                = [5, 10, 4, 6, 6, 8, 10, 8, 6, 7, 2, 4]? [y/n/t/d/i/s/u/a]: t
+
+Complexity: 39 (data structures) + 1 (base) = 40
+
+align_columns:prepare_line(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["Further, ", "allow    ", "for      ", "each ", "word ", "in      ", "a        ", "column ",
+     "to    ", "be    ", "eithe", "lef"]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 39 (data structures) + 1 (base) = 40
+
+align_columns:adjust_list(["Further,", "allow", "for", "each", "word", "in", "a", "column",
+                           "to", "be", "either", "left"], 12, [])
+                = ["Further,", "allow", "for", "each", "word", "in", "a", "column", "to",
+                   "be", "either", "left"]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 27 (data structures) + 1 (base) = 28
+Total complexity: 108
+Max complexity: 40
+
+Call to a function that contains an error:
+align_columns:prepare_line(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["Further, ", "allow    ", "for      ", "each ", "word ", "in      ", "a        ", "column ",
+     "to    ", "be    ", "eithe", "lef"]
+Please, revise the first clause:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length), ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $ ])
+     || {Word, Length} <- Zipped].
+
+
+TOP DOWN: 3
+===========
+4> edd:dd("align_columns:align_left()").
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+align_columns:max_length(["that", "aligns", "each", "column", "of", "fields", "by", "ensuring", "that", "words", "in",
+                          "each"],
+                         [5, 10, 4, 4, 6, 8, 10, 5, 6, 7, 1, 4]) =
+    [5, 10, 4, 6, 6, 8, 10, 8, 6, 7, 2, 4]? [y/n/t/d/i/s/u/a]: t
+Complexity: 39 (data structures) + 1 (base) = 40
+
+
+align_columns:prepare_line(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["Further, ", "allow    ", "for      ", "each ", "word ", "in      ", "a        ", "column ",
+     "to    ", "be    ", "eithe", "lef"]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 39 (data structures) + 1 (base) = 40
+
+align_columns:adjust_list(["Further,", "allow", "for", "each", "word", "in", "a", "column",
+                           "to", "be", "either", "left"], 12, [])
+           = ["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be",
+              "either", "left"]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 27 (data structures) + 1 (base) = 28
+Total complexity: 108
+Max complexity: 40
+
+Call to a function that contains an error:
+align_columns:prepare_line(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left) =
+    ["Further, ", "allow    ", "for      ", "each ", "word ", "in      ", "a        ", "column ",
+     "to    ", "be    ", "eithe", "lef"]
+Please, revise the first clause:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length), ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $ ])
+     || {Word, Length} <- Zipped].
+ok
+
+
+
+
+
+
+
+
+
+align_columns:prepare_line(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"], [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left)
+"align_columns:prepare_line([\"Further,\", \"allow\", \"for\", \"each\", \"word\", \"in\", \"a\", \"column\", \"to\", \"be\", \"either\", \"left\"], [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left)"
+

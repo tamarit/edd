@@ -1,0 +1,138 @@
+TOP_DOWN: 2 (9)
+===============
+4> edd_zoom:zoom_graph("g24:correct_nums(\"(9*2)+(2*3)\", [9, 2, 2, 3])").
+Total number of tree nodes: 9
+Tree size:
+        4075 words
+        32600 bytes
+For the case expression:
+case re:run(Exp, "([0-9]+)",
+            [global, {capture, all_but_first, list}])
+    of
+  nomatch -> "No number entered";
+  {match, IntLs} ->
+      case [X
+            || [X] <- IntLs,
+               not lists:member(list_to_integer(X), Digits)]
+          of
+        [] -> [];
+        L -> L
+      end
+end
+Is there anything incorret?
+1.- The context:
+        Digits = [9,2,2,3]
+        Exp = "(9*2)+(2*3)"
+2.- The argument value: {match,[["9"],["2"],["2"],["3"]]}.
+3.- Enter in the second clause.
+4.- The bindings:
+        IntLs = [["9"],["2"],["2"],["3"]]
+5.- The final value: [].
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 5 (data structures) + 2 (bindings) + 1 (base) = 8
+Complexity (II): 11 (data structures) + 1 (base) = 12
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 9 (data structures) + 1 (bindings) + 1 (base) = 11
+Complexity (V): 1 (data structures) + 1 (base) = 2
+
+For the case expression:
+case [X
+      || [X] <- IntLs,
+         not lists:member(list_to_integer(X), Digits)]
+    of
+  [] -> [];
+  L -> L
+end
+Is there anything incorret?
+1.- The context:
+        Digits = [9,2,2,3]
+        IntLs = [["9"],["2"],["2"],["3"]]
+2.- The argument value: [].
+3.- Enter in the first clause.
+4.- The final value: [].
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 14 (data structures) + 2 (bindings) + 1 (base) = 17
+Complexity (II): 1 (data structures) + 1 (base) = 2
+Complexity (III): 1 (clauses) + 1 (base) = 2
+Complexity (IV): 1 (data structures) + 1 (base) = 2
+Total complexity: 59
+Max complexity: 17
+
+This is the reason for the error:
+Value [] for the final expression [] (Line 39) is not correct.
+ok
+
+
+
+DIVIDE & QUERY: 2 (9)
+=====================
+2> edd_zoom:zoom_graph("g24:correct_nums(\"(9*2)+(2*3)\", [9, 2, 2, 3])").
+[................]
+[1/2/3/4/5/6/d/s/u/a]? s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+For the case expression:
+case re:run(Exp, "([0-9]+)",
+            [global, {capture, all_but_first, list}])
+    of
+  nomatch -> "No number entered";
+  {match, IntLs} ->
+      case [X
+            || [X] <- IntLs,
+               not lists:member(list_to_integer(X), Digits)]
+          of
+        [] -> [];
+        L -> L
+      end
+end
+Is there anything incorrect?
+1.- The context:
+        Digits = [9,2,2,3]
+        Exp = "(9*2)+(2*3)"
+2.- The argument value: {match,[["9"],["2"],["2"],["3"]]}.
+3.- Enter in the second clause.
+4.- The bindings:
+        IntLs = [["9"],["2"],["2"],["3"]]
+5.- The final value: [].
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 5 (data structures) + 2 (bindings) + 1 (base) = 8
+Complexity (II): 11 (data structures) + 1 (base) = 12
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 9 (data structures) + 1 (bindings) + 1 (base) = 11
+Complexity (V): 1 (data structures) + 1 (base) = 2
+
+For the case expression:
+case [X
+      || [X] <- IntLs,
+         not lists:member(list_to_integer(X), Digits)]
+    of
+  [] -> [];
+  L -> L
+end
+Is there anything incorrect?
+1.- The context:
+        Digits = [9,2,2,3]
+        IntLs = [["9"],["2"],["2"],["3"]]
+2.- The argument value: [].
+3.- Enter in the first clause.
+4.- The final value: [].
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 14 (data structures) + 2 (bindings) + 1 (base) = 17
+Complexity (II): 1 (data structures) + 1 (base) = 2
+Complexity (III): 1 (clauses) + 1 (base) = 2
+Complexity (IV): 1 (data structures) + 1 (base) = 2
+Total complexity: 59
+Max complexity: 17
+
+
+This is the reason for the error:
+Value [] for the final expression [] (Line 40) is not correct.
+ok
+

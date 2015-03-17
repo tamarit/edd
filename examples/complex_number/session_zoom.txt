@@ -1,0 +1,72 @@
+TOP DOWN: 3
+===========
+4> edd_zoom:zoom_graph("complex_number:inverse({complex, 1, 3})").
+Total number of tree nodes: 6
+Tree size:
+        1741 words
+        13928 bytes
+Given the context:
+        C = {complex,1,-3}
+        Mod = 12,
+the following variable is asigned:
+ImgPart = -0.25? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 3 (bindings) + 1 (base) = 8
+
+Given the context:
+        C = {complex,1,-3}
+        Mod = 12,
+the following variable is asigned:
+RealPart = 0.08333333333333333? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 3 (bindings) + 1 (base) = 7
+
+Given the context:
+        A = {complex,1,3},
+the following variable is asigned:
+Mod = 12? [y/n/d/i/s/u/a]: n
+
+Complexity: 4 (data structures) + 2 (bindings) + 1 (base) = 7
+Total complexity: 22
+Max complexity: 8
+
+This is the reason for the error:
+Variable Mod is badly assigned 12 in the expression:
+Mod = A#complex.real * A#complex.img +
+        A#complex.img * A#complex.img (Line 47).
+ok
+
+
+DIVIDE & QUERY: 2
+=================
+5> edd_zoom:zoom_graph("complex_number:inverse({complex, 1, 3})").
+Total number of tree nodes: 6
+Given the context:
+        C = {complex,1,-3}
+        Mod = 12,
+the following variable is asigned:
+ImgPart = -0.25? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+Given the context:
+        A = {complex,1,3},
+the following variable is asigned:
+C = {complex,1,-3}? [y/n/d/i/s/u/a]: y
+
+Complexity: 8 (data structures) + 2 (bindings) + 1 (base) = 11
+
+Given the context:
+        A = {complex,1,3},
+the following variable is asigned:
+Mod = 12? [y/n/d/i/s/u/a]: n
+
+Complexity: 4 (data structures) + 2 (bindings) + 1 (base) = 7
+Total complexity: 18
+Max complexity: 11
+
+This is the reason for the error:
+Variable Mod is badly assigned 12 in the expression:
+Mod = A#complex.real * A#complex.img +
+        A#complex.img * A#complex.img (Line 47).
+ok
+
+

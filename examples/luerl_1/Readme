@@ -1,0 +1,10 @@
+Luerl - an implementation of Lua in Erlang
+==========================================
+Bug: https://github.com/rvirding/luerl/commit/70a7efc8f2106a00f4d4c98dc9a7b3921bf7d3a9
+Fix: https://github.com/rvirding/luerl/commit/457111b45b143aaa4aeafbce0aa522a00384679e
+
+Files involved:
+  428 luerl_lib_basic.erl
+  774 ttdict.erl
+  133 luerl.hrl
+ 1335 total

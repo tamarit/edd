@@ -1,0 +1,7 @@
+dns_erlang
+==========
+Bug: https://github.com/aetrion/dns_erlang/commit/938d65b264b798170d8657e45fd7e0719f43a995
+Fix: https://github.com/aetrion/dns_erlang/commit/6a05f3c4d937c695acafdcf965acf541dbdd5e0c
+
+Involved files:
+  1710 dns.erl

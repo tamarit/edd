@@ -1,0 +1,10 @@
+Erlson - Erlang Simple Object Notation
+======================================
+Bug: https://github.com/ewanmellor/erlson/commit/cae2a1e987bf6c96b8bff8693d2c15d154198164
+Fix: https://github.com/ewanmellor/erlson/commit/d0927ac7963cc9807290487460c310ada68d2a3f
+
+Files involved:
+  376 erlson.erl
+  782 mochijson2.erl
+ 1158 total
+

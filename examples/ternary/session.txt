@@ -1,0 +1,121 @@
+> edd:dd("ternary:test()").
+Total number of tree nodes: 64
+Tree size:
+        9586 words
+        76688 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+ternary:sub([-1, -1, -1, -1, 0, -1, -1], [1, -1, 1, 1, -1]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: d
+ternary:add([-1, -1, -1, -1, 0, -1, -1], [-1, 1, -1, -1, 1]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: d
+ternary:to_ternary(-436) = [-1, -1, -1, -1, 0, -1, -1]? [y/n/t/d/i/s/u/a]: n
+ternary:to_ternary(16, [0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+ternary:to_ternary(436, []) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+ternary:to_ternary(0, [1, 1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+ternary:to_ternary(1, [1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]
+Please, revise the fourth clause:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+ok
+
+
+
+
+DIVIDE & QUERY: 7
+=================
+16> edd:dd("ternary:test()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+ternary:sub([-1, -1, -1, -1, 0, -1, -1], [1, -1, 1, 1, -1]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: d
+
+Complexity: 17 (data structures) + 1 (base) = 18
+
+ternary:add([-1, -1, -1, -1, 0, -1, -1], [-1, 1, -1, -1, 1]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: d
+
+Complexity: 17 (data structures) + 1 (base) = 18
+
+ternary:to_ternary(-436) = [-1, -1, -1, -1, 0, -1, -1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 1 (base) = 9
+
+ternary:to_ternary(16, [0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 12 (data structures) + 1 (base) = 13
+
+ternary:to_ternary(1, [1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 14 (data structures) + 1 (base) = 15
+
+ternary:to_ternary(0, [1, 1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 16 (data structures) + 1 (base) = 17
+Total complexity: 106
+Max complexity: 18
+
+Call to a function that contains an error:
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]
+Please, revise the fourth clause:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+ok
+
+
+TOP-DOWN: 10
+============
+17> edd:dd("ternary:test()", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+ternary:sub([-1, -1, -1, -1, 0, -1, -1], [1, -1, 1, 1, -1]) = {error, match_fail}? [y/n/t/d/i/s/u/a]: d
+
+Complexity: 17 (data structures) + 1 (base) = 18
+
+ternary:to_ternary(-436) = [-1, -1, -1, -1, 0, -1, -1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 1 (base) = 9
+
+ternary:to_ternary(436) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 1 (base) = 9
+
+ternary:to_ternary(436, []) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 9 (data structures) + 1 (base) = 10
+
+ternary:to_ternary(145, [1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 10 (data structures) + 1 (base) = 11
+
+ternary:to_ternary(48, [1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 11 (data structures) + 1 (base) = 12
+
+ternary:to_ternary(16, [0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 12 (data structures) + 1 (base) = 13
+
+ternary:to_ternary(5, [1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 13 (data structures) + 1 (base) = 14
+
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 14 (data structures) + 1 (base) = 15
+
+ternary:to_ternary(1, [1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+Total complexity: 127
+Max complexity: 18
+
+Call to a function that contains an error:
+ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]
+Please, revise the fourth clause:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+ok
+
+

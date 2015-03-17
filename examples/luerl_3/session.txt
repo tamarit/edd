@@ -1,0 +1,181 @@
+DIVIDE AND QUERY
+----------------
+9> edd:dd("luerl_lib_math:floor([<<\"0\">>], empty)", tree).
+Total number of tree nodes: 20
+Tree size:
+        4194 words
+        33552 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+luerl_scan:string("0", 1, "0", []) = {ok, [{'NUMBER', 1, 0.0}], 1}? [y/n/t/d/i/s/u/a]: s
+
+Current strategy is Didide & Query.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+luerl_scan:string("0", 1, "0", []) = {ok, [{'NUMBER', 1, 0.0}], 1}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 9 (data structures) + 1 (base) = 10
+
+luerl_lib:tonumber(<<48>>) = 0.0? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 1 (base) = 3
+
+luerl_lib:to_loop([<<48>>], fun luerl_lib:tonumber/1, []) = [0.0]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 6 (data structures) + 1 (base) = 7
+
+luerl_lib:tonumbers([<<48>>], []) = [0.0]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 6 (data structures) + 1 (base) = 7
+
+luerl_lib:tonumbers([<<48>>]) = [0.0]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 1 (base) = 6
+Total complexity: 33
+Max complexity: 10
+
+Call to a function that contains an error:
+luerl_lib_math:floor([<<48>>], empty) = {[-1.0], empty}
+Please, revise the first clause:
+floor(As, St) ->
+    case luerl_lib:tonumbers(As) of
+      [N | _] -> {[float(round(N - 5.0e-1))], St};
+      _ -> badarg_error(floor, As, St)
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 5
+Tree size:
+        2218 words
+        17744 bytes
+For the case expression:
+case luerl_lib:tonumbers(As) of
+  [N | _] -> {[float(round(N - 5.0e-1))], St};
+  _ -> badarg_error(floor, As, St)
+end
+Is there anything incorrect?
+1.- The context:
+        As = [<<"0">>]
+        St = empty
+2.- The argument value: [0.0].
+3.- Enter in the first clause.
+4.- The bindings:
+        N = 0.0
+5.- The final value: {[-1.0],empty}.
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? s
+
+Current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+For the case expression:
+case luerl_lib:tonumbers(As) of
+  [N | _] -> {[float(round(N - 5.0e-1))], St};
+  _ -> badarg_error(floor, As, St)
+end
+Is there anything incorrect?
+1.- The context:
+        As = [<<"0">>]
+        St = empty
+2.- The argument value: [0.0].
+3.- Enter in the first clause.
+4.- The bindings:
+        N = 0.0
+5.- The final value: {[-1.0],empty}.
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 3 (data structures) + 2 (bindings) + 1 (base) = 6
+Complexity (II): 2 (data structures) + 1 (base) = 3
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 1 (bindings) + 1 (base) = 2
+Complexity (V): 4 (data structures) + 1 (base) = 5
+Total complexity: 18
+Max complexity: 6
+
+This is the reason for the error:
+Value {[-1.0],empty} for the final expression {[float(round(N - 5.0e-1))], St} (line 128) is not correct.
+ok
+
+
+
+
+TOP DOWN
+--------
+10> edd:dd("luerl_lib_math:floor([<<\"0\">>], empty)", tree).
+Total number of tree nodes: 20
+Tree size:
+        4194 words
+        33552 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+luerl_scan:string("0", 1, "0", []) = {ok, [{'NUMBER', 1, 0.0}], 1}? [y/n/t/d/i/s/u/a]: s
+
+Current strategy is Didide & Query.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+luerl_lib:tonumbers([<<48>>]) = [0.0]? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 1 (base) = 6
+Total complexity: 6
+Max complexity: 6
+
+Call to a function that contains an error:
+luerl_lib_math:floor([<<48>>], empty) = {[-1.0], empty}
+Please, revise the first clause:
+floor(As, St) ->
+    case luerl_lib:tonumbers(As) of
+      [N | _] -> {[float(round(N - 5.0e-1))], St};
+      _ -> badarg_error(floor, As, St)
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 5
+Tree size:
+        2218 words
+        17744 bytes
+For the case expression:
+case luerl_lib:tonumbers(As) of
+  [N | _] -> {[float(round(N - 5.0e-1))], St};
+  _ -> badarg_error(floor, As, St)
+end
+Is there anything incorrect?
+1.- The context:
+        As = [<<"0">>]
+        St = empty
+2.- The argument value: [0.0].
+3.- Enter in the first clause.
+4.- The bindings:
+        N = 0.0
+5.- The final value: {[-1.0],empty}.
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? s
+
+Current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+For the case expression:
+case luerl_lib:tonumbers(As) of
+  [N | _] -> {[float(round(N - 5.0e-1))], St};
+  _ -> badarg_error(floor, As, St)
+end
+Is there anything incorrect?
+1.- The context:
+        As = [<<"0">>]
+        St = empty
+2.- The argument value: [0.0].
+3.- Enter in the first clause.
+4.- The bindings:
+        N = 0.0
+5.- The final value: {[-1.0],empty}.
+6.- Nothing.
+[1/2/3/4/5/6/d/s/u/a]? 5
+
+Complexity (I): 3 (data structures) + 2 (bindings) + 1 (base) = 6
+Complexity (II): 2 (data structures) + 1 (base) = 3
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 1 (bindings) + 1 (base) = 2
+Complexity (V): 4 (data structures) + 1 (base) = 5
+Total complexity: 18
+Max complexity: 6
+
+This is the reason for the error:
+Value {[-1.0],empty} for the final expression {[float(round(N - 5.0e-1))], St} (line 128) is not correct.
+ok
+

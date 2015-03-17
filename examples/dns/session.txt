@@ -1,0 +1,131 @@
+--------------------------------------------------------------------
+------------------------- Divide and query -------------------------
+--------------------------------------------------------------------
+
+4> edd:dd( "dns:decode_message(foo)", tree).
+Tree size:
+        1013 words
+        8104 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+Call to a function that contains an error:
+dns:decode_message(foo) = {error, match_fail}
+There is no clause matching.
+Do you want to continue the debugging session inside this function? [y/n]:
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 2
+Tree size:
+        1744 words
+        13952 bytes
+
+In the function:
+decode_message(<<Id:16, QR:1, OC:4, AA:1, TC:1, RD:1,
+                 RA:1, 0:1, AD:1, CD:1, RC:4, QC:16, ANC:16, AUC:16,
+                 ADC:16, Rest/binary>> =
+                   MsgBin) ->
+    try #dns_message{id = Id, qr = decode_bool(QR), oc = OC,
+                     aa = decode_bool(AA), tc = decode_bool(TC),
+                     rd = decode_bool(RD), ra = decode_bool(RA),
+                     ad = decode_bool(AD), cd = decode_bool(CD), rc = RC,
+                     qc = QC, anc = ANC, auc = AUC, adc = ADC}
+    of
+      #dns_message{} = Msg ->
+          decode_message(questions, MsgBin, Rest, Msg)
+    catch
+      _ -> {formerr, undefined, MsgBin}
+    end.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 36 (data structures) + 3 (clauses) + 1 (base) = 40
+
+This is the reason for the error:
+The pattern of the first clause of  function definition:
+decode_message(<<Id:16, QR:1, OC:4, AA:1, TC:1, RD:1,
+                 RA:1, 0:1, AD:1, CD:1, RC:4, QC:16, ANC:16, AUC:16,
+                 ADC:16, Rest/binary>> =
+                   MsgBin) ->
+    try #dns_message{id = Id, qr = decode_bool(QR), oc = OC,
+                     aa = decode_bool(AA), tc = decode_bool(TC),
+                     rd = decode_bool(RD), ra = decode_bool(RA),
+                     ad = decode_bool(AD), cd = decode_bool(CD), rc = RC,
+                     qc = QC, anc = ANC, auc = AUC, adc = ADC}
+    of
+      #dns_message{} = Msg ->
+          decode_message(questions, MsgBin, Rest, Msg)
+    catch
+      _ -> {formerr, undefined, MsgBin}
+    end.
+ok
+
+--------------------------------------------------------------------
+----------------------------- Top-down -----------------------------
+--------------------------------------------------------------------
+
+5> edd:dd( "dns:decode_message(foo)", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+Call to a function that contains an error:
+dns:decode_message(foo) = {error, match_fail}
+There is no clause matching.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 2
+In the function:
+decode_message(<<Id:16, QR:1, OC:4, AA:1, TC:1, RD:1,
+                 RA:1, 0:1, AD:1, CD:1, RC:4, QC:16, ANC:16, AUC:16,
+                 ADC:16, Rest/binary>> =
+                   MsgBin) ->
+    try #dns_message{id = Id, qr = decode_bool(QR), oc = OC,
+                     aa = decode_bool(AA), tc = decode_bool(TC),
+                     rd = decode_bool(RD), ra = decode_bool(RA),
+                     ad = decode_bool(AD), cd = decode_bool(CD), rc = RC,
+                     qc = QC, anc = ANC, auc = AUC, adc = ADC}
+    of
+      #dns_message{} = Msg ->
+          decode_message(questions, MsgBin, Rest, Msg)
+    catch
+      _ -> {formerr, undefined, MsgBin}
+    end.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+The current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+In the function:
+decode_message(<<Id:16, QR:1, OC:4, AA:1, TC:1, RD:1,
+                 RA:1, 0:1, AD:1, CD:1, RC:4, QC:16, ANC:16, AUC:16,
+                 ADC:16, Rest/binary>> =
+                   MsgBin) ->
+    try #dns_message{id = Id, qr = decode_bool(QR), oc = OC,
+                     aa = decode_bool(AA), tc = decode_bool(TC),
+                     rd = decode_bool(RD), ra = decode_bool(RA),
+                     ad = decode_bool(AD), cd = decode_bool(CD), rc = RC,
+                     qc = QC, anc = ANC, auc = AUC, adc = ADC}
+    of
+      #dns_message{} = Msg ->
+          decode_message(questions, MsgBin, Rest, Msg)
+    catch
+      _ -> {formerr, undefined, MsgBin}
+    end.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 36 (data structures) + 3 (clauses) + 1 (base) = 40
+
+This is the reason for the error:
+The pattern of the first clause of  function definition:
+decode_message(<<Id:16, QR:1, OC:4, AA:1, TC:1, RD:1,
+                 RA:1, 0:1, AD:1, CD:1, RC:4, QC:16, ANC:16, AUC:16,
+                 ADC:16, Rest/binary>> =
+                   MsgBin) ->
+    try #dns_message{id = Id, qr = decode_bool(QR), oc = OC,
+                     aa = decode_bool(AA), tc = decode_bool(TC),
+                     rd = decode_bool(RD), ra = decode_bool(RA),
+                     ad = decode_bool(AD), cd = decode_bool(CD), rc = RC,
+                     qc = QC, anc = ANC, auc = AUC, adc = ADC}
+    of
+      #dns_message{} = Msg ->
+          decode_message(questions, MsgBin, Rest, Msg)
+    catch
+      _ -> {formerr, undefined, MsgBin}
+    end.
+ok

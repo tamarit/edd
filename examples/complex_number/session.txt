@@ -1,0 +1,80 @@
+> edd:dd("complex_number:calculate()").
+Ans = 6+5i
+Ans = -1+17i
+Ans = -1-3i
+Ans = 0.08333333333333333-0.25i
+Ans = 1-3i
+
+Tree size:
+        2331 words
+        18648 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}? [y/n/t/d/i/s/u/a]: n
+complex_number:conjugate({complex, 1, 3}) = {complex, 1, -3}? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}
+Please, revise the first clause:
+inverse(A) ->
+    C = conjugate(A),
+    Mod = A#complex.real * A#complex.img +
+            A#complex.img * A#complex.img,
+    RealPart = C#complex.real / Mod,
+    ImgPart = C#complex.img / Mod,
+    #complex{real = RealPart, img = ImgPart}.
+
+
+
+DIVIDE AND QUERY: 2
+===================
+4> edd:dd("complex_number:calculate()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 1 (base) = 9
+
+complex_number:conjugate({complex, 1, 3}) = {complex, 1, -3}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 8 (data structures) + 1 (base) = 9
+Total complexity: 18
+Max complexity: 9
+
+Call to a function that contains an error:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}
+Please, revise the first clause:
+inverse(A) ->
+    C = conjugate(A),
+    Mod = A#complex.real * A#complex.img +
+            A#complex.img * A#complex.img,
+    RealPart = C#complex.real / Mod,
+    ImgPart = C#complex.img / Mod,
+    #complex{real = RealPart, img = ImgPart}.
+ok
+
+
+TOP-DOWN: 2
+=======================
+5> edd:dd("complex_number:calculate()", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 1 (base) = 9
+
+complex_number:conjugate({complex, 1, 3}) = {complex, 1, -3}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 8 (data structures) + 1 (base) = 9
+Total complexity: 18
+Max complexity: 9
+
+Call to a function that contains an error:
+complex_number:inverse({complex, 1, 3}) = {complex, 8.33333333333333287074e-2, -2.5e-1}
+Please, revise the first clause:
+inverse(A) ->
+    C = conjugate(A),
+    Mod = A#complex.real * A#complex.img +
+            A#complex.img * A#complex.img,
+    RealPart = C#complex.real / Mod,
+    ImgPart = C#complex.img / Mod,
+    #complex{real = RealPart, img = ImgPart}.
+ok
+

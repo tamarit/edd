@@ -1,0 +1,129 @@
+%vigenere:encrypt("Attack tomorrow dawn", "lemon").
+
+Sesión con Divide & Query: 5 questions
+--------------------------------------
+4> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+Total number of tree nodes: 198
+Tree size:
+        22662 words
+        181296 bytes
+
+vigenere:normalize("Attack tomorrow dawn") = "ATTACKTOMORROWDAWN"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:normalize("lemon") = "LEMON"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:encipher(82, 69) = 86? [y/n/t/d/i/s/u/a]: t
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(13, "LEMON") = "LEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(3, "LEMON") = "LEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+Call to a function that contains an error:
+vigenere:cycle_to(3, "LEMON") = "LEMON"
+Please, revise the first clause:
+cycle_to(N, List) when length(List) >= N -> List.
+ok
+
+
+Sesión con Top Down Heaviest First: 8 questions
+-----------------------------------------------
+7> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+
+vigenere:crypt("Attack tomorrow dawn", "lemon", fun vigenere:encipher/2) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 1 (lambda) + 1 (base) = 5
+
+vigenere:normalize("Attack tomorrow dawn") = "ATTACKTOMORROWDAWN"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:normalize("lemon") = "LEMON"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:encipher(78, 77) = 90? [y/n/t/d/i/s/u/a]: t
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(18, "LEMON") = "LEMONLEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(13, "LEMON") = "LEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(8, "LEMON") = "LEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(3, "LEMON") = "LEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+Total complexity: 12
+Max complexity: 5
+
+Call to a function that contains an error:
+vigenere:cycle_to(3, "LEMON") = "LEMON"
+Please, revise the first clause:
+cycle_to(N, List) when length(List) >= N -> List.
+
+
+
+
+
+SAMPLE CODE FOR FLATTENING LET
+LLAMADA A from_pos en encipher/2
+
+let <_cor3> = apply 'to_pos'/1(P)
+  in let <_cor2> = apply 'to_pos'/1(K)
+    in let <_cor4> = call 'erlang':'+'(_cor3, _cor2)
+      in apply 'from_pos'/1(_cor4)
+
+
+
+SAMPLE CODE FOR TRANSLATING LETS INTO SEQUENCES
+función crypt/3, líneas 56-57
+
+let <PlainText> = apply 'normalize'/1(RawText)
+	in let <_cor5> = call 'erlang':'length'(PlainText)
+		in let <_cor4> = apply 'normalize'/1(RawKey)
+			in let <_cor6> = apply 'cycle_to'/2(_cor5, _cor4)
+				in call 'lists':'zipwith'(Func, PlainText, _cor6)
+
+
+SAMPLE CODE FOR EXECUTING DEFAULT BRANCHES
+'to_pos'/1 = fun (_cor0) ->
+	case _cor0 of
+		<L> when (try let <_cor1> = call 'erlang':'>='(L, 65)
+		    				in  let <_cor2> = call 'erlang':'=<'(L, 90)
+									in  call 'erlang':'and'(_cor1, _cor2)
+							of <Try> -> Try
+							catch <T,R> -> 'false'
+			-> call 'erlang':'-'(L, 65)
+		<_cor3> when 'true'
+			-> primop 'match_fail'({'function_clause',_cor3})
+	end
+
+
+Simplified version (without try)
+=======================================================
+	'to_pos'/1 = fun (_cor0) ->
+	case _cor0 of
+		<L> when (try let <_cor1> = call 'erlang':'>='(L, 65) in ... of ...)
+			-> call 'erlang':'-'(L, 65)
+		<_cor3> when 'true'
+			-> primop 'match_fail'({'function_clause',_cor3})
+	end

@@ -1,0 +1,81 @@
+> edd:dd("roman:main()").
+Tree size:
+        2145 words
+        17160 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+roman:to_roman(89) = "LLXXIX"? [y/n/t/d/i/s/u/a]: n
+roman:to_roman(9) = "IX"? [y/n/t/d/i/s/u/a]: y
+roman:digit(8, 88, 76, 67) = "LLXX"? [y/n/t/d/i/s/u/a]: n
+Call to a function that contains an error:
+roman:digit(8, 88, 76, 67) = "LLXX"
+Please, revise the 8th clause:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+
+
+
+
+
+
+DIVIDE & QUERY: 3
+==========================
+4> edd:dd("roman:main()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+roman:to_roman(89) = "LLXXIX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+roman:to_roman(9) = "IX"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+roman:digit(8, 88, 76, 67) = "LLXX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+Total complexity: 3
+Max complexity: 1
+
+
+Call to a function that contains an error:
+roman:digit(8, 88, 76, 67) = "LLXX"
+Please, revise the 8th clause:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+ok
+
+
+TOP-DOWN: 6
+============================================
+5> edd:dd("roman:main()", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+roman:to_roman(2489) = "MMCDLLXXIX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+roman:to_roman(1489) = "MCDLLXXIX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+roman:to_roman(489) = "CDLLXXIX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+roman:to_roman(89) = "LLXXIX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+roman:to_roman(9) = "IX"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+roman:digit(8, 88, 76, 67) = "LLXX"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+Total complexity: 6
+Max complexity: 1
+
+Call to a function that contains an error:
+roman:digit(8, 88, 76, 67) = "LLXX"
+Please, revise the 8th clause:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+ok
+

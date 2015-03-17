@@ -1,0 +1,102 @@
+TOP_DOWN: 4
+============
+5> edd_zoom:zoom_graph("ternary:to_ternary(2, [1, 1, 0, 1, 1])").
+Total number of tree nodes: 7
+Tree size:
+        3170 words
+        25360 bytes
+
+In the function:
+to_ternary(N, Acc) when N rem 3 == 1 ->
+    to_ternary(N div 3, [1 | Acc]).
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 3 (clauses) + 1 (base) = 7
+
+In the function:
+to_ternary(N, Acc) when N rem 3 == 0 ->
+    to_ternary(N div 3, [0 | Acc]).
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 2 (clauses) + 1 (base) = 6
+
+In the function:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+matching with fourth clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 4 (clauses) + 1 (base) = 8
+
+In the function:
+to_ternary(0, Acc) -> Acc.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 23
+Max complexity: 8
+
+This is the reason for the error:
+Value [1, 1, 1, 1, 0, 1, 1] for the final expression to_ternary((N + 1) div 3, [1 | Acc]) (Line 43) is not correct.
+ok
+
+
+
+DIVIDE & QUERY: 5
+=================
+9> edd_zoom:zoom_graph("ternary:to_ternary(2, [1, 1, 0, 1, 1])").
+Total number of tree nodes: 7
+In the function:
+to_ternary(N, Acc) when N rem 3 == 1 ->
+    to_ternary(N div 3, [1 | Acc]).
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+In the function:
+to_ternary(N, Acc) when N rem 3 == 0 ->
+    to_ternary(N div 3, [0 | Acc]).
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 2 (clauses) + 1 (base) = 6
+
+In the function:
+to_ternary(N, Acc) when N rem 3 == 1 ->
+    to_ternary(N div 3, [1 | Acc]).
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 3 (clauses) + 1 (base) = 7
+
+In the function:
+to_ternary(N, Acc) when N rem 3 == 1 ->
+    to_ternary(N div 3, [1 | Acc]).
+guard of third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 3 (clauses) + 1 (base) = 7
+
+In the function:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+matching with fourth clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 4 (clauses) + 1 (base) = 8
+
+In the function:
+to_ternary(0, Acc) -> Acc.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 30
+Max complexity: 8
+
+This is the reason for the error:
+Value [1, 1, 1, 1, 0, 1, 1] for the final expression to_ternary((N + 1) div 3, [1 | Acc]) (Line 43) is not correct.
+ok
+

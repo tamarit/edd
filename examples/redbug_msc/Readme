@@ -1,0 +1,7 @@
+eper: loose collection of Erlang Performance related tools
+==========================================================
+Bug: https://github.com/massemanet/eper/commit/38c1f00143aaedac5db0d234452640d432754a33
+Fix: https://github.com/massemanet/eper/commit/a5629fe60b2cdae1573b399aaae3cfef1e1b65a6
+
+Files involved:
+  368 redbug_msc.erl

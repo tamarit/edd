@@ -1,0 +1,145 @@
+TOP_DOWN: 8
+===========
+3> edd_zoom:zoom_graph("roman:digit(8, 88, 76, 67)").
+Total number of tree nodes: 9
+Tree size:
+        5608 words
+        44864 bytes
+
+
+Total number of tree nodes: 9
+In the function:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+pattern of 8th clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 8 (clauses) + 1 (base) = 14
+
+In the function:
+digit(7, X, Y, _) -> [Y, X, X].
+pattern of seventh clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 7 (clauses) + 1 (base) = 12
+
+In the function:
+digit(6, X, Y, _) -> [Y, X].
+pattern of sixth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 6 (clauses) + 1 (base) = 10
+
+In the function:
+digit(5, _, Y, _) -> [Y].
+pattern of fifth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 5 (clauses) + 1 (base) = 8
+
+In the function:
+digit(4, X, Y, _) -> [X, Y].
+pattern of fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 5 (clauses) + 1 (base) = 9
+
+In the function:
+digit(3, X, _, _) -> [X, X, X].
+pattern of third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 3 (clauses) + 1 (base) = 8
+
+In the function:
+digit(2, X, _, _) -> [X, X].
+pattern of second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 2 (clauses) + 1 (base) = 6
+
+In the function:
+digit(1, X, _, _) -> [X].
+pattern of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 5 (clauses) + 1 (base) = 8
+Total complexity: 75
+Max complexity: 14
+
+This is the reason for the error:
+Value [76, 76, 88, 88] for the final expression [Y, Y, X, X] (Line 20) is not correct.
+ok
+
+
+DIVIDE & QUERY: 8
+=================
+4> edd_zoom:zoom_graph("roman:digit(8, 88, 76, 67)").
+Total number of tree nodes: 9
+In the function:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+pattern of 8th clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+In the function:
+digit(3, X, _, _) -> [X, X, X].
+pattern of third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 3 (clauses) + 1 (base) = 8
+
+In the function:
+digit(5, _, Y, _) -> [Y].
+pattern of fifth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 5 (clauses) + 1 (base) = 8
+
+In the function:
+digit(2, X, _, _) -> [X, X].
+pattern of second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 2 (clauses) + 1 (base) = 6
+
+In the function:
+digit(4, X, Y, _) -> [X, Y].
+pattern of fourth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 4 (clauses) + 1 (base) = 8
+
+In the function:
+digit(6, X, Y, _) -> [Y, X].
+pattern of sixth clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 3 (data structures) + 6 (clauses) + 1 (base) = 10
+
+In the function:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+pattern of 8th clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 8 (clauses) + 1 (base) = 14
+
+In the function:
+digit(7, X, Y, _) -> [Y, X, X].
+pattern of seventh clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 7 (clauses) + 1 (base) = 12
+
+In the function:
+digit(1, X, _, _) -> [X].
+pattern of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 2 (data structures) + 1 (clauses) + 1 (base) = 4
+Total complexity: 70
+Max complexity: 14
+
+
+This is the reason for the error:
+Value [76, 76, 88, 88] for the final expression [Y, Y, X, X] (Line 20) is not correct.
+ok
+

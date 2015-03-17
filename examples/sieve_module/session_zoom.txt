@@ -1,0 +1,106 @@
+TOP_DOWN: 1
+===========
+3> edd_zoom:zoom_graph("sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 6, 10)").
+Total number of tree nodes: 7
+Tree size:
+        3602 words
+        28816 bytes
+
+For the case expression:
+case lists:nth(Index, NumList) of
+  0 -> next_prime(NumList, Index + 2, Length);
+  Prime ->
+      NewNumList = lists:map(fun (A) ->
+                                     if A > Index andalso A rem Index == 0 -> 0;
+                                        true -> A
+                                     end
+                             end,
+                             NumList),
+      {Prime, Index, NewNumList}
+end
+Is there anything incorrect?
+1.- The context:
+        Index = 6
+        Length = 10
+        NumList = [1,2,3,0,5,0,7,0,0,0]
+2.- The argument value: 0.
+3.- Enter in the first clause.
+4.- The final value: false.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 11 (data structures) + 3 (bindings) + 1 (base) = 15
+Complexity (II): 1 (base)
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 1 (base)
+Total complexity: 19
+Max complexity: 15
+
+This is the reason for the error:
+Value false for the final expression next_prime(NumList, Index + 2, Length) (Line 28) is not correct.
+ok
+
+
+
+DIVIDE & QUERY: 1
+==================
+4> edd_zoom:zoom_graph("sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 6, 10)").
+Total number of tree nodes: 7
+For the case expression:
+case lists:nth(Index, NumList) of
+  0 -> next_prime(NumList, Index + 2, Length);
+  Prime ->
+      NewNumList = lists:map(fun (A) ->
+                                     if A > Index andalso A rem Index == 0 -> 0;
+                                        true -> A
+                                     end
+                             end,
+                             NumList),
+      {Prime, Index, NewNumList}
+end
+Is there anything incorrect?
+1.- The context:
+        Index = 6
+        Length = 10
+        NumList = [1,2,3,0,5,0,7,0,0,0]
+2.- The argument value: 0.
+3.- Enter in the first clause.
+4.- The final value: false.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+For the case expression:
+case lists:nth(Index, NumList) of
+  0 -> next_prime(NumList, Index + 2, Length);
+  Prime ->
+      NewNumList = lists:map(fun (A) ->
+                                     if A > Index andalso A rem Index == 0 -> 0;
+                                        true -> A
+                                     end
+                             end,
+                             NumList),
+      {Prime, Index, NewNumList}
+end
+Is there anything incorrect?
+1.- The context:
+        Index = 6
+        Length = 10
+        NumList = [1,2,3,0,5,0,7,0,0,0]
+2.- The argument value: 0.
+3.- Enter in the first clause.
+4.- The final value: false.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 11 (data structures) + 3 (bindings) + 1 (base) = 15
+Complexity (II): 1 (base)
+Complexity (III): 1 (clause) + 1 (base) = 2
+Complexity (IV): 1 (base)
+Total complexity: 19
+Max complexity: 15
+
+
+This is the reason for the error:
+Value false for the final expression next_prime(NumList, Index + 2, Length) (Line 28) is not correct.
+ok
+

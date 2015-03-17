@@ -1,0 +1,136 @@
+TOP_DOWN: 4
+============
+3> edd_zoom:zoom_graph("turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']})").
+Total number of tree nodes: 10
+Tree size:
+        3725 words
+        29800 bytes
+
+For the case expression:
+case lists:member(State, Halts) of
+  true -> Input;
+  false ->
+      {NewRight, Symbol} = symbol(RightInput, Blank),
+      {NewSymbol, Action, NewState} = Rules(State, Symbol),
+      NewInput = action(Action, NewSymbol,
+                        {LeftInput, [NewSymbol | NewRight]}),
+      perform(Config, Rules, NewState, NewInput)
+end
+Is there anything incorrect?
+1.- The context:
+        Blank = '0'
+        Config = fun turing:busy_beaver_config/0
+        Halts = [halt]
+        LeftInput = []
+        RightInput = ['1','1']
+        Rules = fun turing:busy_beaver/2
+        State = a
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: {[],['1','1','1']}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 6 (data structures) + 7 (bindings) + 1 (base) = 14
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 6 (data structures) + 1 (base) = 7
+
+Given the context:
+        Blank = '0'
+        RightInput = ['1','1'],
+the following variables are asigned:
+        NewRight = ['1']
+        Symbol = '1'? [y/n/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 4 (bindings) + 1 (base) = 10
+
+Given the context:
+        Rules = fun turing:busy_beaver/2
+        State = a
+        Symbol = '1',
+the following variables are asigned:
+        NewSymbol = '1'
+        Action = left
+        NewState = c? [y/n/d/i/s/u/a]: y
+
+Complexity: 6 (bindings) + 1 (base) = 7
+
+Given the context:
+        Action = left
+        LeftInput = []
+        NewRight = ['1']
+        NewSymbol = '1',
+the following variable is asigned:
+NewInput = {[],['1','1','1']}? [y/n/d/i/s/u/a]: n
+
+Complexity: 8 (data structures) + 5 (bindings) + 1 (base) = 14
+Total complexity: 56
+Max complexity: 14
+
+This is the reason for the error:
+Variable NewInput is badly assigned {[],['1','1','1']} in the expression:
+NewInput = action(Action, NewSymbol,
+                  {LeftInput, [NewSymbol | NewRight]}) (Line 57).
+ok
+
+
+
+
+
+
+DIVIDE & QUERY: 2
+==================
+4> edd_zoom:zoom_graph("turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']})").
+Total number of tree nodes: 10
+[......]
+[1/2/3/4/5/d/s/u/a]? s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+For the case expression:
+case lists:member(State, Halts) of
+  true -> Input;
+  false ->
+      {NewRight, Symbol} = symbol(RightInput, Blank),
+      {NewSymbol, Action, NewState} = Rules(State, Symbol),
+      NewInput = action(Action, NewSymbol,
+                        {LeftInput, [NewSymbol | NewRight]}),
+      perform(Config, Rules, NewState, NewInput)
+end
+Is there anything incorrect?
+1.- The context:
+        Blank = '0'
+        Config = fun turing:busy_beaver_config/0
+        Halts = [halt]
+        LeftInput = []
+        RightInput = ['1','1']
+        Rules = fun turing:busy_beaver/2
+        State = a
+2.- The argument value: false.
+3.- Enter in the second clause.
+4.- The final value: {[],['1','1','1']}.
+5.- Nothing.
+[1/2/3/4/5/d/s/u/a]? 4
+
+Complexity (I): 6 (data structures) + 7 (bindings) + 1 (base) = 14
+Complexity (II): 1 (base)
+Complexity (III): 2 (clauses) + 1 (base) = 3
+Complexity (IV): 6 (data structures) + 1 (base) = 7
+
+Given the context:
+        Action = left
+        LeftInput = []
+        NewRight = ['1']
+        NewSymbol = '1',
+the following variable is asigned:
+NewInput = {[],['1','1','1']}? [y/n/d/i/s/u/a]: n
+
+Complexity: 6 (data structures) + 5 (bindings) + 1 (base) = 12
+Total complexity: 37
+Max complexity: 14
+
+This is the reason for the error:
+Variable NewInput is badly assigned {[],['1','1','1']} in the expression:
+NewInput = action(Action, NewSymbol,
+                  {LeftInput, [NewSymbol | NewRight]}) (Line 57).
+ok
+

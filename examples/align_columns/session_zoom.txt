@@ -1,0 +1,131 @@
+TOP_DOWN: 3
+============
+5> edd_zoom:zoom_graph("align_columns:prepare_line([\"Further,\", \"allow\", \"for\", \"each\", \"word\", \"in\", \"a\", \"column\", \"to\", \"be\", \"either\", \"left\"], [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left)").
+
+Total number of tree nodes: 4
+Tree size:
+        3243 words
+        25944 bytes
+
+Given the context:
+        All_words = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"]
+        Words_length = [10,10,10,6,6,9,10,8,7,7,6,4],
+the following variable is asigned:
+Zipped = [{"Further,",10},
+ {"allow",10},
+ {"for",10},
+ {"each",6},
+ {"word",6},
+ {"in",9},
+ {"a",10},
+ {"column",8},
+ {"to",7},
+ {"be",7},
+ {"either",6},
+ {"left",4}]? [y/n/d/i/s/u/a]: y
+
+Complexity: 63 (data structures) + 3 (bindings) + 1 (base) = 67
+
+Given the context:
+        Words_length = [10,10,10,6,6,9,10,8,7,7,6,4]
+        Words_line = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"],
+the following variable is asigned:
+All_words = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"]? [y/n/d/i/s/u/a]: y
+
+Complexity: 39 (data structures) + 3 (bindings) + 1 (base) = 43
+
+The function:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length), ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $ ])
+     || {Word, Length} <- Zipped].
+pattern of first clause succeed? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 112
+Max complexity: 67
+
+This is the reason for the error:
+Value [[70, 117, 114, 116, 104, 101, 114, 44, 32],
+ [97, 108, 108, 111, 119, 32, 32, 32, 32],
+ [102, 111, 114, 32, 32, 32, 32, 32, 32],
+ [101, 97, 99, 104, 32], [119, 111, 114, 100, 32],
+ [105, 110, 32, 32, 32, 32, 32, 32],
+ [97, 32, 32, 32, 32, 32, 32, 32, 32],
+ [99, 111, 108, 117, 109, 110, 32],
+ [116, 111, 32, 32, 32, 32], [98, 101, 32, 32, 32, 32],
+ [101, 105, 116, 104, 101], [108, 101, 102]] for the final expression [apply(string, Alignment, [Word, Length - 1, $ ])
+ || {Word, Length} <- Zipped] (Line 37) is not correct.
+ok
+
+
+
+DIVIDE & QUERY: 3
+=================
+6> edd_zoom:zoom_graph("align_columns:prepare_line([\"Further,\", \"allow\", \"for\", \"each\", \"word\", \"in\", \"a\", \"column\", \"to\", \"be\", \"either\", \"left\"], [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4], left)").
+[..........]
+ {"left",4}]? [y/n/d/i/s/u/a]: s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+Given the context:
+        Words_length = [10,10,10,6,6,9,10,8,7,7,6,4]
+        Words_line = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"],
+the following variable is asigned:
+All_words = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"]? [y/n/d/i/s/u/a]: y
+
+Complexity: 39 (data structures) + 3 (bindings) + 1 (base) = 43
+
+Given the context:
+        All_words = ["Further,","allow","for","each","word","in","a","column","to","be","either",
+ "left"]
+        Words_length = [10,10,10,6,6,9,10,8,7,7,6,4],
+the following variable is asigned:
+Zipped = [{"Further,",10},
+ {"allow",10},
+ {"for",10},
+ {"each",6},
+ {"word",6},
+ {"in",9},
+ {"a",10},
+ {"column",8},
+ {"to",7},
+ {"be",7},
+ {"either",6},
+ {"left",4}]? [y/n/d/i/s/u/a]: y
+
+Complexity: 63 (data structures) + 3 (bindings) + 1 (base) = 67
+
+In the function:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length), ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $ ])
+     || {Word, Length} <- Zipped].
+pattern of first clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 112
+Max complexity: 67
+
+This is the reason for the error:
+Value [[70, 117, 114, 116, 104, 101, 114, 44, 32],
+ [97, 108, 108, 111, 119, 32, 32, 32, 32],
+ [102, 111, 114, 32, 32, 32, 32, 32, 32],
+ [101, 97, 99, 104, 32], [119, 111, 114, 100, 32],
+ [105, 110, 32, 32, 32, 32, 32, 32],
+ [97, 32, 32, 32, 32, 32, 32, 32, 32],
+ [99, 111, 108, 117, 109, 110, 32],
+ [116, 111, 32, 32, 32, 32], [98, 101, 32, 32, 32, 32],
+ [101, 105, 116, 104, 101], [108, 101, 102]] for the final expression [apply(string, Alignment, [Word, Length - 1, $ ])
+ || {Word, Length} <- Zipped] (Line 37) is not correct.
+ok
+
+

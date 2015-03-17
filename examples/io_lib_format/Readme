@@ -1,6 +1,12 @@
 io_lib_format (from OTP/Erlang)
 Real bug extracted from the commit that solved it. 
-https://github.com/nox/otp/commit/a10a7979887403ea61c30155cef18aa7324420a6#diff-0
+
+Bug: https://github.com/erlang/otp/commit/84adefa331c4159d432d22840663c38f155cd4c1
+Fix: https://github.com/erlang/otp/commit/a10a7979887403ea61c30155cef18aa7324420a6
+
+Files involved:
+  720 io_lib_format_old.erl
+  720 total
 
 Example of buggy call:
 lists:flatten(io_lib_format_old:fwrite("~6.7w\n",[11111]))

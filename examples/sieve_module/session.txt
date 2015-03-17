@@ -1,0 +1,181 @@
+> edd:dd("sieve_module:find_primes_below(10)").
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+sieve_module:determine_primes([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 3, [2, 3]) = [2, 3]? [y/n/t/d/i/s/u/a]: n
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 8, 10) = false? [y/n/t/d/i/s/u/a]: y
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 6, 10) = false? [y/n/t/d/i/s/u/a]: n
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 12, 10) = false? [y/n/t/d/i/s/u/a]: i
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 10, 10) = false? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0], 6, 10) = false
+Please, revise the second clause:
+next_prime(NumList, Index, Length) ->
+    case lists:nth(Index, NumList) of
+      0 -> next_prime(NumList, Index + 2, Length);
+      Prime ->
+          NewNumList = lists:map(fun (A) ->
+                                         if A > Index andalso
+                                              A rem Index == 0 ->
+                                                0;
+                                            true -> A
+                                         end
+                                 end,
+                                 NumList),
+          {Prime, Index, NewNumList}
+    end.
+
+
+
+
+
+
+
+
+
+DIVIDE & QUERY: 6
+====================
+7> edd:dd("sieve_module:find_primes_below(20)").
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+sieve_module:determine_primes([1, 2, 3, 0, 5, 0, 7, 0, 9, 0, 11, 0, 13, 0, 15, 0, 17, 0, 19, 0], 2, [2])
+                     = [2, 3]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 26 (data structures) + 1 (base) = 27
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 9, 0, 11, 0, 13, 0, 15, 0, 17, 0, 19, 0], 3, 20)
+                     = {3, 3, [1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0]}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 12, 20)
+                     = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 18, 20)
+                     = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 22, 20)
+                     = false? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 20, 20)
+                     = false? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 21 (data structures) + 1 (base) = 22
+Total complexity: 161
+Max complexity: 46
+
+Call to a function that contains an error:
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 18, 20) = false
+Please, revise the second clause:
+next_prime(NumList, Index, Length) ->
+    case lists:nth(Index, NumList) of
+      0 -> next_prime(NumList, Index + 2, Length);
+      Prime ->
+          NewNumList = lists:map(fun (A) ->
+                                         if A > Index andalso
+                                              A rem Index == 0 ->
+                                                0;
+                                            true -> A
+                                         end
+                                 end,
+                                 NumList),
+          {Prime, Index, NewNumList}
+    end.
+ok
+
+
+
+TOP-DOWN: 13
+============
+10> edd:dd("sieve_module:find_primes_below(20)", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+sieve_module:determine_primes([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 1, [])
+                   = [2, 3]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 25 (data structures) + 1 (base) = 26
+
+sieve_module:determine_primes([1, 2, 3, 0, 5, 0, 7, 0, 9, 0, 11, 0, 13, 0, 15, 0, 17, 0, 19, 0], 2, [2])
+                   = [2, 3]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 26 (data structures) + 1 (base) = 27
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 9, 0, 11, 0, 13, 0, 15, 0, 17, 0, 19, 0], 3, 20)
+                   = {3, 3, [1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0]}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+sieve_module:determine_primes([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 3, [2, 3])
+                   = [2, 3]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 27 (data structures) + 1 (base) = 28
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 4, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 6, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 8, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 10, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 12, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 14, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 16, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 18, 20)
+                   = false? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 21 (data structures) + 1 (base) = 22
+
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 20, 20)
+                   = false? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 22
+Total complexity: 303
+Max complexity: 46
+
+Call to a function that contains an error:
+sieve_module:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 18, 20) = false
+Please, revise the second clause:
+next_prime(NumList, Index, Length) ->
+    case lists:nth(Index, NumList) of
+      0 -> next_prime(NumList, Index + 2, Length);
+      Prime ->
+          NewNumList = lists:map(fun (A) ->
+                                         if A > Index andalso
+                                              A rem Index == 0 ->
+                                                0;
+                                            true -> A
+                                         end
+                                 end,
+                                 NumList),
+          {Prime, Index, NewNumList}
+    end.
+ok
+
+

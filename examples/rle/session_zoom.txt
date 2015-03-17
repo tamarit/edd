@@ -1,0 +1,91 @@
+TOP_DOWN: 1
+===========
+3> edd_zoom:zoom_graph("rle:doEncode(\"WW\", \"W\", 2, \"4W1B3W2B4W1B\")").
+Total number of tree nodes: 8
+Tree size:
+        3743 words
+        29944 bytes
+
+For the if expression:
+if NextChar == CurrChar ->
+       doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+   true ->
+       doEncode(string:substr(S, 2), NextChar, 1,
+                R ++ integer_to_list(Count) ++ CurrChar)
+end
+Is there anything incorrect?
+1.- The context:
+        Count = 2
+        CurrChar = "W"
+        NextChar = "W"
+        R = "4W1B3W2B4W1B"
+        S = "WW"
+2.- Enter in the first clause.
+3.- The final value: "4W1B3W2B4W1B3W".
+4.- Nothing.
+[1/2/3/4/d/s/u/a]? 3
+
+Complexity (I): 5 (bindings) + 1 (base) = 6
+Complexity (II): 1 (clause) + 1 (base) = 2
+Complexity (III): 1 (base)
+Total complexity: 9
+Max complexity: 6
+
+This is the reason for the error:
+Value "4W1B3W2B4W1B3W" for the final expression doEncode(string:substr(S, 3), CurrChar, Count + 1, R) (Line 15) is not correct.
+ok
+
+
+DIVIDE & QUERY: 1
+=================
+4> edd_zoom:zoom_graph("rle:doEncode(\"WW\", \"W\", 2, \"4W1B3W2B4W1B\")").
+Total number of tree nodes: 8
+For the if expression:
+if NextChar == CurrChar ->
+       doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+   true ->
+       doEncode(string:substr(S, 2), NextChar, 1,
+                R ++ integer_to_list(Count) ++ CurrChar)
+end
+Is there anything incorrect?
+1.- The context:
+        Count = 2
+        CurrChar = "W"
+        NextChar = "W"
+        R = "4W1B3W2B4W1B"
+        S = "WW"
+2.- Enter in the first clause.
+3.- The final value: "4W1B3W2B4W1B3W".
+4.- Nothing.
+[1/2/3/4/d/s/u/a]? s
+Select a strategy (Didide & Query or Top Down): [d/t] d
+For the if expression:
+if NextChar == CurrChar ->
+       doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+   true ->
+       doEncode(string:substr(S, 2), NextChar, 1,
+                R ++ integer_to_list(Count) ++ CurrChar)
+end
+Is there anything incorrect?
+1.- The context:
+        Count = 2
+        CurrChar = "W"
+        NextChar = "W"
+        R = "4W1B3W2B4W1B"
+        S = "WW"
+2.- Enter in the first clause.
+3.- The final value: "4W1B3W2B4W1B3W".
+4.- Nothing.
+[1/2/3/4/d/s/u/a]? 3
+
+Complexity (I): 5 (bindings) + 1 (base) = 6
+Complexity (II): 1 (clause) + 1 (base) = 2
+Complexity (III): 1 (base)
+Total complexity: 9
+Max complexity: 6
+
+
+This is the reason for the error:
+Value "4W1B3W2B4W1B3W" for the final expression doEncode(string:substr(S, 3), CurrChar, Count + 1, R) (Line 15) is not correct.
+ok
+

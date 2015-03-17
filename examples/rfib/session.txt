@@ -1,0 +1,148 @@
+> edd:dd("rfib:main(10)").
+Total number of tree nodes: 288
+Tree size:
+        23788 words
+        190304 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rfib:nfib(9) = 89? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(8) = 55? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(7) = 34? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(6) = 21? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(5) = 13? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(4) = 8? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(3) = 5? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(2) = 3? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(1) = 2? [y/n/t/d/i/s/u/a]: n
+rfib:nfib(0) = 1? [y/n/t/d/i/s/u/a]: y
+rfib:nfib(-1) = 1? [y/n/t/d/i/s/u/a]: i
+Call to a function that contains an error:
+rfib:nfib(1) = 2
+Please, revise the second clause:
+nfib(N) when N >= 1 -> nfib(N - 1) + nfib(N - 2).
+
+
+
+
+
+
+
+
+DIVIDE & QUERY: 11
+==================
+7> edd:dd( "rfib:main(10)", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rfib:nfib(9) = 89? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(8) = 55? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(7) = 34? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(6) = 21? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(5) = 13? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(4) = 8? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(3) = 5? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(2) = 3? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(1) = 2? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(0) = 1? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+rfib:nfib(-1) = 1? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 1 (base)
+Total complexity: 11
+Max complexity: 1
+
+Call to a function that contains an error:
+rfib:nfib(1) = 2
+Please, revise the second clause:
+nfib(N) when N >= 1 -> nfib(N - 1) + nfib(N - 2).
+ok
+
+
+
+TOP-DOWN: 12
+============
+10> edd:dd( "rfib:main(10)", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rfib:nfib(10) = 144? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(9) = 89? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(8) = 55? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(7) = 34? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(6) = 21? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(5) = 13? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(4) = 8? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(3) = 5? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(2) = 3? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(1) = 2? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rfib:nfib(-1) = 1? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 1 (base)
+
+rfib:nfib(0) = 1? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+Total complexity: 12
+Max complexity: 1
+
+Call to a function that contains an error:
+rfib:nfib(1) = 2
+Please, revise the second clause:
+nfib(N) when N >= 1 -> nfib(N - 1) + nfib(N - 2).
+ok
+
+

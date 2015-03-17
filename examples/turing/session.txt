@@ -1,0 +1,133 @@
+> edd:dd("turing:main()").
+==============================
+Turing machine simulator test.
+==============================
+
+
+DIVIDE & QUERY: 7
+=================
+6> edd:dd("turing:main()", tree ).
+Total number of tree nodes: 49
+Tree size:
+        9653 words
+        77224 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+turing:turing(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, [])
+              = ['1', '1', '1']? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 5 (data structures) + 1 (base) = 6
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 9 (data structures) + 1 (base) = 10
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, c, {[], ['1', '1', '1']})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 10 (data structures) + 1 (base) = 11
+
+turing:busy_beaver_config() = {a, [halt], '0'}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 1 (base) = 6
+
+turing:symbol(['1', '1'], '0') = {['1'], '1'}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 7 (data structures) + 1 (base) = 8
+
+turing:busy_beaver(a, '1') = {'1', left, c}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 1 (base) = 5
+
+turing:action(left, '1', {[], ['1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 11 (data structures) + 1 (base) = 12
+Total complexity: 58
+Max complexity: 12
+
+Call to a function that contains an error:
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}) = {[], ['1', '1', '1']}
+Please, revise the first clause:
+perform(Config, Rules, State,
+        Input = {LeftInput, RightInput}) ->
+    {_, Halts, Blank} = Config(),
+    case lists:member(State, Halts) of
+      true -> Input;
+      false ->
+          {NewRight, Symbol} = symbol(RightInput, Blank),
+          {NewSymbol, Action, NewState} = Rules(State, Symbol),
+          NewInput = action(Action, NewSymbol,
+                            {LeftInput, [NewSymbol | NewRight]}),
+          perform(Config, Rules, NewState, NewInput)
+    end.
+ok
+
+
+
+
+TOP-DOWN: 9
+============
+7> edd:dd("turing:main()", tree, top_down ).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+turing:turing(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, [])
+              = ['1', '1', '1']? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 5 (data structures) + 1 (base) = 6
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], []})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 9 (data structures) + 1 (base) = 10
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, b, {['1'], []})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 10 + 1 (base) = 11
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 11 (data structures) + 1 (base) = 12
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, c, {[], ['1', '1', '1']})
+              = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 12 (data structures) + 1 (base) = 13
+
+turing:action(left, '1', {[], ['1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 11 (data structures) + 1 (base) = 12
+
+turing:busy_beaver(a, '1') = {'1', left, c}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 4 (data structures) + 1 (base) = 5
+
+turing:symbol(['1', '1'], '0') = {['1'], '1'}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 7 (data structures) + 1 (base) = 8
+
+turing:busy_beaver_config() = {a, [halt], '0'}? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 5 (data structures) + 1 (base) = 6
+Total complexity: 83
+Max complexity: 13
+
+Call to a function that contains an error:
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}) = {[], ['1', '1', '1']}
+Please, revise the first clause:
+perform(Config, Rules, State,
+        Input = {LeftInput, RightInput}) ->
+    {_, Halts, Blank} = Config(),
+    case lists:member(State, Halts) of
+      true -> Input;
+      false ->
+          {NewRight, Symbol} = symbol(RightInput, Blank),
+          {NewSymbol, Action, NewState} = Rules(State, Symbol),
+          NewInput = action(Action, NewSymbol,
+                            {LeftInput, [NewSymbol | NewRight]}),
+          perform(Config, Rules, NewState, NewInput)
+    end.
+ok
+
+

@@ -1,0 +1,173 @@
+> edd:dd("rle:test()").
+Tree size:
+        28123 words
+        224984 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rle:encode("WWWWWWWBWWWWWBBBWWWWWWWBWWWWW") = "7W1B5W3B7W1B5W"? [y/n/t/d/i/s/u/a]: y
+rle:decode("7W1B5W3B7W1B5W") = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: n
+rle:doDecode("7W1B5W", [],
+             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBB") =
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: n
+rle:doDecode("5W", [],
+             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWB") =
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: u
+rle:doDecode("7W1B5W", [],
+             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBB") =
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: y
+rle:doDecode("W3B7W1B5W", "5",
+             "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB") =
+    "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: y
+rle:doDecode("B5W3B7W1B5W", "71", []) = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: y
+rle:doDecode("1B5W3B7W1B5W", "7", []) = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+rle:decode("7W1B5W3B7W1B5W") = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBWWWWWBBBWWWWWWWBWWWWW"
+Please, revise the first clause:
+decode(S) ->
+    doDecode(string:substr(S, 3), string:substr(S, 1, 1),
+             []).
+
+
+
+
+
+
+
+
+DIVIDE & QUERY: 5
+==================
+5> edd:dd("rle:test()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rle:encode("WWWWWWWBWWWWWBBBWWWWWWWBWWWWW") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWWWWBWWWWW", "B", 2, "4W1B3W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWW", "B", 1, "4W1B3W2B4W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WW", "W", 2, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode([], "W", 3, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (data structures) + 1 (base) = 2
+Total complexity: 6
+Max complexity: 2
+
+Call to a function that contains an error:
+rle:doEncode("WW", "W", 2, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"
+Please, revise the second clause:
+doEncode(S, CurrChar, Count, R) ->
+    NextChar = string:substr(S, 1, 1),
+    if NextChar == CurrChar ->
+           doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+       true ->
+           doEncode(string:substr(S, 2), NextChar, 1,
+                    R ++ integer_to_list(Count) ++ CurrChar)
+    end.
+ok
+
+
+
+
+TOP-DOWN: 19
+============
+6> edd:dd("rle:test()", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+rle:encode("WWWWWWWBWWWWWBBBWWWWWWWBWWWWW") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWWWBWWWWWBBBWWWWWWWBWWWWW", "W", 1, []) = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (data structures) + 1 (base) = 2
+
+rle:doEncode("WWWWBWWWWWBBBWWWWWWWBWWWWW", "W", 2, []) = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (data structures) + 1 (base) = 2
+
+rle:doEncode("WWBWWWWWBBBWWWWWWWBWWWWW", "W", 3, []) = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (data structures) + 1 (base) = 2
+
+rle:doEncode("BWWWWWBBBWWWWWWWBWWWWW", "W", 4, []) = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (data structures) + 1 (base) = 2
+
+rle:doEncode("WWWWWBBBWWWWWWWBWWWWW", "B", 1, "4W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWBBBWWWWWWWBWWWWW", "W", 1, "4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWBBBWWWWWWWBWWWWW", "W", 2, "4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("BBBWWWWWWWBWWWWW", "W", 3, "4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("BBWWWWWWWBWWWWW", "B", 1, "4W1B3W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWWWWBWWWWW", "B", 2, "4W1B3W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWWWBWWWWW", "W", 1, "4W1B3W2B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWBWWWWW", "W", 2, "4W1B3W2B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWBWWWWW", "W", 3, "4W1B3W2B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("BWWWWW", "W", 4, "4W1B3W2B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWWW", "B", 1, "4W1B3W2B4W") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WWWW", "W", 1, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode("WW", "W", 2, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+rle:doEncode([], "W", 3, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (data structures) + 1 (base) = 2
+Total complexity: 22
+Max complexity: 2
+
+Call to a function that contains an error:
+rle:doEncode("WW", "W", 2, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"
+Please, revise the second clause:
+doEncode(S, CurrChar, Count, R) ->
+    NextChar = string:substr(S, 1, 1),
+    if NextChar == CurrChar ->
+           doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+       true ->
+           doEncode(string:substr(S, 2), NextChar, 1,
+                    R ++ integer_to_list(Count) ++ CurrChar)
+    end.
+ok
+
+

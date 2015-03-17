@@ -1,0 +1,216 @@
+> edd:dd("dutch:main(20)").
+The starting random sequence is [red,blue,red,red,blue,white,blue,red,blue,
+                                 white,red,white,white,white,red,blue,red,
+                                 white,red,red];
+The ordered sequence is [red,red,red,red,red,red,red,red,red,white,white,
+                         white,white,white,white,white,white,white,white,
+                         white].
+Total number of tree nodes: 123
+Tree size:
+        34053 words
+        272424 bytes
+
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+dutch:is_dutch([red, blue, red, red, blue, white, blue, red, blue, white, red, white, white, white, red, blue, red, white, red, red]) = false? [y/n/t/d/i/s/u/a]: y
+dutch:random_balls(16, [red, white, red, red]) = [red, blue, red, red, blue, white, blue, red, blue, white, red, white, white, white, red, blue, red, white, red, red]? [y/n/t/d/i/s/u/a]: t
+dutch:dutch([red, red, red, red], [white], [white, white, white, white], [white, red, white, white, white, red, blue, red, white, red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white], [white, white, white, white], [blue, red, white, red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+dutch:dutch([red, red, red, red, red, red, red], [white, white, white, white, white, white], [white, white, white, white, white], [red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: y
+dutch:dutch([red, red, red, red, red, red, red], [white, white, white, white, white], [white, white, white, white, white], [white, red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: y
+dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white], [white, white, white, white, white], [red, white, red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: y
+Call to a function that contains an error:
+dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white], [white, white, white, white], [blue, red, white, red, red]) = [red, red, red, red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white]
+Please, revise the fourth clause:
+dutch(R, W, B, [blue | L]) ->
+    dutch(R, W, [white | B], L).
+
+
+
+
+DIVIDE & QUERY: 12
+==================
+7> edd:dd( "dutch:main()", tree).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+dutch:is_dutch([red, blue, red, red, white, white, blue, blue, white, red, white, blue, blue, white])
+                 = false? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+
+dutch:dutch([], [], [], [white, red, white, white, red, white, red, blue, red, red, white,
+                         white, blue, blue, white, red, white, blue, blue, white])
+                 = [red, red, red, red, red, red, white, white, white, white, white,
+                    white, white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red], [white, white, white, white, white], [white],
+                         [white, blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red], [white, white, white, white], [], [red, blue, red, red, white,
+                         white, blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red], [white, white, white, white, white, white], [white, white, white],
+                    [white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red], [white, white, white, white], [white],
+                    [white, white, blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+               white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red], [white, white, white, white], [white], [red, red, white,
+                     white, blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red], [white, white, white, white], [], [blue, red, red, white, white,
+                              blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white, white, white],
+                        [white, white, white], [white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+               white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red], [white, white, white, white, white, white], [white, white],
+                        [blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+               white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red, red], [white, white, white, white, white, white], [white],
+                        [blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white,
+               white, white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red, red], [white, white, white, white], [white], [red, white, white,
+                         blue, blue, white, red, white, blue, blue, white])
+            = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+               white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+Total complexity: 522
+Max complexity: 46
+
+Call to a function that contains an error:
+dutch:dutch([red, red, red], [white, white, white, white], [], [blue, red, red, white, white, blue, blue, white, red, white, blue, blue, white]) = [red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white, white, white, white]
+Please, revise the fourth clause:
+dutch(R, W, B, [blue | L]) ->
+    dutch(R, W, [white | B], L).
+ok
+
+
+
+
+
+TOP-DOWN: 11
+=============
+8> edd:dd( "dutch:main()", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+dutch:is_dutch([white, red, white, white, red, white, red, blue, red, red, white, white, blue, blue,
+                white, red, white, blue, blue, white]) = false? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 15 (data structures) + 1 (base) = 16
+
+dutch:dutch([white, red, white, white, red, white, red, blue, red, red, white, white, blue,
+                        blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([], [], [], [white, red, white, white, red, white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([], [white], [], [red, white, white, red, white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red], [white], [], [white, white, red, white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red], [white, white], [], [white, red, white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red], [white, white, white], [], [red, white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red], [white, white, white], [], [white, red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red], [white, white, white, white], [], [red, blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red], [white, white, white, white], [], [blue, red, red, white,
+                        white, blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 45 (data structures) + 1 (base) = 46
+
+dutch:dutch([red, red, red], [white, white, white, white], [white], [red, red, white, white,
+                        blue, blue, white, red, white, blue, blue, white])
+          = [red, red, red, red, red, red, white, white, white, white, white, white, white,
+             white, white, white, white, white, white, white]? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 45 (data structures) + 1 (base) = 46
+Total complexity: 476
+Max complexity: 46
+
+Call to a function that contains an error:
+dutch:dutch([red, red, red], [white, white, white, white], [], [blue, red, red, white, white, blue, blue, white, red, white, blue, blue, white]) = [red, red, red, red, red, red, white, white, white, white, white, white, white, white, white, white, white, white, white, white]
+Please, revise the fourth clause:
+dutch(R, W, B, [blue | L]) ->
+    dutch(R, W, [white | B], L).
+ok
+
