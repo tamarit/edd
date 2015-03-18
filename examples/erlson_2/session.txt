@@ -1,0 +1,129 @@
+--------------------------------------------------------------------
+------------------------- Divide and query -------------------------
+--------------------------------------------------------------------
+
+22> edd:dd( "erlson:store(<<\"Hello\">>, foo, [])", tree).
+Total number of tree nodes: 2
+Tree size:
+        1295 words
+        10360 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+erlson:store_path(<<72, 101, 108, 108, 111>>, foo, []) = {error, match_fail}? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 10 (data structures) + 1 (base)
+Total complexity: 11
+Max complexity: 11
+
+Call to a function that contains an error:
+erlson:store(<<72, 101, 108, 108, 111>>, foo, []) = {error, raise}
+Please, revise the second clause:
+store(Path, Value, Dict) ->
+    try store_path(Path, Value, Dict) catch
+      erlson_not_found ->
+          erlang:error(erlson_not_found, [Path, Dict])
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 4
+Tree size:
+        1983 words
+        15864 bytes
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+
+Current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] d
+Strategy is set to Didide & Query.
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 1 (clause) + 1 (base) = 2
+
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+guard of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 4
+Max complexity: 2
+
+This is the reason for the error:
+The guard of the first clause of  function definition:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+ok
+
+-------------------------------------------------------------------------------------
+------------------------------------ Top-Down ---------------------------------------
+-------------------------------------------------------------------------------------
+
+24> edd:dd( "erlson:store(<<\"Hello\">>, foo, [])", tree).
+Total number of tree nodes: 2
+Tree size:
+        1295 words
+        10360 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+erlson:store_path(<<72, 101, 108, 108, 111>>, foo, []) = {error, match_fail}? [y/n/t/d/i/s/u/a]: s
+
+Current strategy is Didide & Query.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+erlson:store_path(<<72, 101, 108, 108, 111>>, foo, []) = {error, match_fail}? [y/n/t/d/i/s/u/a]: i
+
+Complexity: 10 (data structures) + 1 (base)
+Total complexity: 11
+Max complexity: 11
+
+Call to a function that contains an error:
+erlson:store(<<72, 101, 108, 108, 111>>, foo, []) = {error, raise}
+Please, revise the second clause:
+store(Path, Value, Dict) ->
+    try store_path(Path, Value, Dict) catch
+      erlson_not_found ->
+          erlang:error(erlson_not_found, [Path, Dict])
+    end.
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 4
+Tree size:
+        1983 words
+        15864 bytes
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: s
+
+Current strategy is Top Down.
+Select the new strategy (Didide & Query or Top Down): [d/t] t
+Strategy is set to Top Down.
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 1 (clause) + 1 (base) = 2
+
+In the function:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+guard of first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: n
+
+Complexity: 1 (clause) + 1 (base) = 2
+Total complexity: 4
+Max complexity: 2
+
+
+This is the reason for the error:
+The guard of the first clause of  function definition:
+store(Name, Value, Dict) when is_atom(Name) ->
+    store_val(Name, Value, Dict).
+ok

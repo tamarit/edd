@@ -1,0 +1,8 @@
+Erlson - Erlang Simple Object Notation
+======================================
+Bug: https://github.com/ewanmellor/erlson/commit/cae2a1e987bf6c96b8bff8693d2c15d154198164
+Fix: https://github.com/ewanmellor/erlson/commit/11115054b9f379c91e2bb998533dc7abd806be3b
+
+Files involved:
+  377 erlson.erl
+
