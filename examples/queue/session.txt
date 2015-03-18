@@ -1,40 +1,142 @@
-* current result
+Buggy:
+> queue_old:out_r({[1],lists:seq(1,10)}). 
+{{value,1},{[10,9,8,7,6,5,4,3],[1,2]}}
 
-> queue:out({[3,2,3,1,23,2,3,4],[3]}).
-{{value,3},{[3,2],[4,3,2,23,1,3]}}
+Fixed:
+> queue_new:out_r({[1],lists:seq(1,10)}).  
+{{value,1},{[10,9,8,7],[1,2,3,4,5,6]}} 
 
-* correct result
-> queue:out({[3,2,3,1,23,2,3,4],[3]}).
-{{value,3},{[3,2,3,1,23],[4,3,2]}}
 
-*session
 
-> edd:dd("queue:out({[3,2,3,1,23,2,3,4],[3]})",tree).
+DIVIDE AND QUERY
+----------------
+
+> edd:dd("queue_old:out_r({[1],lists:seq(1,10)})",tree). 
+Total number of tree nodes: 3
+Tree size:
+        1601 words
+        12808 bytes
 Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: 
-queue:r2f([3, 2, 3, 1, 23, 2, 3, 4]) = {[3, 2], [4, 3, 2, 23, 1, 3]}? [y/n/t/d/i/s/u/a]: n
+queue_old:out_r({[1], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}) = {{value, 1}, {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: (16 + 21 =) 37 (data structures) + 1 (base) = 38
+
+queue_old:f2r([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) = {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: (11 + 15 =) 26 (data structures) + 1 (base) = 27
+
 Call to a function that contains an error:
-queue:r2f([3, 2, 3, 1, 23, 2, 3, 4]) = {[3, 2], [4, 3, 2, 23, 1, 3]}
+queue_old:f2r([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) = {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}
 Please, revise the fourth clause:
-r2f([X, Y | R]) -> {[X, Y], lists:reverse(R, [])}.
+f2r([X, Y | F]) -> {lists:reverse(F, []), [X, Y]}.
+
+Total complexity: 65
+Max complexity: 38
+
 Do you want to continue the debugging session inside this function? [y/n]: y
 Total number of tree nodes: 5
+Tree size:
+        2367 words
+        18936 bytes
+
 In the function:
-r2f([X, Y | R]) -> {[X, Y], lists:reverse(R, [])}.
+f2r([X, Y | F]) -> {lists:reverse(F, []), [X, Y]}.
 matching with fourth clause succeed.
 Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
 In the function:
-r2f([X, Y]) -> {[X], [Y]}.
+f2r([X, Y]) -> {[Y], [X]}.
 matching with third clause failed.
 Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
 In the function:
-r2f([_] = R) -> {[], R}.
+f2r([_] = F) -> {F, []}.
 matching with second clause failed.
 Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
 In the function:
-r2f([]) -> {[], []}.
+f2r([]) -> {[], []}.
 matching with first clause failed.
 Is this correct? [y/n/d/i/s/u/a]: y
 
+Complexity: 1 (base) = 1
+
 
 This is the reason for the error:
-Value {[3, 2], [4, 3, 2, 23, 1, 3]} for the final expression {[X, Y], lists:reverse(R, [])} (line 483) is not correct.
+Value {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]} for the final expression {lists:reverse(F, []), [X, Y]} (line 487) is not correct.
+ok
+
+Total complexity: 4
+Max complexity: 1
+
+TOP_DOWN
+--------
+
+> edd:dd("queue_old:out_r({[1],lists:seq(1,10)})",tree,top_down). 
+Total number of tree nodes: 3
+Tree size:
+        1619 words
+        12952 bytes
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: 
+queue_old:out_r({[1], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}) = {{value, 1}, {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: (16 + 21 =) 37 (data structures) + 1 (base) = 38
+
+queue_old:f2r([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) = {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: (11 + 15 =) 26 (data structures) + 1 (base) = 27
+
+Call to a function that contains an error:
+queue_old:f2r([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) = {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]}
+Please, revise the fourth clause:
+f2r([X, Y | F]) -> {lists:reverse(F, []), [X, Y]}.
+
+Total complexity: 65
+Max complexity: 38
+
+Do you want to continue the debugging session inside this function? [y/n]: y
+Total number of tree nodes: 5
+Tree size:
+        2385 words
+        19080 bytes
+In the function:
+f2r([X, Y | F]) -> {lists:reverse(F, []), [X, Y]}.
+matching with fourth clause succeed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
+In the function:
+f2r([X, Y]) -> {[Y], [X]}.
+matching with third clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
+In the function:
+f2r([_] = F) -> {F, []}.
+matching with second clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
+In the function:
+f2r([]) -> {[], []}.
+matching with first clause failed.
+Is this correct? [y/n/d/i/s/u/a]: y
+
+Complexity: 1 (base) = 1
+
+
+This is the reason for the error:
+Value {[10, 9, 8, 7, 6, 5, 4, 3], [1, 2]} for the final expression {lists:reverse(F, []), [X, Y]} (line 487) is not correct.
+ok
+
+Total complexity: 4
+Max complexity: 1
