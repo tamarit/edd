@@ -68,7 +68,8 @@ core_module(File) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec ask( G :: digraph(), Strategy :: top_down | divide_query,Graph :: binary()) -> ok.
-ask(G,Strategy,Graph)->
+ask(G,Strategy,Graph) ->
+	% io:get_line(""),
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
@@ -227,7 +228,7 @@ translate_string_to_functions("\n") ->
 	[];
 translate_string_to_functions("") ->
 	[];
-translate_string_to_functions(List0) ->
+translate_string_to_functions(List0 = [_|_]) ->
 	List = string:strip(List0),
 	case lists:splitwith(fun(C) -> C =/= $: end,List) of
 	     {ModName,[_|Tail1]} ->
@@ -258,7 +259,9 @@ translate_string_to_functions(List0) ->
 	     _ -> 
 	     	io: format("The format is not correct\n"),
 	     	[]
-	end.
+	end;
+translate_string_to_functions(_) ->
+	[].
 	
 look_for_root(G)->
 	case digraph:no_vertices(G) of
