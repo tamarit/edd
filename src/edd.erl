@@ -27,7 +27,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd).
--export([dd/1,dd/2,dd/3, ddc/2]).
+-export([dd/1,dd/2,dd/3, dd_server/2, ddc/2]).
 
 
 %%------------------------------------------------------------------------------
@@ -84,6 +84,17 @@ ddc(Expr,TraceTimeout) ->
 
 
 %%------------------------------------------------------------------------------
+%% @doc Starts the declarative debugger 'edd' server.
+%% @end
+%%------------------------------------------------------------------------------
+-spec dd_server(Expr::string(), Dir :: string()) -> ok.	
+dd_server(Expr, Dir) ->
+	code:add_patha(Dir), 
+	% io:format("PATHS: ~p\n",[code:get_path()]),
+	dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl", Dir) end).
+
+
+%%------------------------------------------------------------------------------
 %% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
 %%      whose evaluation yields an incorrect value. It will use Divide and Query
 %%      strategy and will not create the tree.
@@ -94,17 +105,33 @@ dd(Expr) ->
 	dd_internal(Expr,divide_query,false).
 
 dd_internal(Expr,Strategy,Graph) ->
+	G = dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end),
+	case Graph of
+	     true ->
+	       edd_lib:dot_graph_file(G,"dbg");
+	     false -> 
+	       ok
+	end,
+	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	[_,{memory,Words},_] = digraph:info(G),
+	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	edd_lib:ask(G,Strategy,Graph).
+
+dd_internal(Expr, FunCore) ->
 	{ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
 	M1 = smerl:new(foo),
 	{ok, M2} = smerl:add_func(M1,"bar() ->" ++ Expr ++ " ."),
 	%Obtiene el CORE de la expresión Expr
 	{ok,_,CoreP} = smerl:compile2(M2,[to_core,binary,no_copt]), 
 	InitialCall = extract_call(CoreP),
-	%io:format("InitialCall: ~p\n",[InitialCall]),
+	% io:format("InitialCall: ~p\n",[InitialCall]),
 	FunOperator = erl_syntax:application_operator(AExpr),
 	{remote,_,{atom,_,ModName},_} = FunOperator,
-	Core = edd_lib:core_module(atom_to_list(ModName)++".erl"),
-	%io:format("Core: ~p\n",[Core]),
+	% io:format("ModName: ~p\n",[ModName]),
+	Core = FunCore(ModName),
+	% io:format("Core: ~p\n",[Core]),
 	
 	%to get the .core file. ONLY FOR DEBUGGING 
 	%compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
@@ -169,23 +196,12 @@ dd_internal(Expr,Strategy,Graph) ->
 	     _ -> 
 	     	ok
 	end,
-	case Graph of
-	     true ->
-	       edd_lib:dot_graph_file(G,"dbg");
-	     false -> 
-	       ok
-	end,
-	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
-	[_,{memory,Words},_] = digraph:info(G),
-	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
-	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    edd_lib:ask(G,Strategy,Graph).
+    G.
 
 
 get_tree(Expr,Env,G,Core,FreeV,Trusted) ->
-	%io:format("Expr: ~p\n",[Expr]),
-	%io:format("Env: ~p\n",[ets:tab2list(Env)]),
+	% io:format("Expr: ~p\n",[Expr]),
+	% io:format("Env: ~p\n",[ets:tab2list(Env)]),
 	case cerl:type(Expr) of
 		'apply' ->
 			get_tree_apply(Expr,Env,G,Core,FreeV,Trusted);
@@ -377,11 +393,11 @@ get_tree_apply(Apply,Env0,G,Core,FreeV,Trusted)->
 get_tree_applyFun(Args,NPars,Core,FreeV,FunBody,G,FunVar,FunName,Trusted,Env0) ->
 	Env = ets:new(env_temp, [bag]),
 	create_new_env(Args, NPars, Env),
-	%io:format("Env0: ~p\nEnv: ~p\n",[Env0,ets:tab2list(Env]),
+	% io:format("Env0: ~p\nEnv: ~p\n",[Env0,ets:tab2list(Env)]),
 	add_bindings_to_env(Env0,Env),
 	CaseId = get(case_id),
 	{Value,NFreeV,Roots} = get_tree(FunBody,Env,G,Core,FreeV,Trusted),
-	%io:format("{Value,NFreeV,Roots}: ~p\n",[{Value,NFreeV,Roots} ]),
+	% io:format("{Value,NFreeV,Roots}: ~p\n",[{Value,NFreeV,Roots} ]),
 	IsLC = % Detecta si se trata de una list comprehension
 		case FunVar of 
 		  {anonymous_function,_,_,_,_,_} ->
@@ -462,6 +478,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	% io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
 	% io:format("~p\n",[Call]),
 	FileAdress = code:where_is_file(atom_to_list(ModName)++".erl"),
+	% io:format("FileAdress: ~p\n", [FileAdress]), 
 	% Busca el erl. Si no está, busca el beam (libreria de sistema) y tunea la ruta
 	% para apuntar al ebin/ correspondiente
 	NFileAdress = 
@@ -481,12 +498,14 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	     		end;
 	     	_ -> FileAdress
 	   end,
-	[FirstChar|_] = NFileAdress,
-	Trusted = 
-	   case FirstChar of
-	        $. -> false;
-	        _ -> true
-	   end,
+	LibDir = code:lib_dir(),
+	Trusted = lists:prefix(LibDir, NFileAdress),
+	% [FirstChar|_] = NFileAdress,
+	% Trusted = 
+	%    case FirstChar of
+	%         $. -> false;
+	%         _ -> true
+	%    end,
 	% io:format("Current module: ~p\n",[{cerl:concrete(cerl:module_name(Core)),Trusted}]),
 	case {cerl:concrete(cerl:module_name(Core)),Trusted} of
 	     {ModName,false} -> % Call de una función en el mismo módulo
@@ -555,7 +574,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 			                     _ ->
 			                       {{c_literal,[],false},FreeV,[]}
 			                end;
-			             _ ->
+			             _ ->	
 			               ModCore = edd_lib:core_module(NFileAdress),
 			               get_tree_apply(cerl:ann_c_apply(cerl:get_ann(Call),
 			                               cerl:c_var({FunName,FunArity}),Args),

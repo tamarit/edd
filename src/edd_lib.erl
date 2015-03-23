@@ -26,7 +26,8 @@
 
 -module(edd_lib).
 
--export([parse_expr/1, dot_graph_file/2, ask/3, core_module/1]).
+-export([parse_expr/1, dot_graph_file/2, json_graph/1, 
+		ask/3, core_module/1, core_module/2]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -56,6 +57,17 @@ parse_expr(Func) ->
 -spec core_module( File :: string()) -> binary().    
 core_module(File) ->
 	{ok,_,Core} = compile:file(File,[to_core,binary,no_copt]),
+	Core.
+
+%%------------------------------------------------------------------------------
+%% @doc Compiles the Erlang program 'File' into Core Erlang and returns the 
+%%      resulting Core program as a binary.
+%%      
+%% @end
+%%------------------------------------------------------------------------------
+-spec core_module( File :: string(), Dir :: string()) -> binary().    
+core_module(File, Dir) ->
+	{ok,_,Core} = compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
 	Core.
 
 %%------------------------------------------------------------------------------
@@ -434,3 +446,39 @@ changeNewLines([Other|Chars]) ->
 	[Other|changeNewLines(Chars)];
 changeNewLines([]) ->
 	[].
+
+%%------------------------------------------------------------------------------
+%% @doc Created a JSON representation of a given deugging tree
+%% @end
+%%------------------------------------------------------------------------------
+-spec json_graph( G :: digraph()) -> string().	   
+json_graph(G)->
+	Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
+	Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+	JSON_Erlang = 
+		{struct, 
+			[{"vertices", {array, (lists:map(fun json_vertex/1,Vertices))}},
+			{"edges", {array, lists:flatten(lists:map(fun json_edge/1,Edges))}}]},
+	% io:format("JSON_Erlang: ~p\n", [JSON_Erlang]),
+	lists:flatten(mochijson:encode(JSON_Erlang)).
+	
+
+
+json_vertex({V,{L,_,File,Line}}) ->
+	{struct, 
+		[{"node",integer_to_list(V)} ,
+		 {"question", 
+			changeNewLines(lists:flatten(transform_label(lists:flatten(L),[]))) 
+			++ 
+			case File of 
+				none ->
+					"";
+				_ -> 
+					[$\\,$l] 
+						++ changeNewLines(
+							io_lib:format("fun location: (~s, line ~p)",[File, Line]))
+			end}]}.     
+	    
+json_edge({V1,V2}) -> 
+	{struct, [{"from",integer_to_list(V1)}, {"to",integer_to_list(V2)}]}.	
+	

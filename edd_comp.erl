@@ -40,9 +40,16 @@ compile() ->
   comp_aux( 'src/edd_con.erl'),
   comp_aux( 'src/edd_con_lib.erl'),
   comp_aux( 'src/edd_trace.erl'),
+  comp_aux( 'src/edd_tcp.erl'),
+  comp_aux( 'src/edd_server.erl'),
+  comp_aux( 'src/edd_control.erl'),
+  comp_aux( 'src/edd_client.erl'),
+  comp_aux( 'src/mochijson.erl'),
   edoc:files(['src/edd.erl','src/edd_lib.erl','src/smerl.erl', 'edd_comp.erl',
   'src/edd_zoom.erl', 'src/edd_zoom_lib.erl', 'src/edd_con.erl', 
-  'src/edd_con_lib.erl', 'src/edd_trace.erl'],[{dir,doc}]).
+  'src/edd_con_lib.erl', 'src/edd_trace.erl', 'src/edd_tcp.erl'
+  , 'src/edd_server.erl', 'src/edd_control.erl', 'src/edd_client.erl'
+  , 'src/mochijson.erl'],[{dir,doc}]).
 
 %%------------------------------------------------------------------------------
 %% @doc Load all the files of the Erlang Declarative Debugger (edd).
@@ -58,6 +65,11 @@ load() ->
   code:load_abs("ebin/edd_con"),
   code:load_abs("ebin/edd_con_lib"),
   code:load_abs("ebin/edd_trace"),
+  code:load_abs("ebin/edd_tcp"),
+  code:load_abs("ebin/edd_server"),
+  code:load_abs("ebin/edd_control"),
+  code:load_abs("ebin/edd_client"),
+  code:load_abs("ebin/mochijson"),
   ok.
 
 comp_aux( File ) ->

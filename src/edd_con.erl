@@ -67,8 +67,9 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	
 	FunsInitialCall = get_funs_from_abstract(AExpr,-1),
 	compile:file(atom_to_list(ModName)++".erl"),
-	{{first_pid,FirstPid},{traces,Traces}} = 
+	{{first_pid,FirstPid},{traces,Traces0}} = 
 		edd_trace:trace(Expr,Timeout),
+	Traces = dict_keys_to_str(Traces0),
 	%TO CHANGE
 	%io:format("FunsInitialCall: ~p\n",[FunsInitialCall]),
 	Self = self(),
@@ -91,7 +92,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 			parent = 0
 		},
 	TraceFirst = 
-		case dict:find(FirstPid,Traces) of 
+		case dict_str_find(FirstPid,Traces) of 
 			error -> [];
 			{ok, TraceFirst_} -> TraceFirst_
 		end,
@@ -109,7 +110,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 			first_pid = FirstPid,
 			main_pid_answer = 0,
 			main_result = [],
-			pid_info = dict:store(FirstPid, #pid_state{trace = TraceFirst}, dict:new()),
+			pid_info = dict_str_store(FirstPid, #pid_state{trace = TraceFirst}, dict:new()),
 			iteration = 0
 		},
 	PidScheduler = 
@@ -144,7 +145,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	 	     	     		stuck_receive -> 
 	 	     	     			Value;
 	 	     	     		_ -> 
-	 	     	     			io_lib:format("~p",[cerl:concrete(Value)])
+	 	     	     			io_lib:format("~p",[cerl:concrete(cerl:fold_literal(Value))])
 	 	     	     	end,
 	 	     	     %io:format("Summary: ~p\n",[Summary]),
 	 	     	     PrettySummary = 
@@ -153,7 +154,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 						 	 || {PidSent,Msg} <- Sent]}
 				 		 || {PidSummary,CallSum,Spawned,Sent} <- Summary],
 				 	%io:format("PrettySummary: ~p\n",[PrettySummary]),
- 	     	     	PidG!{add_vertex,0,{root,Expr,PrintValue,PrettySummary,FirstPid}}
+ 	     	     	PidG!{add_vertex,0,{{root,Expr,PrintValue,PrettySummary},lists:flatten(io_lib:format("~p",[FirstPid]))}}
 	 	     	                           %get_from_scheduler(PidScheduler,{get_case_id,0,self()}),none,1}}
  	     	       	% digraph:add_vertex(G,FreeV,
 	 	     	       %                    {Expr ++ " = "
@@ -189,7 +190,6 @@ ddc(Expr,Timeout,Strategy,Priority) ->
     %edd_lib:ask(G,{top_down,old}),
     %edd_lib:ask(G,{top_down,new}),
     PidG!stop,
-    %ets:delete(Env),
     ok.
 
 digraph_server() ->
@@ -255,7 +255,7 @@ scheduler(State0) ->
 			%io:format("Pasa control a ~p\n",[TreeState#tree_state.pid_trace]),
 			case cerl:type(TreeState#tree_state.expr) of 
 				'receive' ->
-					Pid_info = dict:fetch(TreeState#tree_state.pid_trace, State#scheduler_state.pid_info),
+					Pid_info = dict_str_fetch(TreeState#tree_state.pid_trace, State#scheduler_state.pid_info),
 					%io:format("Trace: ~p\n",[Pid_info#pid_state.trace]),
 					%io:format("Trace: ~p\n",[Pid_info#pid_state.pid_continue]),
 					%io:format("Trace: ~p\n",[Pid_info#pid_state.trace]),
@@ -281,7 +281,7 @@ scheduler(State0) ->
 		{add_spawn,MNF_item = TreeState,PidWhoSpawn, NTracePidWhoSpawn} ->
 			%io:format("antes2\n"),
 			Pid_Info_WhoSpawn = 
-				dict:fetch(PidWhoSpawn, State#scheduler_state.pid_info),
+				dict_str_fetch(PidWhoSpawn, State#scheduler_state.pid_info),
 			Stack = Pid_Info_WhoSpawn#pid_state.stack,
 			ParentStack = 
 				case Stack of
@@ -291,63 +291,65 @@ scheduler(State0) ->
 						none
 				end,
 			NPidInfo = 
-				dict:store(
+				dict_str_store(
 					PidWhoSpawn,
 					Pid_Info_WhoSpawn#pid_state{
 						trace = NTracePidWhoSpawn,
 						temp_spawned = Pid_Info_WhoSpawn#pid_state.temp_spawned ++ [{TreeState#tree_state.pid_trace,ParentStack}]},
 					State#scheduler_state.pid_info),
 			Pid_trace_start_trace = 
-				case dict:find(TreeState#tree_state.pid_trace,State#scheduler_state.traces) of 
+				case dict_str_find(TreeState#tree_state.pid_trace,State#scheduler_state.traces) of 
 					error -> [];
 					{ok,Pid_trace_start_trace_} -> Pid_trace_start_trace_
 				end,
 			scheduler(State#scheduler_state{
 				mnf = State#scheduler_state.mnf ++ [MNF_item], 
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 						TreeState#tree_state.pid_trace,
 						#pid_state{trace = Pid_trace_start_trace},
 						NPidInfo)});
 		{add_receive,MNF_item = TreeState,PidContinue} ->
 			%io:format("antes3\n"),
 			Pid_info = 
-				dict:fetch(TreeState#tree_state.pid_trace, State#scheduler_state.pid_info),
+				dict_str_fetch(TreeState#tree_state.pid_trace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{
 				mnf = State#scheduler_state.mnf ++ [MNF_item], 
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 					TreeState#tree_state.pid_trace, 
 					Pid_info#pid_state{pid_continue = PidContinue}, 
 					State#scheduler_state.pid_info)});
 		{set_trace,PidTrace,NCurrentTrace} ->
 			%io:format("antes4\n"),
 			Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{ 
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{trace = NCurrentTrace},
 						State#scheduler_state.pid_info)});
 		{get_trace,PidTrace,PidAnswer} ->
 			%io:format("antes5\n"),
-     		PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.trace,
+     		PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.trace,
      		scheduler(State);
      	{set_receipt,PidTrace,NReceipt} ->
      		%io:format("antes6\n"),
 			Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{ 
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{receipt = NReceipt},
 						State#scheduler_state.pid_info)});
 		{get_receipt,PidTrace,PidAnswer} ->
 			%io:format("antes7\n"),
-			PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.receipt,
+			PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.receipt,
      		scheduler(State);
      	{add_message,From,To,Msg} ->
      		%io:format("antes8\n"),
+     		% io:format("From: ~p\nTo: ~p\n",[From,To]),
+     		FreeV = State#scheduler_state.free_v,
      		Pid_info_from = 
-				dict:fetch(From, State#scheduler_state.pid_info),
+				dict_str_fetch(From, State#scheduler_state.pid_info),
 			Stack = 
 				Pid_info_from#pid_state.stack,
 			ParentStack = 
@@ -358,7 +360,7 @@ scheduler(State0) ->
 						none
 				end,
 			Pid_info_to = 
-				dict:fetch(To, State#scheduler_state.pid_info),
+				dict_str_fetch(To, State#scheduler_state.pid_info),
 			NTrace = 
 				case get_next_sent(Pid_info_from#pid_state.trace,[]) of 
 					not_found -> Pid_info_from#pid_state.trace;
@@ -367,24 +369,24 @@ scheduler(State0) ->
 			NPidInfo1 = 
 				case From of 
 					To -> 
-						dict:store(
+						dict_str_store(
 							To,
 							Pid_info_to#pid_state{
-								receipt = Pid_info_to#pid_state.receipt ++ [{From,Msg}],
+								receipt = Pid_info_to#pid_state.receipt ++ [{From,Msg,FreeV}],
 								temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}],
 								trace = NTrace},
 							State#scheduler_state.pid_info);
 					_ ->
 						NPidInfo0 = 
-							dict:store(
+							dict_str_store(
 									From,
 									Pid_info_from#pid_state{
 										temp_sent = Pid_info_from#pid_state.temp_sent ++ [{To,Msg,ParentStack}],
 										trace = NTrace},
 									State#scheduler_state.pid_info),
-						dict:store(
+						dict_str_store(
 								To,
-								Pid_info_to#pid_state{receipt = Pid_info_to#pid_state.receipt ++ [{From,Msg}]},
+								Pid_info_to#pid_state{receipt = Pid_info_to#pid_state.receipt ++ [{From,Msg,FreeV}]},
 								NPidInfo0)
 				end,
 			scheduler(State#scheduler_state{ 
@@ -403,14 +405,14 @@ scheduler(State0) ->
      		%Stack = (dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.stack,
      		%{NumberedStack,_} = lists:mapfoldl(fun(E,Id) -> {{Id,E}, Id + 1} end,1,lists:reverse(Stack)),
      		%PidAnswer!lists:reverse(NumberedStack),
-     		PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.stack,
+     		PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.stack,
 			scheduler(State);
 		{get_finished_calls_stack,PidTrace,PidAnswer} ->
-     		PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.finished_stack,
+     		PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.finished_stack,
 			scheduler(State);
 		{substitute_stack,PidTrace,IdCall,New} ->
      		Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			Stack = Pid_info#pid_state.stack,
 			{NStack,NFinishedStack} = 
 				case [Elem || Elem = {IdCall_,_,_} <- Stack, IdCall_ == IdCall] of 
@@ -421,7 +423,7 @@ scheduler(State0) ->
 						 [{IdCall,ParentStack,New} | Pid_info#pid_state.finished_stack]}
 				end,
 			scheduler(State#scheduler_state{
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							finished_stack = NFinishedStack,
@@ -429,11 +431,11 @@ scheduler(State0) ->
 						State#scheduler_state.pid_info)});
 		{clean_stack,PidTrace} ->
      		Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			{_,NStack} = clean_stack(Pid_info#pid_state.stack),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							finished_stack = [],
@@ -441,7 +443,7 @@ scheduler(State0) ->
 						State#scheduler_state.pid_info)});
 		{store_call,PidTrace, Call} ->
      		Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			NFirstCall = 
 				case Pid_info#pid_state.first_call of 
 					none -> 
@@ -452,7 +454,7 @@ scheduler(State0) ->
 			%io:format("Pid: ~p\nOld: ~p\nCandidate: ~p\nNew: ~p\n",[PidTrace,Pid_info#pid_state.first_call,Call,NFirstCall]),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							first_call = NFirstCall},
@@ -460,7 +462,7 @@ scheduler(State0) ->
 		{add_call_stack,PidTrace,Call,PidAnswer} ->
      		%io:format("antes9\n"),
      		Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			CurrentStackId = Pid_info#pid_state.current_stack_id,
 			PidAnswer!CurrentStackId,
 			ParentStack = 
@@ -471,15 +473,15 @@ scheduler(State0) ->
 						none
 				end,
 			scheduler(State#scheduler_state{ 
-				pid_info = dict:store(
+				pid_info = dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							stack = [{CurrentStackId,ParentStack,Call} | Pid_info#pid_state.stack],
 							current_stack_id = CurrentStackId + 1},
 						State#scheduler_state.pid_info)});
-		{set_transition,PidTrace,Receive,Clause,{Pid,Msg},NodeReceive} ->
+		{set_transition,PidTrace,Receive,Clause,{Pid,Msg,NodeSend},NodeReceive} ->
 			Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			CurrentStack = [Pid_ || {Pid_,_,_} <- Pid_info#pid_state.stack],
 			% NMsg = 
 			% 	case Msg of 
@@ -491,28 +493,28 @@ scheduler(State0) ->
 			%io:format("~p\n",[{Receive,Clause,NPidMsg}]),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
-							transition = {{Receive,Clause,{Pid,Msg},NodeReceive},CurrentStack},
+							transition = {{Receive,Clause,{Pid,Msg,NodeSend},NodeReceive},CurrentStack},
 							values_transition = dict:store(NodeReceive,none,Pid_info#pid_state.values_transition)},
 						State#scheduler_state.pid_info)});
 		{get_transition,PidTrace,PidAnswer} ->
-			Pid_info = dict:fetch(PidTrace, State#scheduler_state.pid_info),
+			Pid_info = dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 				case Pid_info#pid_state.transition of 
-					{{Receive,Clause,{Pid,Msg},NodeReceive},CurrentStack} ->
+					{{Receive,Clause,{Pid,Msg,NodeSend},NodeReceive},CurrentStack} ->
 						%io:format("Dict: ~p\n",[dict:to_list(Pid_info#pid_state.values_transition)]),
 						Value = dict:fetch(NodeReceive,Pid_info#pid_state.values_transition),
-						PidAnswer!{{Receive,Clause,{Pid,Msg},NodeReceive,Value},CurrentStack};
+						PidAnswer!{{Receive,Clause,{Pid,Msg,NodeSend},NodeReceive,Value},CurrentStack};
 					{} ->
 						PidAnswer!{}
 				end,
 			scheduler(State);
 		{value_transition,PidTrace,NodeReceive,Value} ->
-			Pid_info = dict:fetch(PidTrace, State#scheduler_state.pid_info),
+			Pid_info = dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							values_transition = dict:store(NodeReceive,Value,Pid_info#pid_state.values_transition)},
@@ -520,43 +522,43 @@ scheduler(State0) ->
 		{get_sent,PidTrace,PidAnswer} ->
 			PrettySent = 
 				[{Pid, erl_prettypr:format(get_abstract_form(Msg,none),[{paper, 300},{ribbon, 300}])}
-				 || {Pid,Msg} <- (dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.sent],
+				 || {Pid,Msg} <- (dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.sent],
 			%io:format("PrettySent: ~p\n",[PrettySent]),
 			PidAnswer!PrettySent,
 			scheduler(State);
 		{get_spawned,PidTrace,PidAnswer} ->
-			PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.spawned,
+			PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.spawned,
 			scheduler(State);
 		{get_temp_sent,PidTrace,PidAnswer} ->
 			PrettySent = 
 				[{Pid, erl_prettypr:format(get_abstract_form(Msg,none),[{paper, 300},{ribbon, 300}]),IdCall}
-				 || {Pid,Msg,IdCall} <- (dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_sent],
+				 || {Pid,Msg,IdCall} <- (dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_sent],
 			%io:format("PrettySent: ~p\n",[PrettySent]),
 			PidAnswer!PrettySent,
 			scheduler(State);
 		{get_temp_spawned,PidTrace,PidAnswer} ->
 			%io:format("spawned: ~p\n",[(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_spawned]),
-			PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_spawned,
+			PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_spawned,
 			scheduler(State);
 		{store_receive,PidTrace,Node} ->
 			Pid_Info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_Info#pid_state{
 							temp_receipt = Pid_Info#pid_state.temp_receipt ++ [{Node,length(Pid_Info#pid_state.stack)}]},
 						State#scheduler_state.pid_info)});
 		{get_temp_receipt,PidTrace,PidAnswer} ->
-			PidAnswer!(dict:fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_receipt,
+			PidAnswer!(dict_str_fetch(PidTrace, State#scheduler_state.pid_info))#pid_state.temp_receipt,
 			scheduler(State);
 		{store_temp_data,PidTrace} ->
 			Pid_info = 
-				dict:fetch(PidTrace, State#scheduler_state.pid_info),
+				dict_str_fetch(PidTrace, State#scheduler_state.pid_info),
 			scheduler(State#scheduler_state{
 				pid_info = 
-					dict:store(
+					dict_str_store(
 						PidTrace,
 						Pid_info#pid_state{
 							sent = Pid_info#pid_state.sent ++ [{Pid,Msg} || {Pid,Msg,_} <- Pid_info#pid_state.temp_sent],
@@ -569,33 +571,29 @@ scheduler(State0) ->
 			%io:format("rep result\n"),
 			case {State#scheduler_state.main_pid_answer, State#scheduler_state.mnf} of 
 				{PidFrom,[]} -> 
-					%io:format("despues1\n"),
 					%Clause = hd([Clause_ ||{0,Clause_} <- State#scheduler_state.cases]),
 					%Sent = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.sent,
 					%Spawned = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.spawned,
-					catch ets:delete(Env),
+					%catch ets:delete(Env),
 					Summary = 
 						[{Pid,PidInfo#pid_state.first_call,PidInfo#pid_state.spawned,PidInfo#pid_state.sent} 
 						 || {Pid,PidInfo} <- dict:to_list(State#scheduler_state.pid_info)],
 					State#scheduler_state.main_pid!{result,Result,Summary};
 				{_,[]} -> 
-					%io:format("despues2\n"),
 					%Clause = hd([Clause_ ||{0,Clause_} <- State#scheduler_state.cases]),
 					%Sent = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.sent,
 					%Spawned = (dict:fetch(State#scheduler_state.first_pid, State#scheduler_state.pid_info))#pid_state.spawned,
-					catch ets:delete(Env),
+					%catch ets:delete(Env),
 					Summary = 
 						[{Pid,PidInfo#pid_state.first_call,PidInfo#pid_state.spawned,PidInfo#pid_state.sent} 
 						 || {Pid,PidInfo} <- dict:to_list(State#scheduler_state.pid_info)],
 					State#scheduler_state.main_pid!{result,State#scheduler_state.main_result,Summary};
 				{PidFrom,_} -> 
-					%io:format("despues3\n"),
-					catch ets:delete(Env),
+					%catch ets:delete(Env),
 					self()!next_mnf,
 					scheduler(State#scheduler_state{main_result = Result});
 				{_,_} -> 
-					%io:format("despues4\n"),
-					catch ets:delete(Env),
+					%catch ets:delete(Env),
 					self()!next_mnf,
 					scheduler(State)
 			end;
@@ -626,6 +624,11 @@ scheduler(State0) ->
 			scheduler(State#scheduler_state{free_v = State#scheduler_state.free_v + 1});
 		{get_graph,PidAnswer} ->
 			PidAnswer!State#scheduler_state.g,
+			scheduler(State);
+		{execute_code_on_the_fly,PidAnswer} ->
+			Result = foo:bar(),
+			%io:format("~p\n",[Result]),
+			PidAnswer!foo:bar(),
 			scheduler(State);
 		_Msg -> 
 			io:format("Unknown message ~p\n",[_Msg])
@@ -664,8 +667,9 @@ get_tree(State,Pid) ->
 				LetArg = cerl:let_arg(Expr),
 				ValueArg =
 				   get_tree(State#tree_state{expr = LetArg}),
-				%io:format("Vars: ~p\n",[Vars]),
-				%io:format("ValueArg: ~p\n",[ValueArg]),
+				% io:format("Vars: ~p\n",[Vars]),
+				% io:format("LetArg: ~p\n",[LetArg]),
+				% io:format("ValueArg: ~p\n",[ValueArg]),
 				case check_errors(ValueArg) of
 				     true -> 
 				     	ValueArg;
@@ -714,10 +718,11 @@ get_tree(State,Pid) ->
 				     	cerl:abstract(PidTrace);
 				     %Send
 				     {c_call,_,{c_literal,_,erlang},{c_literal,_,'!'},[ToPid,Msg]} ->
+				     	%io:format("ToPid: ~p\n",[ToPid]),
 				     	VToPid = get_tree(State#tree_state{expr = ToPid}),
 				     	VMsg = get_tree(State#tree_state{expr = Msg}),
 				     	%io:format("PidTrace:~p\nVToPid: ~p\nVMsg: ~p\n",[PidTrace,VToPid,VMsg]),
-				     	SchedulerPid!{add_message,PidTrace,cerl:concrete(VToPid),VMsg},
+				     	SchedulerPid!{add_message,PidTrace,cerl:concrete(cerl:fold_literal(VToPid)),VMsg},
 				     	%io:format("Sent: ~p\n",[get_from_scheduler(SchedulerPid,{get_sent,PidTrace,self()})]),
 				     	VMsg;
 				     %Spawn
@@ -738,16 +743,24 @@ get_tree(State,Pid) ->
 						CurrentTrace = get_from_scheduler(SchedulerPid,{get_trace,PidTrace,self()}),
 						%io:format("SpawnCall: ~p\nPidTrace: ~p\nCurrentTrace: ~p\n",[SpawnCall,PidTrace,CurrentTrace]),
 						{SpawnPid, NCurrentTrace} = get_next_spawned(CurrentTrace,[]),
+						%io:format("Info: ~p\n",[{SpawnPid, NCurrentTrace}]),
 						case SpawnPid of 
 							no_pid ->
 								throw({error,io_lib:format("Pid ~p does not spawn more processes in the trace.",[Pid]),Expr}),
 	     						SpawnCall;
 	     					_ ->
 								SchedulerPid!{add_spawn,State#tree_state{expr = SpawnCall, pid_trace = SpawnPid},PidTrace,NCurrentTrace},
-								%io:format("SpawnPid: ~p\n",[cerl:abstract(SpawnPid)]),
+								% io:format("SpawnPid: ~p\n",[cerl:abstract(SpawnPid)]),
 								cerl:abstract(SpawnPid)
 								
 						end;
+					%Register
+				     % {c_call,_,{c_literal,_,erlang},{c_literal,_,'register'},[NamePid,PidToRegister]} ->
+				     % 	VNamePid = get_tree(State#tree_state{expr = NamePid}),
+				     % 	VPidToRegister = get_tree(State#tree_state{expr = PidToRegister});
+				     	% Guardar en el estat general una ets amb esta info
+				     	% tornar true
+				     	% Donar suport a les tres fucnions relacionades http://www.erlang.org/doc/reference_manual/processes.html;
 				     _ -> 
 				     	get_tree_call(State)
 				end;
@@ -1123,25 +1136,37 @@ get_tree_call(State) ->
 		     	end,
 	     	case {NoLits} of
 	     	    {[]} -> 
-	     	     	ABArgs = 
+	     	    	ABArgs = 
 	     	     	   [get_abstract_from_core_literal(cerl: fold_literal(BArg)) 
 	     	     	    || BArg <- BArgs],
+	     	     	SchedulerPid = State#tree_state.scheduler_pid,
 	     	     	Value =  
-						try
-		           % Posible problema si el ya existe un módulo foo
-						   M1 = smerl:new(foo),
-						   {ok, M2} = 
-						      smerl:add_func(M1, 
-						          {function,1,bar,0,
-					                    [{clause,1,[],[],
-					                     [{call,1,{remote,1,{atom,1,ModName},
-						                               {atom,1,FunName}},ABArgs}]}]}),
-	                         smerl:compile(M2,[nowarn_format]),
-		                     foo:bar() %Genera el valor utilizando el módulo creado
-				                               %on de fly
-						catch
-						   Exception:Reason -> {Exception,Reason}
+	     	     		case {ModName,FunName} of 
+	     	     			% {lists,nth} ->
+	     	     			% 	{integer,_,Index} = get_abstract_from_core_literal(lists:nth(1,BArgs)),
+	     	     			% 	{c_literal,_,ListNth} = cerl:fold_literal(lists:nth(2,BArgs)),
+	     	     			% 	%io:format("~p ~p\n",[Index,ListNth]),
+	     	     			% 	lists:nth(Index,ListNth);
+	     	    			_ ->
+								try
+				           % Posible problema si el ya existe un módulo foo
+				           		   %io:format("Self: ~p\n",[self()]),
+								   M1 = smerl:new(foo),
+								   {ok, M2} = 
+								      smerl:add_func(M1, 
+								          {function,1,bar,0,
+							                    [{clause,1,[],[],
+							                     [{call,1,{remote,1,{atom,1,ModName},
+								                               {atom,1,FunName}},ABArgs}]}]}),
+			                         smerl:compile(M2,[nowarn_format]),
+			                         get_from_scheduler(SchedulerPid,{execute_code_on_the_fly,self()})
+				                     %foo:bar() %Genera el valor utilizando el módulo creado
+						                               %on de fly
+								catch
+								   Exception:Reason -> {Exception,Reason}
+								end
 						end,
+					%io:format("~p:~p Args: ~p Value: ~p\n",[ModName,FunName,ABArgs,Value]),
 					AValue = cerl:abstract(Value),
 					AValue;
 			     _ -> 
@@ -1229,7 +1254,7 @@ get_clause_body([Clause | Clauses],BArgs,State,DepsBefore,InfoFails,NumClause) -
 	     {true, {{c_clause, _, _, _, ClauseBody}, Bindings}} -> 
 			case cerl:clause_body(Clause) of
 			     ClauseBody -> 
-			     	%io:format("antes: ~p\n",[ets:tab2list(State#tree_state.env) ++ [{VarName, Value} || {{c_var,_,VarName},Value} <- Bindings]]),
+			     	% io:format("antes: ~p\n",[ets:tab2list(State#tree_state.env) ++ [{VarName, Value} || {{c_var,_,VarName},Value} <- Bindings]]),
 			     	TempEnv = get_from_scheduler(SchedulerPid,{create_env,self()}),
 					ets:insert(TempEnv,ets:tab2list(State#tree_state.env) ++ [{VarName, Value} || {{c_var,_,VarName},Value} <- Bindings]),
 					%{VarsPattern,ValuesPattern} = lists:unzip(Bindings),
@@ -1325,7 +1350,7 @@ get_tree_receive(State) ->
 	%io:format("Receipt: ~p\n",[Receipt]),
 	case get_clause_body_receive(CurrentTrace,Receipt,Clauses,SchedulerPid,State,DepsBefore,[]) of 
 		{Clause,ClauseBody,NTrace,Consumed,CoreConsumed,InfoFails,Reason} ->
-			%io:format("InfoFails: ~p\n",[InfoFails]),
+			%io:format("Consumed: ~p\n",[Consumed]),
 			SchedulerPid!{set_trace, PidTrace, NTrace},
 			SchedulerPid!{set_receipt, PidTrace, [Item || Item <- Receipt, Item /= CoreConsumed]},
 			% Parent = 
@@ -1389,7 +1414,7 @@ get_tree_receive(State) ->
 					%io:format("\nSTORE\nPid: ~pInfo: ~p\n",[PidTrace,{AExpr,Line,File}]),
 					NodeReceive = get_from_scheduler(SchedulerPid,{get_free_v,self()}),
 					SchedulerPid!increment_free_v,
-					SchedulerPid!{set_transition,PidTrace,{AExpr,Line,File},none,{none,none},NodeReceive},
+					SchedulerPid!{set_transition,PidTrace,{AExpr,Line,File},none,{none,none,none},NodeReceive},
 					SchedulerPid!{value_transition,PidTrace,NodeReceive,Value},
 					Deps = get_dependences(cerl_trees:variables(Expr),State#tree_state.env, SchedulerPid),
 					IdReceive =
@@ -1414,7 +1439,7 @@ get_clause_body_receive(_,[],_,_,_,_,InfoFails) ->
 get_clause_body_receive([],_,_,_,_,_,InfoFails) ->
 	{stuck_receive,InfoFails};
 	%throw({error,"Something bad has happened while receiving messages."});
-get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails) ->
+get_clause_body_receive(Trace,[{Sender,Msg,NodeSend}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails) ->
 	%io:format("Entra\n"),
 	NTrace = get_next_receipt(Trace,[]),
 	%io:format("{Sender,Msg}: ~p\n",[{Sender,Msg}]),
@@ -1424,19 +1449,19 @@ get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,
 			%io:format("\n\nEspera!!\n\n"),
 			%io:format("ANTES_2\n"),
 			wait_for_scheduling(SchedulerPid,State),
-			get_clause_body_receive(Trace,[{Sender,Msg}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails);
+			get_clause_body_receive(Trace,[{Sender,Msg,NodeSend}|Receipt],Clauses,SchedulerPid,State,DepsBefore,InfoFails);
 		_ -> 
 			%io:format("\n\nTrobat!!\n~p -> ~p\n\n",[Trace,NTrace]),
 			PrettyMsg = erl_prettypr:format(get_abstract_form(Msg,none),[{paper, 300},{ribbon, 300}]),
 			case get_clause_body(Clauses,[Msg],State,DepsBefore,[],1) of 
 				{none,InfoFailsReceive} ->
-					NInfoFailsReceive = [{Sender,PrettyMsg,InfoFailClause} || InfoFailClause <- InfoFailsReceive],
+					NInfoFailsReceive = [{Sender,PrettyMsg,NodeSend,InfoFailClause} || InfoFailClause <- InfoFailsReceive],
 					get_clause_body_receive(NTrace,Receipt,Clauses,SchedulerPid,State,DepsBefore,InfoFails ++ NInfoFailsReceive) ;
 				{Clause,ClauseBody,Bindings,InfoFailsReceive,Reason}  ->
 					%io:format("InfoFails: ~p\n",[InfoFails]),
 					add_bindings_to_env(Bindings,State#tree_state.env),
-					NInfoFailsReceive = [{Sender,PrettyMsg,InfoFailClause} || InfoFailClause <- InfoFailsReceive],
-					{Clause,ClauseBody,NTrace,{Sender,PrettyMsg},{Sender,Msg},InfoFails ++ NInfoFailsReceive,Reason}
+					NInfoFailsReceive = [{Sender,PrettyMsg,NodeSend,InfoFailClause} || InfoFailClause <- InfoFailsReceive],
+					{Clause,ClauseBody,NTrace,{Sender,PrettyMsg,NodeSend},{Sender,Msg,NodeSend},InfoFails ++ NInfoFailsReceive,Reason}
 			end
 	end.
 
@@ -1498,10 +1523,10 @@ store_tree_receive([{IdCall, _, Call}|Stack],FinishedCallsStack,G,Parent,AExpr,S
 	% 	{finished_call,AMatch,SelectedClause,FileCall,LineCall,PidTraceCall,TransitionCall} ->
 	% 		G!{add_vertex,FreeV,{AMatch,SelectedClause,FileCall,LineCall,PidTraceCall,[{Pid,Msg} || {Pid,Msg,Id} <- Sent, Id == IdCall], [Pid || {Pid,Id} <- Spawned, Id == IdCall],TransitionCall}};
 	% 	_ ->
-	G!{add_vertex,Node,{to_receive,AExpr,NCall,File,Line,PidTrace,
+	G!{add_vertex,Node,{{to_receive,AExpr,NCall,File,Line,
 	 %[{Pid,Msg} || {Pid,Msg,Id} <- Sent, Id == IdCall], [Pid || {Pid,Id} <- Spawned, Id == IdCall],
 	 [{Pid,Msg} || {Pid,Msg,Id} <- Sent, lists:member(IdCall,Id)], [Pid || {Pid,Id} <- Spawned, lists:member(IdCall,Id)],
-	 Transition}},
+	 Transition},lists:flatten(io_lib:format("~p",[PidTrace]))}},
 	%end,
 	%io:format("Call ~p\n",[Call]),
 	% case Call of 
@@ -1536,13 +1561,13 @@ store_tree_calls([{IdCall, IdParent, FinishedCallReceive}|CurrentStack],Finished
 			{finished_call,AMatch,SelectedClause,FileCall,LineCall,_,TransitionCall} ->
 				FreeV = get_from_scheduler(SchedulerPid,{get_free_v,self()}),
 				SchedulerPid!increment_free_v,
-				G!{add_vertex,FreeV,{to_value,{call,AMatch,FileCall,LineCall,TransitionCall},PidTrace, SelectedClause, SentCall, SpawnedCall}},
+				G!{add_vertex,FreeV,{{to_value,{call,AMatch,FileCall,LineCall,TransitionCall}, SelectedClause, SentCall, SpawnedCall},lists:flatten(io_lib:format("~p",[PidTrace]))}},
 				FreeV;
 			{finished_recieve,FinishedRecieve,NodeReceive,Clause,SenderMsg,Context,Bindings, {},InfoFails,_} ->
 				%io:format("ContextTC: ~p\n",[Context]),
 				DiscardedMessages = 
 					lists:usort([{SenderF,MsgF}  || {SenderF,MsgF,_} <- InfoFails]) -- [SenderMsg],
-				G!{add_vertex,NodeReceive,{to_value,{'receive',FinishedRecieve, SenderMsg,Context,Bindings,DiscardedMessages},PidTrace, Clause, SentCall, SpawnedCall}},
+				G!{add_vertex,NodeReceive,{{to_value,{'receive',FinishedRecieve, SenderMsg,Context,Bindings,DiscardedMessages}, Clause, SentCall, SpawnedCall},lists:flatten(io_lib:format("~p",[PidTrace]))}},
 				%store_tree_succeed_fail(G,PidTrace,SchedulerPid,NodeReceive,FinishedRecieve,InfoFails,{Clause,MsgSender,Reason},Context),
 				NodeReceive
 		end,
@@ -1620,6 +1645,9 @@ get_abstract_form({anonymous_function,_,_,File,Line,Env},PidScheduler) ->
 	get_fun_from_file(File,Line,Env,PidScheduler);
 get_abstract_form(stuck_receive,_) -> 
 	get_abstract_from_core_literal(cerl:abstract(stuck_receive));
+%This case is used to treat receives with multiples outputs
+get_abstract_form({c_values,_,[H|_]},PidScheduler) -> 
+	get_abstract_form(H,PidScheduler);
 get_abstract_form(Par_,_) -> 
 	Par = cerl:fold_literal(Par_),
 	case cerl:is_literal(Par) or is_pid(Par) of
@@ -1682,7 +1710,7 @@ get_fun_from_file(File,Line,Env,PidScheduler) ->
 	erl_syntax_lib:map(FunChangeVar,AnoFun).    	
     
 bind_vars(Expr,Env) ->
-	%io:format("Expr: ~p\nEnv: ~p\n",[Expr,ets:tab2list(Env)]),
+	% io:format("Expr: ~p\nEnv: ~p\n",[Expr,ets:tab2list(Env)]),
 	case Expr of
 	     {anonymous_function,_,_,_,_,_} -> Expr;
 	     _ ->
@@ -1762,6 +1790,7 @@ get_abstract_from_core_literal(Lit) ->
 	ALit.
 
 get_MFA(Function) ->
+	% io:format("function: ~p\n",[Function]),
 	{c_call,_,{c_literal,_,erlang},{c_literal,_,make_fun},MFA} = Function,
 	[{c_literal,_,ModName},{c_literal,_,FunName},{c_literal,_,FunArity}] = MFA,
 	{ModName,FunName,FunArity}.
@@ -1937,7 +1966,7 @@ get_next_receipt([H|T],Acc) ->
 
 
 get_args_from_core_args(SpawnArgs) ->
-	%io:format("SpawnArgs: ~p\n", [SpawnArgs]),
+	% io:format("SpawnArgs: ~p\n", [SpawnArgs]),
 	case cerl:type(SpawnArgs) of 
 		cons ->
 			Tail = 
@@ -2013,9 +2042,9 @@ get_dependences([Var | Vars], Env, PidScheduler, Acc) ->
 									get_abstract_form(Value, PidScheduler);
 								{c_call,_,_,_,_} -> 
 									get_abstract_form(Value, PidScheduler);
-								_ -> 
-									%io:format("Value: ~p\n",[Value]),
-									cerl:concrete(Value)
+								_ ->
+									%io:format("Value: ~p\n",[cerl:fold_literal(Value)]),
+									cerl:concrete(cerl:fold_literal(Value))
 							end,
 						[{VarName, ConcreteValue}]
 				end
@@ -2024,3 +2053,42 @@ get_dependences([Var | Vars], Env, PidScheduler, Acc) ->
 get_dependences([], _, _, Acc) ->
 	%io:format("Acc: ~p\n", [Acc]),
 	lists:usort(lists:flatten(Acc)).
+
+dict_str_find(Pid,Dict) ->
+	%io:format("Find: ~p\n",[Pid]),
+	%io:format("~p\n",[dict:to_list(Dict)]),
+	NPid = 
+		case is_pid(Pid) of 
+			true -> hd(io_lib:format("~p",[Pid]));
+			false -> Pid
+		end,
+	dict:find(NPid,Dict).
+
+dict_str_fetch(Pid,Dict) ->
+	%io:format("Fetch: ~p\n",[Pid]),
+	%io:format("~p\n",[dict:to_list(Dict)]),
+	NPid = 
+		case is_pid(Pid) of 
+			true -> hd(io_lib:format("~p",[Pid]));
+			false -> Pid
+		end,
+	%io:format("NPid: ~p\n",[NPid]),
+	Result =  dict:fetch(NPid,Dict),
+	%io:format("FETCH: ~p\n",[Result]),
+	Result. 
+
+dict_str_store(Pid, Data,Dict) ->
+	%io:format("Store: ~p\n",[Pid]),
+	NPid = 
+		case is_pid(Pid) of 
+			true -> hd(io_lib:format("~p",[Pid]));
+			false -> Pid
+		end,
+	Res = dict:store(NPid,Data,Dict),
+	%io:format("~p\n",[dict:to_list(Res)]),
+	Res.
+
+dict_keys_to_str(Dict) ->
+	dict:from_list(
+		[{hd(io_lib:format("~p",[Pid])),Data} 
+			|| {Pid,Data} <- dict:to_list(Dict)]).

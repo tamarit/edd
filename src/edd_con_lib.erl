@@ -32,7 +32,8 @@
 	 vertices = [], correct = [],
 	 not_correct = [], unknown = [], 
 	 previous_state = [],
-	 preselected = none}).
+	 preselected = none,
+	 pids = []}).
 
 
 
@@ -47,11 +48,19 @@
 %%------------------------------------------------------------------------------
 %-spec ask( G :: digraph(), Strategy,Priority) -> ok.
 ask(G,Strategy,Priority)->
+	print_root_info(G),
 	% STrustedFunctions = 
-	%   io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
-	% TrustedFunctions = translate_string_to_functions(STrustedFunctions),
+	%   io:get_line("Please, insert a PID where you have observed a wrong beahviour: "),
+	%FirstPid = translate_string_to_pid(STrustedFunctions),
 	% IniCorrect = [V || V <- digraph:vertices(G),
 	%                    lists:member(get_MFA_Label(G,V),TrustedFunctions)],
+	FirstPid = ask_initial_process(G),
+	case FirstPid of 
+		[PidSelected] ->
+			io:format("\nSelected initial PID: ~s\n",[PidSelected]);
+		_ ->
+			io:format("\nInitial PID not defined.\n")
+	end,
 	IniCorrect = [],
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
@@ -61,10 +70,10 @@ ask(G,Strategy,Priority)->
 			strategy = Strategy,
 			priority = Priority,
 			vertices = Vertices,
-			not_correct = [Root]
+			not_correct = [Root],
+			pids = FirstPid
 		},
 	%_ = io:get_line(""),
-	print_root_info(G),
 	ask_about(FirstState).
 	
 
@@ -121,7 +130,18 @@ ask_about(State) ->
 get_answer(Message,Answers) ->
    [_|Answer] = 
      lists:reverse(io:get_line(Message)),
-   AtomAnswer = list_to_atom(lists:reverse(Answer)),
+
+   AtomAnswer = 
+   		try 
+   			list_to_integer(lists:reverse(Answer))
+   		catch 
+			_:_ ->
+		   		try 
+		   			list_to_atom(lists:reverse(Answer))
+		   		catch 
+		   			_:_ -> get_answer(Message,Answers)
+		   		end
+	   	end,
    case lists:member(AtomAnswer,Answers) of
         true -> AtomAnswer;
         false -> get_answer(Message,Answers)
@@ -140,9 +160,9 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 	%io:format("~s:\nVertex:~p\n~s\n",[Message,NotCorrectVertex,build_question(Label)]).
 	{Pid,ACall} = 
 		case Label of 
-			{to_receive,_,ACall_,_,_,Pid_,_,_,_} ->
+			{{to_receive,_,ACall_,_,_,_,_,_},Pid_} ->
 				{Pid_,ACall_};
-			{to_value,Expr,Pid_, Clause, _, _} ->
+			{{to_value,Expr, Clause, _, _},Pid_} ->
 				case Expr of 
 					{'receive',{AExpr,Value,Line,File}, MsgSender,Context,_,_} ->
 						{Pid_,{'receive',{AExpr,Value,Line,File},Clause,MsgSender,Context,none,none,none,[]}};
@@ -150,7 +170,7 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 						{Pid_,{'call',ACall_,File,Line}}
 				end
 		end,
-	io:format("~sThe problem is in pid ~p ",[Message,Pid]),
+	io:format("~sThe problem is in pid ~s ",[Message,Pid]),
 	case ACall of
 		{'receive',{AReceive,_,LineR,FileR},_,_,_,_,_,_,_} ->
 			io:format("with the receive expression:\n~s.\n",[build_receive(AReceive,FileR,LineR,0,none)]);
@@ -245,42 +265,14 @@ get_ordinal(7) -> "seventh";
 get_ordinal(N) ->
 	integer_to_list(N)++"th".
 	
-% translate_string_to_functions("\n") ->
+% translate_string_to_pid("\n") ->
 % 	[];
-% translate_string_to_functions("") ->
+% translate_string_to_pid("") ->
 % 	[];
-% translate_string_to_functions(List0) ->
+% translate_string_to_pid(List0) ->
 % 	List = string:strip(List0),
-% 	case lists:splitwith(fun(C) -> C =/= $: end,List) of
-% 	     {ModName,[_|Tail1]} ->
-% 		case lists:splitwith(fun(C) -> C =/= $/ end,Tail1) of
-% 		     {FunName,[_|Tail2]} ->
-% 		     	case lists:splitwith(
-% 		     	      fun(C) -> 
-% 		     	         lists:member(C,[$0,$1,$2,$3,$4,$5,$6,$7,$8,$9]) 
-% 		     	      end,Tail2) of
-% 		     	     {FunArity,[_|Tail3]} ->
-% 		     	       	case FunArity of
-% 		     	       	     [] ->
-% 		     	       	       	io: format("The format is not correct\n"),
-% 	     				[];
-% 	     			     _ -> 
-% 	     			      [{list_to_atom(ModName),list_to_atom(FunName),
-% 				  	list_to_integer(string:strip(FunArity))} |
-% 	 			  	translate_string_to_functions(string:strip(Tail3))]
-% 		     	       	end;
-% 		     	     _ -> 
-% 		     	     	io: format("The format is not correct\n"),
-% 	     			[]
-% 		     	end;
-% 		     _ -> 
-% 		     	io: format("The format is not correct\n"),
-% 	     		[]
-% 		end;
-% 	     _ -> 
-% 	     	io: format("The format is not correct\n"),
-% 	     	[]
-% 	end.
+% 	[$\n|ListPid0] = lists:reverse(List),
+% 	lists:reverse(ListPid0).
 	
 look_for_root(G)->
 	case digraph:no_vertices(G) of
@@ -293,7 +285,29 @@ print_root_info(G) ->
 	Root = look_for_root(G),
     {Root,LabelRoot} = digraph:vertex(G,Root),
 	{Question,_} = build_question(LabelRoot),
-	io:format("\n~s\n",[Question]).
+	io:format("\n~s\n",[pids_wo_quotes(Question)]).
+
+ask_initial_process(G) ->
+	Root = look_for_root(G),
+    {Root,{{root,_,_,Summary},_}} = digraph:vertex(G,Root),
+	Pids = [PidSummary || {PidSummary,_,_,_} <- lists:usort(Summary)],
+	{StrPidsDict,LastId} = lists:mapfoldl(fun(Pid, Id) -> {{io_lib:format("~p.- ~s\n",[Id,Pid]),{Id,Pid}}, Id+1} end, 0, Pids),
+	{StrPids, Dict} = lists:unzip(StrPidsDict),
+	Options = lists:concat(StrPids) ++ io_lib:format("~p.- None\n",[LastId]),
+	NDict = [{LastId,none} | Dict],
+	Question = io_lib:format("\nList of pids:\n" ++ Options ++ "\nPlease, insert a PID where you have observed a wrong beahviour: [0...~p]: ",[LastId]),
+	Answer = get_answer(pids_wo_quotes(Question),lists:seq(0,LastId)),
+	Result = [Data || {Option,Data} <- NDict, Answer =:= Option],
+	case Result of 
+		none ->
+			[Pid || {_,Pid} <- Dict];
+		_ -> 
+			Result 
+	end.
+
+get_pid_vertex(V,G) ->
+	{V,{_,Pid}} = digraph:vertex(G,V),
+	Pid.
 
 asking_loop(#debugger_state{vertices = []} = State) -> 
 	State;
@@ -309,7 +323,10 @@ asking_loop(State0) ->
 	G  = State#debugger_state.graph,
 	Strategy = State#debugger_state.strategy,
 	Priority = State#debugger_state.priority,
-	Vertices = State#debugger_state.vertices,
+	Pids = State#debugger_state.pids,
+	%io:format("Pids: ~p\n",[Pids]),
+	%[io:format("~p\n",[get_pid_vertex(V,G)]) || V <- State#debugger_state.vertices],
+	Vertices =  State#debugger_state.vertices,
 	Correct = State#debugger_state.correct,
 	NotCorrect = State#debugger_state.not_correct,
 	Unknown = State#debugger_state.unknown,
@@ -317,20 +334,22 @@ asking_loop(State0) ->
 	{Selected,NSortedVertices} =
 		case Preselected of 
 			none ->
+				VerticesPid = [V || V <- State#debugger_state.vertices, lists:member(get_pid_vertex(V,G),Pids)],
+				VerticesNoPid = [V || V <- State#debugger_state.vertices, not lists:member(get_pid_vertex(V,G),Pids)],
 				VerticesWithValues = 
 				  case Strategy of 
 				       top_down ->
-				        Children = digraph:out_neighbours(G, hd(NotCorrect)),
-				        SelectableChildren = Children -- (Children -- Vertices), 
-				          [{V, -length(digraph_utils:reachable([V], G))} 
-				           || V <- SelectableChildren];
+					        Children = digraph:out_neighbours(G, hd(NotCorrect)),
+					        SelectableChildren = Children -- (Children -- VerticesPid), 
+					          [{V, -length(digraph_utils:reachable([V], G))} 
+					           || V <- SelectableChildren];
 				       divide_query ->
-					 [{V,begin
-					         Reach = digraph_utils:reachable([V], G),
-					         TotalReach = length(Reach) - (1 + length(Reach -- Vertices)),
-					         Rest = (length(Vertices) - 1) - TotalReach,
-					         abs(TotalReach - Rest)
-					     end} || V <- Vertices]
+							 [{V,begin
+							         Reach = digraph_utils:reachable([V], G),
+							         TotalReach = length(Reach) - (1 + length(Reach -- VerticesPid)),
+							         Rest = (length(VerticesPid) - 1) - TotalReach,
+							         abs(TotalReach - Rest)
+							     end} || V <- VerticesPid]
 				  end,
 				%io:format("VerticesWithValues: ~p\n",[VerticesWithValues]),
 				SortedVertices = lists:keysort(2,VerticesWithValues),
@@ -343,8 +362,9 @@ asking_loop(State0) ->
 						new -> hd(lists:reverse(SameThanFirst));
 						indet -> element(1,hd(SortedVertices))
 					end,
-				{Selected_, [V || {V,_} <- SortedVertices, V /= Selected_]};
+				{Selected_, [V || {V,_} <- SortedVertices, V /= Selected_] ++ VerticesNoPid};
 			_ ->
+				%io:format("Vertices: ~p\n",[Vertices]),
 				{Preselected,Vertices -- [Preselected]}
 		end,
 	YesAnswer = begin
@@ -360,6 +380,7 @@ asking_loop(State0) ->
 	             }
 	            end, 
 	Answer = ask_question(G,Selected),
+	%io:format("Answer: ~p\n",[Answer]),
 	NState = 
 	   case Answer of
 	        y -> YesAnswer;
@@ -416,13 +437,17 @@ asking_loop(State0) ->
 	        	print_root_info(G),
 	        	State;
 	        {c,Node} ->
+	        	%io:format("NSortedVertices: ~p\n",[NSortedVertices]),
 	        	State#debugger_state{
 	        		vertices = NSortedVertices -- digraph_utils:reachable([Selected],G),
 	        		correct = [Selected| Correct],
-			     	preselected = Node
+			     	preselected = Node,
+			     	%pids = [lists:flatten(io_lib:format("~p",[get_pid_vertex(Node,G)]))]
+			     	pids = [lists:flatten(get_pid_vertex(Node,G))]
 			    };
 	        _ -> State
-	   end, 
+	   end,
+	%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
 	asking_loop(NState).
 	
 ask_question(G,V)->
@@ -431,7 +456,7 @@ ask_question(G,V)->
 	io:format("\n"),
 	{Question,Dict} = build_question(Label),
 	%io:format("\nVertex: ~p\n~s",[V, Question]),
-	io:format("~s",[Question]),
+	io:format("~s",[pids_wo_quotes(Question)]),
 	%NLabel = transform_label(lists:flatten(Label),[]),
 	% case File of 
 	% 	none ->
@@ -513,7 +538,7 @@ question_to_receive_value(ACallReceive,ToValueReceive,Pid,Sent,Spawned,Transitio
 		end,
 	%io:format("Context: ~p\n",[Context]),
 	StartQuestion = 
-		io_lib:format("Pid ~p",[Pid]) ++
+		io_lib:format("Pid ~s",[Pid]) ++
 		case ACallReceive of 
 			{'receive',{AReceive,_,LineR,FileR},Clause,Consumed,_,_,_,_,_} ->
 				" evaluates the receive expression:\n" ++ build_receive(AReceive,FileR,LineR,Clause,Consumed);
@@ -588,7 +613,7 @@ question_to_receive_value(ACallReceive,ToValueReceive,Pid,Sent,Spawned,Transitio
 	{StartQuestion ++ StrOption1 ++ StrOption2 ++ StrOption3 ++
 	StrOption4 ++ StrOption5 ++ StrOption6,CurrentDict6}.
  
-questions_receive(CurrenOption,Clause,{Sender,Msg},Bindings,CurrentDict,DiscardedMessages) ->
+questions_receive(CurrenOption,Clause,{Sender,Msg,NodeSend},Bindings,CurrentDict,DiscardedMessages) ->
 	{Str1,CurrenOption1,CurrentDict1} = 
 		case DiscardedMessages of 
 			[] ->
@@ -599,11 +624,13 @@ questions_receive(CurrenOption,Clause,{Sender,Msg},Bindings,CurrentDict,Discarde
 				[{CurrenOption,incorrect}]}
 		end,
 	StartingQuestion =
-		io_lib:format("~s\n~p. - The consumed message:\n",[Str1,CurrenOption1]) ++ Msg ++
+		io_lib:format("~s\n~p. - The consumed message:\n\t",[Str1,CurrenOption1]) ++ Msg ++
 		io_lib:format(", sent by ~p, ",[Sender]) ++
 		io_lib:format("\n~p. - To enter in the ~s clause.",[CurrenOption1 + 1,get_ordinal(Clause)]),
+	%io:format("NodeSend: ~p\n",[NodeSend]),
 	StartingDict = 
-		[{CurrenOption1 + 1,{incorrect,{go_to,clauses}}}, {CurrenOption1,correct} |CurrentDict1],
+		%[{CurrenOption1 + 1,{incorrect,{go_to,clauses}}}, {CurrenOption1,correct} |CurrentDict1],
+		[{CurrenOption1 + 1,{incorrect,{go_to,clauses}}}, {CurrenOption1,{correct,{go_to,NodeSend}}} |CurrentDict1],
 	case Bindings of 
 		[] ->
 			{StartingQuestion,CurrenOption1 + 2,StartingDict};
@@ -616,8 +643,8 @@ questions_receive(CurrenOption,Clause,{Sender,Msg},Bindings,CurrentDict,Discarde
 
 
 
-build_question({root,AExpr,AResult,Summary,Pid}) ->
-	{io_lib:format("Main pid ~p\n",[Pid]) ++
+build_question({{root,AExpr,AResult,Summary},Pid}) ->
+	{io_lib:format("Main pid ~s\n",[Pid]) ++
 	AExpr ++ 
 	case AResult of 
 		stuck_receive ->
@@ -629,7 +656,7 @@ build_question({root,AExpr,AResult,Summary,Pid}) ->
 	"Summary:\n" ++
 	lists:flatten([io_lib:format("Pid: ~p; Call: ~s; Spawned: ~p; Sent: [",[PidSummary,Call,Spawned]) ++ print_sent(Sent) ++"]\n"
 	|| {PidSummary,Call,Spawned,Sent} <- lists:usort(Summary)]),[]};
-build_question({to_receive,AExpr,ACall,File,Line,Pid,Sent,Spawned,Transition_}) ->
+build_question({{to_receive,AExpr,ACall,File,Line,Sent,Spawned,Transition_},Pid}) ->
 	question_to_receive_value(ACall,{'receive',AExpr,File,Line},Pid,Sent,Spawned,Transition_,[]);
 	% io_lib:format("Pid ~p",[Pid]) ++
 	% case ACall of 
@@ -643,13 +670,13 @@ build_question({to_receive,AExpr,ACall,File,Line,Pid,Sent,Spawned,Transition_}) 
 	% io_lib:format("\nlocation (~s, line ~p)\n",[File,Line]) ++ 
 	% build_transition(Transition) ++ 
 	% print_sent_spawned(Sent, Spawned);
-build_question({to_value,Expr,Pid, Clause, Sent, Spawned}) ->
+build_question({{to_value,Expr, Clause, Sent, Spawned},Pid}) ->
 	case Expr of 
 			{'receive',{AExpr,Value,Line,File}, MsgSender,Context,Bindings,DiscardedMessages} ->
 				question_to_receive_value({'receive',{AExpr,Value,Line,File},Clause,MsgSender,Context,none,none,none,DiscardedMessages},Value,Pid,Sent,Spawned,{},Bindings);
 			{call,{ACall,Value},File,Line,Transition} ->
 				question_to_receive_value({'call',ACall,File,Line},Value,Pid,Sent,Spawned,Transition,[])
-	end;
+	end.
 	% {PExpr,Value,Transition,Context} = 
 	% 	case Expr of 
 	% 		{'receive',{AExpr,Value_,Line,File}, MsgSender,Context_,Bindings_} ->
@@ -694,32 +721,32 @@ build_question({to_value,Expr,Pid, Clause, Sent, Spawned}) ->
 % Guard of the ith clause succeed
 % Is this correct?
 
-build_question({receive_clause,PatGuard,FailSucced,{AExpr,_,Line,File},Pid, {Sender,Msg}, Clause, Bindings,Context} ) ->
-	{io_lib:format("For Pid ~p,",[Pid]) ++
-	case Context of 
-		[] -> 
-			"";
-		_ ->
-			"\ngiven the context:\n" ++
-			get_context(Context) 
-	end ++
-	"\nthe receive expression:\n" ++
-	erl_prettypr:format(AExpr,[{paper, 300},{ribbon, 300}]) ++
-	io_lib:format("\nlocation (~s, line ~p)",[File,Line]) ++
-	case PatGuard of 
-		pattern ->
-			io_lib:format("\nmatching with the ~s clause ~ps",[get_ordinal(Clause),FailSucced]);
-		guard ->
-			io_lib:format("\nguard of the ~s clause ~ps",[get_ordinal(Clause),FailSucced])
-	end ++
-	"\nwith the message " ++ Msg ++ io_lib:format(" sent by ~p",[Sender]) ++
-	case Bindings of 
-		[] ->
-			".";
-		_ ->
-			",\nand with the following bindings:\n" ++ get_context(Bindings)
-	end ++
-	"\nIs this correct?",[]}.
+% build_question({receive_clause,PatGuard,FailSucced,{AExpr,_,Line,File},Pid, {Sender,Msg}, Clause, Bindings,Context} ) ->
+% 	{io_lib:format("For Pid ~p,",[Pid]) ++
+% 	case Context of 
+% 		[] -> 
+% 			"";
+% 		_ ->
+% 			"\ngiven the context:\n" ++
+% 			get_context(Context) 
+% 	end ++
+% 	"\nthe receive expression:\n" ++
+% 	erl_prettypr:format(AExpr,[{paper, 300},{ribbon, 300}]) ++
+% 	io_lib:format("\nlocation (~s, line ~p)",[File,Line]) ++
+% 	case PatGuard of 
+% 		pattern ->
+% 			io_lib:format("\nmatching with the ~s clause ~ps",[get_ordinal(Clause),FailSucced]);
+% 		guard ->
+% 			io_lib:format("\nguard of the ~s clause ~ps",[get_ordinal(Clause),FailSucced])
+% 	end ++
+% 	"\nwith the message " ++ Msg ++ io_lib:format(" sent by ~p",[Sender]) ++
+% 	case Bindings of 
+% 		[] ->
+% 			".";
+% 		_ ->
+% 			",\nand with the following bindings:\n" ++ get_context(Bindings)
+% 	end ++
+% 	"\nIs this correct?",[]}.
 	% io_lib:format("\nlocation (~s, line ~p)\n",[File,Line]) ++ 
 	% io_lib:format("Pid ~p",[Pid]) ++
 	% " evaluates the receive expression:\n" ++ 
@@ -745,7 +772,7 @@ build_question({receive_clause,PatGuard,FailSucced,{AExpr,_,Line,File},Pid, {Sen
 
 build_transition({}) ->
 	"";
-build_transition({{AReceive,Line,File},Clause,{Sender,Msg},_NodeReceive,Value}) ->
+build_transition({{AReceive,Line,File},Clause,{Sender,Msg,_},_NodeReceive,Value}) ->
 	build_receive(AReceive,File,Line,Clause,{Sender,Msg}) ++ 
 	case Value of 
 		stuck_receive ->
@@ -777,9 +804,9 @@ print_sent_spawned(Sent, Spawned) ->
 print_sent([])->
 	"";
 print_sent([{Pid,Msg}])->
-	"{" ++ io_lib:format("~p, ",[Pid]) ++ change_new_lines(Msg) ++"}";
+	"{" ++ io_lib:format("~p, ",[Pid]) ++ pids_wo_quotes(Msg) ++"}";
 print_sent([{Pid,Msg}|T])->
-	"{" ++ io_lib:format("~p, ",[Pid]) ++ change_new_lines(Msg) ++"},"++
+	"{" ++ io_lib:format("~p, ",[Pid]) ++ pids_wo_quotes(Msg) ++"},"++
 	print_sent(T).
 
 transform_value(Value) ->
@@ -857,27 +884,34 @@ dot_vertex({V,L}) ->
 	%io:format("\nVertex: ~p\nDict: ~p\n",[V,Dict]),
 	%io:format("Vertex: ~p\n",[Esto]),
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
-	++integer_to_list(V)++" .- " 
-	++ change_new_lines(lists:flatten(
-		transform_label(lists:flatten(Question),[])))  ++ 
+	++ integer_to_list(V)++" .- " 
+	% ++ change_new_lines(lists:flatten(
+	% transform_label(lists:flatten(Question),[])))  ++ 
+	% "\"];\n". 
+	++ pids_wo_quotes(change_new_lines(lists:flatten(
+		transform_label(lists:flatten(pids_wo_quotes(Question)),[]))))  ++ 
 	"\"];\n".     
 	    
 dot_edge({V1,V2}) -> 
 	integer_to_list(V1)++" -> "++integer_to_list(V2)
 	++" [color=black, penwidth=3];\n".	
 	
-%\"<0.1695.0>\"
 change_new_lines([10|Chars]) ->
 	[$\\,$l|change_new_lines(Chars)];
-change_new_lines([$",$<|Chars]) ->
-	[$<|change_new_lines(Chars)];
-change_new_lines([$>,$"|Chars]) ->
-	[$>|change_new_lines(Chars)];
 change_new_lines([$"|Chars]) ->
 	[$\\,$"|change_new_lines(Chars)];
 change_new_lines([Other|Chars]) ->
 	[Other|change_new_lines(Chars)];
 change_new_lines([]) ->
+	[].
+
+pids_wo_quotes([$",$<|Chars]) ->
+	[$<|pids_wo_quotes(Chars)];
+pids_wo_quotes([$>,$"|Chars]) ->
+	[$>|pids_wo_quotes(Chars)];
+pids_wo_quotes([Other|Chars]) ->
+	[Other|pids_wo_quotes(Chars)];
+pids_wo_quotes([]) ->
 	[].
 
  
