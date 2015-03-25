@@ -31,7 +31,6 @@ server_entry_point(Socket) ->
 
 -spec server(integer()) -> ok.
 server(Port) ->
-	edd_control:start(),
     edd_tcp:start(?MODULE, Port, fun server_entry_point/1),
     ok.
 
