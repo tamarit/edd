@@ -10,3 +10,5 @@ doc/erlang.png
 *.css
 
 *.dump
+
+*.class
