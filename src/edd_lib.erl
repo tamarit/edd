@@ -27,7 +27,8 @@
 -module(edd_lib).
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, 
-		ask/3, core_module/1, core_module/2]).
+		ask/3, core_module/1, core_module/2, 
+		asking_loop/9, initial_state/2]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -85,28 +86,56 @@ ask(G,Strategy,Graph) ->
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
+	{Vertices0, Correct0, NoCorrect0} = 
+		initial_state(G, TrustedFunctions),		
+	ask_about(G,Strategy,Vertices0, Correct0, NoCorrect0, Graph).
+	
+initial_state(G, TrustedFunctions) ->
 	IniCorrect = [V || V <- digraph:vertices(G),
 	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
-	ask_about(G,Strategy,Vertices,IniCorrect,[Root],Graph).
-	
+	{Vertices,IniCorrect,[Root]}.
 
 ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) -> 
+	FunGetAnswer =
+		fun(Selected, _, _, _, _) -> 
+			ask_question(G,Selected) 
+		end,
+	FunGetNewStrategy = 
+		fun(Strategy) -> 
+			PrintStrategy = 
+	        	fun
+	        		(top_down) -> "Top Down";
+	        		(divide_query) -> "Didide & Query"
+	        	end,
+            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
+        	SelectedStrategy = 
+	        	case get_answer("Select the new strategy (Didide & Query or "
+	                  ++ "Top Down): [d/t] ",[d,t]) of
+	                  t -> 
+	                     top_down;
+	                  d -> 
+	                     divide_query
+	             end,
+            io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
+            SelectedStrategy
+		end,
 	{Correct,NotCorrect,Unknown,_,NStrategy} = 
-	   asking_loop(G,Strategy,Vertices,Correct0,NotCorrect0,[],[]),
+	   asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
+	   	Strategy,Vertices,Correct0,NotCorrect0,[],[]),
 	case NotCorrect of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
 	     _ -> 
 	        NotCorrectVertexs = [NCV || NCV <- NotCorrect, 
-	                                   (digraph:out_neighbours(G, NCV)--Correct)==[] ],
+	                                   (digraph:out_neighbours(G, NCV) -- Correct) == [] ],
 	        case NotCorrectVertexs of
 	             [] ->
 	             	io:format("Not enough information.\n"),
 	             	NotCorrectWithUnwnownVertexs = 
 			  			[NCV || NCV <- NotCorrect, 
-	                          (digraph:out_neighbours(G, NCV)--(Correct++Unknown))=:=[]],
+	                          (digraph:out_neighbours(G, NCV)--(Correct ++ Unknown)) =:= []],
 	                Maybe0 = 
 	                         [U || U <- Unknown, 
 	                               NCV <- NotCorrectWithUnwnownVertexs,
@@ -282,10 +311,13 @@ look_for_root(G)->
 	     _ -> hd([V||V <- digraph:vertices(G), digraph:in_degree(G, V)==0])
 	end.
 
-asking_loop(_,Strategy,[],Correct,NotCorrect,Unknown,State) -> 
+asking_loop(_,_,_,Strategy,[],Correct,NotCorrect,Unknown,State) -> 
 	{Correct,NotCorrect,Unknown,State,Strategy};
-asking_loop(_,Strategy,[-1],_,_,_,_) -> {[-1],[-1],[-1],[],Strategy};
-asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
+asking_loop(_,_,_,Strategy,[-1],_,_,_,_) -> 
+	{[-1],[-1],[-1],[],Strategy};
+asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
+	Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
+	io:format("LLEGA1\n", []),
 	VerticesWithValues = 
 	  case Strategy of 
 	       top_down ->
@@ -314,7 +346,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	             EqualToSeleceted ++ Correct,NotCorrect,Unknown,
 	             [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy}
 	            end, 
-	Answer = ask_question(G,Selected),
+	Answer = FunGetAnswer(Selected, Vertices, Correct, NotCorrect, Unknown),
 	{NVertices,NCorrect,NNotCorrect,NUnknown,NState,NStrategy} = 
 	   case Answer of
 	        y -> YesAnswer;
@@ -341,26 +373,12 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
 	             {Vertices -- NewCorrect,NewCorrect ++ Correct,NotCorrect,Unknown,
 	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
 	        s -> 
-	            PrintStrategy = 
-		        	fun
-		        		(top_down) -> "Top Down";
-		        		(divide_query) -> "Didide & Query"
-		        	end,
-	            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
-	        	SelectedStrategy = 
-		        	case get_answer("Select the new strategy (Didide & Query or "
-		                  ++"Top Down): [d/t] ",[d,t]) of
-		                  t -> 
-		                     top_down;
-		                  d -> 
-		                     divide_query
-		             end,
-	            io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
-	        	{Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy};
+	        	{Vertices,Correct,NotCorrect,Unknown,State,FunGetNewStrategy(Strategy)};
 	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy};
 	        _ -> {Vertices,Correct,NotCorrect,Unknown,State,Strategy}
 	   end, 
-	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
+	asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
+		NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
 	
 ask_question(G,V)->
 	{V,{Label,_,File,Line}} = digraph:vertex(G,V),

@@ -1,2 +1,12 @@
 .DS_Store
 *.beam
+
+*.html
+
+doc/edoc-info
+
+doc/erlang.png
+
+*.css
+
+*.dump

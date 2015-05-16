@@ -91,7 +91,7 @@ ddc(Expr,TraceTimeout) ->
 dd_server(Expr, Dir) ->
 	code:add_patha(Dir), 
 	% io:format("PATHS: ~p\n",[code:get_path()]),
-	dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl", Dir) end).
+	dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end).
 
 
 %%------------------------------------------------------------------------------
@@ -135,7 +135,6 @@ dd_internal(Expr, FunCore) ->
 	
 	%to get the .core file. ONLY FOR DEBUGGING 
 	%compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
-	
 	FunsInitialCall = get_funs_from_abstract(AExpr,-1),
 	%TO CHANGE
 	put(funs_initial_call,FunsInitialCall),
@@ -147,9 +146,10 @@ dd_internal(Expr, FunCore) ->
 	{Value,FreeV,Roots} = 
 	  get_tree(InitialCall,ets:new(env,[bag]),G,Core,0,false),
 	ets:delete(Env),
+
 	%Caso especial si la llamada inicial tiene funciones anidadas como f(g(3)), que
 	%será traducido a CORE con un let x = g(3) in f(x)
-	%io:format("InitialCall: ~p\n",[InitialCall]),
+	% io:format("InitialCall: ~p\n",[InitialCall]),
 	%io:format("FreeV: ~p\n",[FreeV]),
  	%io:format("Roots: ~w\n",[Roots]),
 	FunAddVertexAndEdges = 

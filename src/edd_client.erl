@@ -30,6 +30,7 @@ client_control(Sock, Dir, Call) ->
 			erlang:error(error)
     end,
     client_receive(Sock).
+    % client_receive(Sock).
 
 client_receive(Sock) ->
 	case gen_tcp:recv(Sock, 0) of

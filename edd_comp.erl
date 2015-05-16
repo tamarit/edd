@@ -42,6 +42,7 @@ compile() ->
   comp_aux( 'src/edd_trace.erl'),
   comp_aux( 'src/edd_tcp.erl'),
   comp_aux( 'src/edd_server.erl'),
+  comp_aux( 'src/edd_jserver.erl'),
   comp_aux( 'src/edd_client.erl'),
   comp_aux( 'src/mochijson.erl'),
   edoc:files(['src/edd.erl','src/edd_lib.erl','src/smerl.erl', 'edd_comp.erl',
@@ -66,6 +67,7 @@ load() ->
   code:load_abs("ebin/edd_trace"),
   code:load_abs("ebin/edd_tcp"),
   code:load_abs("ebin/edd_server"),
+  code:load_abs("ebin/edd_jserver"),
   code:load_abs("ebin/edd_client"),
   code:load_abs("ebin/mochijson"),
   ok.
