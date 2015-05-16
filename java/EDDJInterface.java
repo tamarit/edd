@@ -21,7 +21,7 @@ public class EDDJInterface
         OtpNode myNode = new OtpNode("eddjava@localhost");
         OtpMbox myMbox = myNode.createMbox("edd");
 
-        // Receive PID from erlag server
+        // Receive PID from erlang server
         myObject = myMbox.receive();
         myMsg = (OtpErlangTuple) myObject;
         command = (OtpErlangAtom) myMsg.elementAt(0);
@@ -42,7 +42,7 @@ public class EDDJInterface
         myMsg = (OtpErlangTuple) myObject;
         command = (OtpErlangAtom) myMsg.elementAt(0);
         OtpErlangString dbg_tree = (OtpErlangString) myMsg.elementAt(1);
-        // Should be 'ready'
+        // Should be 'debugging_tree'
         System.out.println("Command received: " + command.toString() );
         System.out.println("Data received: " + dbg_tree.toString() );
 
@@ -62,7 +62,6 @@ public class EDDJInterface
         myObject = myMbox.receive();
         myMsg = (OtpErlangTuple) myObject;
         command = (OtpErlangAtom) myMsg.elementAt(0);
-        // Should be 'ready'
         System.out.println("Command received: " + command.toString() );
 
         if(command.toString().equals("question"))
