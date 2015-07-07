@@ -68,6 +68,7 @@ core_module(File) ->
 %%------------------------------------------------------------------------------
 -spec core_module( File :: string(), Dir :: string()) -> binary().    
 core_module(File, Dir) ->
+	io:format("~p\n", [compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}])]),
 	{ok,_,Core} = compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
 	Core.
 
