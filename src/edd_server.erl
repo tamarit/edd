@@ -109,7 +109,6 @@ disconnect(_Socket) ->
     ok.
 
 ask_question(Socket, Question, Vertices, Correct, NotCorrect, Unknown) ->
-	io:format("LLEGAASK0: ~p\n", [{Question, Vertices, Correct, NotCorrect, Unknown}]),
 	QuestionInfo = 
 		{struct, [
 			{"node", integer_to_list(Question)},
@@ -118,7 +117,6 @@ ask_question(Socket, Question, Vertices, Correct, NotCorrect, Unknown) ->
 			{"no_correct", {array, (lists:map(fun json_node/1, NotCorrect))}},
 			{"unknown", {array, (lists:map(fun json_node/1, Unknown))}}
 			]},
-	io:format("LLEGAASK1: ~p\n", [QuestionInfo]),
 	JSON_Question = 
 		lists:flatten(mochijson:encode(QuestionInfo)),
     case gen_tcp:send(Socket, JSON_Question) of
@@ -127,7 +125,6 @@ ask_question(Socket, Question, Vertices, Correct, NotCorrect, Unknown) ->
         {error,closed} ->
             disconnect(Socket)
     end,
-   	io:format("LLEGAASK2\n"),
     case gen_tcp:recv(Socket, 0) of
         {ok, Data2} ->
             Answer0 = binary_to_list(Data2),

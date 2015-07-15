@@ -12,3 +12,5 @@ doc/erlang.png
 *.dump
 
 *.class
+
+mails/*

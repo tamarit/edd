@@ -26,7 +26,7 @@
 
 -module(edd_lib).
 
--export([parse_expr/1, dot_graph_file/2, json_graph/1, 
+-export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
 		ask/3, core_module/1, core_module/2, 
 		asking_loop/9, initial_state/2]).
 
@@ -68,9 +68,6 @@ core_module(File) ->
 %%------------------------------------------------------------------------------
 -spec core_module( File :: string(), Dir :: string()) -> binary().    
 core_module(File, Dir) ->
-	io:format("Fichero a compilar: ~s\n",[Dir ++ File]),
-	io:format("Directorio de salida: ~s\n", [Dir]),
-	io:format("Resultado: ~p\n", [compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}])]),
 	{ok,_,Core} = compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
 	Core.
 
@@ -83,7 +80,7 @@ core_module(File, Dir) ->
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
--spec ask( G :: digraph(), Strategy :: top_down | divide_query,Graph :: binary()) -> ok.
+-spec ask( G :: digraph:graph(), Strategy :: top_down | divide_query,Graph :: binary()) -> ok.
 ask(G,Strategy,Graph) ->
 	% io:get_line(""),
 	STrustedFunctions = 
@@ -106,13 +103,13 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) ->
 			ask_question(G,Selected) 
 		end,
 	FunGetNewStrategy = 
-		fun(Strategy) -> 
+		fun(Strategy0) -> 
 			PrintStrategy = 
 	        	fun
 	        		(top_down) -> "Top Down";
 	        		(divide_query) -> "Didide & Query"
 	        	end,
-            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
+            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy0) ++ ".\n"),
         	SelectedStrategy = 
 	        	case get_answer("Select the new strategy (Didide & Query or "
 	                  ++ "Top Down): [d/t] ",[d,t]) of
@@ -430,7 +427,7 @@ analyze_tokens([H|T]) ->
 %%      will not be created but the function will not throw any exception.
 %% @end
 %%------------------------------------------------------------------------------
--spec dot_graph_file( G :: digraph(), Name :: string() ) -> string().	   
+-spec dot_graph_file( G :: digraph:graph(), Name :: string() ) -> string().	   
 dot_graph_file(G,Name)->
 	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
@@ -469,10 +466,10 @@ changeNewLines([]) ->
 	[].
 
 %%------------------------------------------------------------------------------
-%% @doc Created a JSON representation of a given deugging tree
+%% @doc Created a JSON representation of a given debugging tree
 %% @end
 %%------------------------------------------------------------------------------
--spec json_graph( G :: digraph()) -> string().	   
+-spec json_graph( G :: digraph:graph()) -> string().	   
 json_graph(G)->
 	Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
 	Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
@@ -480,12 +477,12 @@ json_graph(G)->
 		{struct, 
 			[{"vertices", {array, (lists:map(fun json_vertex/1,Vertices))}},
 			{"edges", {array, lists:flatten(lists:map(fun json_edge/1,Edges))}}]},
-	% io:format("JSON_Erlang: ~p\n", [JSON_Erlang]),
+	io:format("JSON_Erlang: ~p\n", [JSON_Erlang]),
 	lists:flatten(mochijson:encode(JSON_Erlang)).
 	
 
 
-json_vertex({V,{L,_,File,Line}}) ->
+json_vertex({V,Info = {L,_,File,Line}}) ->
 	{struct, 
 		[{"node",integer_to_list(V)} ,
 		 {"question", 
@@ -498,8 +495,50 @@ json_vertex({V,{L,_,File,Line}}) ->
 					[$\\,$l] 
 						++ changeNewLines(
 							io_lib:format("fun location: (~s, line ~p)",[File, Line]))
-			end}]}.     
+			end},
+		{"info", Info}]}.     
 	    
 json_edge({V1,V2}) -> 
-	{struct, [{"from",integer_to_list(V1)}, {"to",integer_to_list(V2)}]}.	
+	{struct, [{"from",integer_to_list(V1)}, {"to",integer_to_list(V2)}]}.
+
+%%------------------------------------------------------------------------------
+%% @doc Created a tupled representation of a given debugging tree
+%% @end
+%%------------------------------------------------------------------------------
+-spec tupled_graph( G :: digraph:graph()) -> tuple().	   
+tupled_graph(G)->
+	Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
+	Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+	Tupled_Erlang = 
+		{
+			{vertices, lists:map(fun tupled_vertex/1,Vertices)},
+		 	{edges,lists:map(fun tupled_edge/1,Edges)}
+		},
+	io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
+	Tupled_Erlang.
+	
+
+
+tupled_vertex({V,Info = {L,_,File,Line}}) ->
+	Question = 
+		changeNewLines(lists:flatten(transform_label(lists:flatten(L),[]))) 
+		++ 
+		case File of 
+			none ->
+				"";
+			_ -> 
+				[$\\,$l] 
+					++ changeNewLines(
+						io_lib:format("fun location: (~s, line ~p)",[File, Line]))
+		end,
+	{
+		{id, V},
+		{question, Question},
+		{info, Info}
+	}.     
+	    
+tupled_edge({V1,V2}) -> 
+	{V1, V2}.
+
+
 	
