@@ -67,7 +67,7 @@ edd_loop() ->
 
 
 ask_question(Question, Vertices, Correct, NotCorrect, Unknown) ->
-	?JAVA_NODE_NAME ! {question, Question, {Vertices, Correct, NotCorrect, Unknown}},
+	?JAVA_NODE_NAME ! {question, Question, {[a|Vertices], [a|Correct], [a|NotCorrect], [a|Unknown]}},
     receive 
 		{answer, Answer} ->
 			Answer;
