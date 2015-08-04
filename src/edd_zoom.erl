@@ -1,10 +1,10 @@
 -module(edd_zoom).
 
--export([zoom_graph/1,zoom/1,zoom_graph/2]).
+-export([zoom_graph/1, zoom/1, zoom_graph/2, zoom_graph_server/2]).
 
 
-%Pending:
-%CUIDAO: EL APPLY ES TRADUEIX A VOLTES A UN CALL. SI EL MODULO NO EXPORTA EIX FUNCIO ES UN ERROR
+%TODO:
+%CUIDAO: EL APPLY ES TRADUEIX A VOLTES A UN CALL. SI EL MODULO NO EXPORTA EIXA FUNCIO ES UN ERROR
 %% El shadowing provoca mal comportament per culpa del apply subsitution que substitueix variables en els patrons
 %poner los cases y sobretodo sus argumentos de manera que al traducir a Core no haya mas de un case en la misma linea 
 
@@ -13,6 +13,15 @@ zoom(Expr)->
 
 zoom_graph(Expr)->
 	zoom_graph(Expr,true).
+
+zoom_graph_server(Expr, Dir) ->
+	code:add_patha(Dir), 
+	% io:format("PATHS: ~p\n",[code:get_path()]),
+	zoom_graph_internal(
+		Expr, 
+		false, 
+		fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
+		fun(X) -> smerl:for_file(Dir ++ "/" ++ atom_to_list(X) ++ ".erl", Dir) end).
 
 zoom_graph({Expr,File,_},Graph) ->
 	{AExpr,CoreArgs} = get_abstract_and_core_args(Expr),
@@ -47,13 +56,26 @@ zoom_graph({Expr,File,_},Graph) ->
   %   FunctionDef = hd(erl_syntax_lib:fold(FunEqualsAbstract, [], FormsES)),
     get_tree_then_ask(InitialCall,AExpr,Core,erl_syntax:revert(FunctionDef),Graph);
 
+zoom_graph(Expr,Graph) ->
+	G = 
+		zoom_graph_internal(
+			Expr,
+			Graph, 
+			fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl") end,
+			fun(X) -> smerl:for_file(atom_to_list(X) ++ ".erl") end),
+	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	[_,{memory,Words},_] = digraph:info(G),
+	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
+	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	edd_zoom_lib:ask(G,top_down),
+	ok.
 
-
-zoom_graph(Expr,Graph)->
+zoom_graph_internal(Expr,Graph, CoreFun, SmerlFun)->
 	{AExpr,CoreArgs} = get_abstract_and_core_args(Expr),
     FunOperator = erl_syntax:application_operator(AExpr),
 	{remote,_,{atom,_,ModName},{atom,_,FunName}} = FunOperator,
-	Core = edd_zoom_lib:core_module(atom_to_list(ModName)++".erl"),
+	Core = CoreFun(ModName),
 	% ONLY TO DEBUG
 	compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
 	FunArity = length(erl_syntax:application_arguments(AExpr)),
@@ -65,7 +87,7 @@ zoom_graph(Expr,Graph)->
 	InitialCall = cerl:update_c_case(CaseFun, cerl:c_values(CoreArgs), 
 	                                 cerl:case_clauses(CaseFun)),
 	% %io:format("InitialCall: ~p\n",[InitialCall]), 
-    {ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
+    {ok,M} = SmerlFun(ModName),
 	FunctionDef = 
 	    hd([FunctionDef_ || 
               	FunctionDef_ = {function,_,FunName_,Arity_,_} <- smerl:get_forms(M),
@@ -103,14 +125,8 @@ get_tree_then_ask(InitialCall,AExpr,Core,FunctionDef,Graph) ->
 		false ->
 			ok 
 	end,
-	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
-	[_,{memory,Words},_] = digraph:info(G),
-	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
-	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	edd_zoom_lib:ask(G,top_down),
 	%io:format("Env final:\n~p\n",[ets:tab2list(Env)]),
-	ok.
+	G.
 
 get_abstract_and_core_args(Expr) ->
 	{ok,[AExpr|_]} = edd_zoom_lib:parse_expr(Expr++"."),

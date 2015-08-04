@@ -8,6 +8,8 @@ start() ->
 	register(edd_server, self()), 
 	?JAVA_NODE_NAME ! {ready, self()},
 	io:format("Server is ready\n"),
+	% self()!{zoom_dbg, "roman:digit(9, 73, 86, 88)", "/Users/tama/Documents/git/edd/examples/roman", none},
+	self()!{buggy_call, "stock:test()", "/Users/tama/Documents/git/edd/examples/stock", none},
 	edd_loop().
 
 edd_loop() ->
@@ -50,7 +52,7 @@ edd_loop() ->
 				             	%% TODO: Send the list of candidates nodes 
 				             	?JAVA_NODE_NAME ! unknown_nodes;
 				             [NotCorrectVertex|_] ->
-								?JAVA_NODE_NAME ! {buggy_node,NotCorrectVertex}
+								?JAVA_NODE_NAME ! {buggy_node,NotCorrectVertex, edd_lib:get_call_string(G,NotCorrectVertex)}
 				        end
 				end
 			catch 
@@ -59,6 +61,11 @@ edd_loop() ->
 					?JAVA_NODE_NAME ! {error, Error},
 					ok
 			end;
+		{zoom_dbg, Call, Dir, State} ->
+			io:format("Received a zoom-debugging request\n"),
+			G = edd_zoom:zoom_graph_server(Call,Dir),
+			Send_G = edd_zoom_lib:tupled_graph(G),
+			?JAVA_NODE_NAME ! {dbg_tree, Send_G};
 		Msg -> 
 			io:format("Message not expected: ~p\n", [Msg]),
 			ok
@@ -67,6 +74,7 @@ edd_loop() ->
 
 
 ask_question(Question, Vertices, Correct, NotCorrect, Unknown) ->
+	% Added an atom 'a' to lists in order to avoid Java receiving them as String.
 	?JAVA_NODE_NAME ! {question, Question, {[a|Vertices], [a|Correct], [a|NotCorrect], [a|Unknown]}},
     receive 
 		{answer, Answer} ->

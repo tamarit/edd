@@ -477,7 +477,14 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	Args = cerl:call_args(Call),
 	% io:format("FUNCTION CALL ~p:~p/~p\n",[ModName,FunName,FunArity]),
 	% io:format("~p\n",[Call]),
-	FileAdress = code:where_is_file(atom_to_list(ModName)++".erl"),
+	% io:format("~s\n",[atom_to_list(ModName) ++ ".erl"]),
+	FileAdress = 
+		case lists:member($/, atom_to_list(ModName)) of 
+			true ->  
+				atom_to_list(ModName);
+			false -> 
+				code:where_is_file(atom_to_list(ModName) ++ ".erl")
+		end,
 	% io:format("FileAdress: ~p\n", [FileAdress]), 
 	% Busca el erl. Si no está, busca el beam (libreria de sistema) y tunea la ruta
 	% para apuntar al ebin/ correspondiente
@@ -487,6 +494,7 @@ get_tree_call(Call,Env0,G,Core,FreeV) ->
 	     		NFileAdress_ = code:where_is_file(atom_to_list(ModName)++".beam"),
 	     		case NFileAdress_ of
 	     		     non_existing -> 
+	     		     	io:format("PATHS: ~p\n",[code:get_path()]),
 	     		     	throw({error,"Non existing module",ModName});
 	     		     _ -> 
 	     		     	RelPath = "ebin/" ++ atom_to_list(ModName) ++ ".beam",

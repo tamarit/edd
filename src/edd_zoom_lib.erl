@@ -26,7 +26,7 @@
 
 -module(edd_zoom_lib).
 
--export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1, look_for_root/1]).
+-export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1, look_for_root/1, tupled_graph/1]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -943,6 +943,7 @@ dot_graph(G)->
 	
 	   
 dot_vertex({V,L}) ->
+	io:format("\nL: ~p\n",[L]),
 	{Label,_} = build_question(L),
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
 	++integer_to_list(V)++" .- " 
@@ -960,3 +961,32 @@ change_new_lines([Other|Chars]) ->
 	[Other|change_new_lines(Chars)];
 change_new_lines([]) ->
 	[].
+
+%%------------------------------------------------------------------------------
+%% @doc Created a tupled representation of a given debugging tree
+%% @end
+%%------------------------------------------------------------------------------
+-spec tupled_graph( G :: digraph:graph()) -> tuple().	   
+tupled_graph(G)->
+	Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
+	Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+	Tupled_Erlang = 
+		{
+			{vertices, lists:map(fun tupled_vertex/1,Vertices)},
+		 	{edges,lists:map(fun tupled_edge/1,Edges)}
+		},
+	% io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
+	Tupled_Erlang.
+	
+
+
+tupled_vertex({V,L}) ->
+	{Question,_} = build_question(L),
+	{
+		{id, V},
+		{question, change_new_lines(lists:flatten(Question))}
+	}.    
+	    
+tupled_edge({V1,V2}) -> 
+	{V1, V2}.
+

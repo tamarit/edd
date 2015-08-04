@@ -28,7 +28,7 @@
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
 		ask/3, core_module/1, core_module/2, 
-		asking_loop/9, initial_state/2]).
+		asking_loop/9, initial_state/2, get_call_string/2]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -68,7 +68,7 @@ core_module(File) ->
 %%------------------------------------------------------------------------------
 -spec core_module( File :: string(), Dir :: string()) -> binary().    
 core_module(File, Dir) ->
-	{ok,_,Core} = compile:file(Dir ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
+	{ok,_,Core} = compile:file(Dir ++ "/" ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
 	Core.
 
 %%------------------------------------------------------------------------------
@@ -317,7 +317,6 @@ asking_loop(_,_,_,Strategy,[-1],_,_,_,_) ->
 	{[-1],[-1],[-1],[],Strategy};
 asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
 	Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
-	io:format("LLEGA1\n", []),
 	VerticesWithValues = 
 	  case Strategy of 
 	       top_down ->
@@ -514,7 +513,7 @@ tupled_graph(G)->
 			{vertices, lists:map(fun tupled_vertex/1,Vertices)},
 		 	{edges,lists:map(fun tupled_edge/1,Edges)}
 		},
-	io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
+	% io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
 	Tupled_Erlang.
 	
 
