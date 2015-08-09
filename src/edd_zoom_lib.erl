@@ -26,7 +26,9 @@
 
 -module(edd_zoom_lib).
 
--export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1, look_for_root/1, tupled_graph/1]).
+-export([parse_expr/1, dot_graph_file/2, ask/2, core_module/1, 
+	look_for_root/1, tupled_graph/1, initial_state/1, asking_loop/10,
+	string_buggy_info/2]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -66,6 +68,12 @@ look_for_root(G)->
 	     _ -> hd([V||V <- digraph:vertices(G), digraph:in_degree(G, V)==0])
 	end.
 
+initial_state(G) ->
+	Root = look_for_root(G),
+	Vertices = digraph:vertices(G) -- [Root],
+	{Vertices,[],[Root]}.
+	
+
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
 %%      node. The tree 'G' must be a digraph representing the abbreviated proof 
@@ -79,12 +87,29 @@ look_for_root(G)->
 ask(G,Strategy)->
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root],
+	{Vertices,Correct,NotCorrect} = 
+		initial_state(G),
 	ask_about(G,Strategy,Vertices,[],[Root]).
-	
 
 ask_about(G,Strategy,Vertices,Correct0,NotCorrect0) -> 
+	FunGetAnswer =
+		fun(Question0, Answers, _, _, _, _) -> 
+			Question1 =
+				case is_integer(Question0) of 
+					true -> 
+						{Question0,Info} = digraph:vertex(G,Question0),
+						{QuestionNode,_} = build_question(Info),
+						QuestionNode;
+					false ->  
+						Question0
+				end,
+			get_answer(Question1, Answers)	
+		end,
+	FunGetNewStrategy = 
+		fun edd_lib:select_strategy/1,
 	{Correct,NotCorrect,Unknown,_,NStrategy} = 
-	   asking_loop(G,Strategy,Vertices,Correct0,NotCorrect0,[],[],-1),
+	   asking_loop(G,FunGetNewStrategy, FunGetAnswer, Strategy,
+	   		Vertices,Correct0,NotCorrect0,[],[],-1),
 	case NotCorrect of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
@@ -130,11 +155,12 @@ get_answer(Message,Answers) ->
         false -> get_answer(Message,Answers)
    end.
 
-ask_question_dependeces(Deps) ->
+ask_question_dependeces(FunGetAnswer, Deps, CurrentState) ->
+	{Vertices,Correct,NotCorrect,Unknown,_State,_Strategy,_PreSelected} = CurrentState,
 	{StringDeps,DictDeps} = string_dependences(Deps,1),
 	Message = 
 		"Related variables:\n" ++ StringDeps ++ "What value is wrong? ",
-	Answer = get_answer(Message,[list_to_atom(integer_to_list(Opt)) || {Opt,_} <-  DictDeps]),
+	Answer = FunGetAnswer(Message,[list_to_atom(integer_to_list(Opt)) || {Opt,_} <-  DictDeps], Vertices,Correct,NotCorrect,Unknown),
 	IntAnswer = list_to_integer(atom_to_list(Answer)),
 	hd([V || {Opt,V} <-  DictDeps, Opt =:= IntAnswer ]).
 
@@ -155,8 +181,7 @@ find_unknown_children(G,Unknown,[V|Vs]) ->
 find_unknown_children(_,_,[]) ->
 	[].
 	 
- 
-print_buggy_node(G,NotCorrectVertex,Message) ->
+string_buggy_info(G,NotCorrectVertex) ->
 	{NotCorrectVertex,InfoError} = 
 		digraph:vertex(G,NotCorrectVertex),
 	NInfoError = 
@@ -171,8 +196,10 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 			_ ->
 				InfoError
 		end,
-	io:format("\n\n~s:\n~s\n",[Message,print_buggy_info(NInfoError)]).
+	print_buggy_info(NInfoError).
 
+print_buggy_node(G,NotCorrectVertex,Message) ->
+	io:format("\n\n~s:\n~s\n",[Message,string_buggy_info(G,NotCorrectVertex)]).
 
 print_buggy_info({'let',{VarName,Value,ALetArg},_}) -> 
 	"Variable " ++ atom_to_list(VarName) ++ " is badly assigned " ++ transform_value(Value) ++
@@ -266,10 +293,10 @@ get_both_case_nodes(G,Selected,Info) ->
 	
 
 
-asking_loop(_,Strategy,[],Correct,NotCorrect,Unknown,State,_) -> 
+asking_loop(_,_,_,Strategy,[],Correct,NotCorrect,Unknown,State,_) -> 
 	{Correct,NotCorrect,Unknown,State,Strategy};
-asking_loop(_,Strategy,[-1],_,_,_,_,_) -> {[-1],[-1],[-1],[],Strategy};
-asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
+asking_loop(_,_,_,Strategy,[-1],_,_,_,_,_) -> {[-1],[-1],[-1],[],Strategy};
+asking_loop(G,FunGetNewStrategy, FunGetAnswer,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	% io:format("Selectable: ~w\n",[lists:sort(Vertices)]),
 	% io:format("Correct: ~w\n",[lists:sort(Correct)]),
 	% io:format("NotCorrect: ~w\n",[lists:sort(NotCorrect)]),
@@ -320,8 +347,10 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,-1},
 	            %end, 
 	%io:format("Selected: ~p\n",[Selected]),
-	CurrentState = {Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected},
-	{Answer,StateQuestion} = ask_question(G,Selected,CurrentState,NSortedVertices),
+	CurrentState = 
+		{Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected},
+	{Answer,StateQuestion} = 
+		ask_question(G,Selected,CurrentState,NSortedVertices, FunGetAnswer),
 	%io:format("State: ~p\n",[StateQuestion]),
 	{NVertices,NCorrect,NNotCorrect,NUnknown,NState,NStrategy,NPreSelected} = 
 	   case Answer of
@@ -337,7 +366,7 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 			             [Selected|Correct],NotCorrect,Unknown,
 			             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,NextQuestion};
 	        		_ -> 
-	        			NextQuestion = ask_question_dependeces(DepsSelected),
+	        			NextQuestion = ask_question_dependeces(FunGetAnswer, DepsSelected, CurrentState),
 	        			%Podria passar que estaguera entre els correct, notcorret o unknown?
 	        			{NSortedVertices -- digraph_utils:reachable([Selected],G),
 			             [Selected|Correct],NotCorrect,Unknown,
@@ -359,75 +388,74 @@ asking_loop(G,Strategy,Vertices,Correct,NotCorrect,Unknown,State,PreSelected) ->
 	                     {PVertices,PCorrect,PNotCorrect,PUnknown,PState,Strategy,PPreSelected}
 	             end;
 	        s -> 
-	        	PrintStrategy = 
-		        	fun
-		        		(top_down)-> "Top Down";
-		        		(divide_query) -> "Didide & Query"
-		        	end,
-	        	io:format("\nCurrent strategy is "++ PrintStrategy(Strategy) ++ ".\n"),
-	        	SelectedStrategy = 
-		        	case get_answer("Select the new strategy (Didide & Query or "
-		                  ++"Top Down): [d/t] ",[d,t]) of
-		                  t -> 
-		                     top_down;
-		                  d -> 
-		                     divide_query
-		             end,
-	             io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
-	             {Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy,PreSelected};
+	        	SelectedStrategy = FunGetNewStrategy(Strategy),
+	            {Vertices,Correct,NotCorrect,Unknown,State,SelectedStrategy,PreSelected};
 	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy,-1};
 	        c -> StateQuestion;
 	        _ -> CurrentState
 	   end, 
 	%asking_loop(G,NStrategy,lists:usort(NVertices),lists:usort(NCorrect),lists:usort(NNotCorrect),lists:usort(NUnknown),NState,NPreSelected).
-	asking_loop(G,NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState,NPreSelected).
+	asking_loop(G,FunGetNewStrategy, FunGetAnswer, NStrategy,NVertices,
+		NCorrect,NNotCorrect,NUnknown,NState,NPreSelected).
 
 	
-%EN preguntes dobles tindre en conter el undo	
-ask_question(_,-1,CurrentState,[])->
+%TODO: En preguntes dobles tindre en conter el undo	
+ask_question(_,-1,CurrentState,[],_)->
 	{_,Correct,NotCorrect,Unknown,State,Strategy,PreSelected} = CurrentState,
 	NCurrentState = {[],Correct,NotCorrect,Unknown,State,Strategy,PreSelected},
 	{c,NCurrentState};
-ask_question(G,Selected,CurrentState,NSortedVertices)->
+ask_question(G,Selected,CurrentState,NSortedVertices,FunGetAnswer)->
 	{Selected,Info} = digraph:vertex(G,Selected),
+	% io:format("Info: ~p\n", [Info]),
+	{Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected} = CurrentState,
 	case Info of 
 		{case_if_clause,{_, _, _,pattern,_,_,_}, _} ->
-			{Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected} = CurrentState,
 			[Parent] = digraph:in_neighbours(G, Selected),
 			NState = 
 				{NSortedVertices,Correct,NotCorrect,Unknown,
 	             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,Parent},
 			{c,NState};
 		{case_if_clause,{_, _, _,guard,_,_,_}, _} ->
-			{Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected} = CurrentState,
 			[Parent] = digraph:in_neighbours(G, Selected),
 			case lists:member(Parent,Correct++NotCorrect++Unknown) of 
 				true ->
-					{Question,_} = build_question(Info),
-					io:format("~s",[Question]),
-					Options = "? [y/n/d/s/u/a]: ",
-					[_|Answer] = lists:reverse(io:get_line(Options)),
-					{list_to_atom(lists:reverse(Answer)),[]};
+					% {Question,_} = build_question(Info),
+					% io:format("~s",[Question]),
+					% Options = "? [y/n/d/s/u/a]: ",
+					% [_|Answer] = lists:reverse(io:get_line(Options)),
+					% {list_to_atom(lists:reverse(Answer)),[]};
+					Answer = 
+						FunGetAnswer(Selected, [y,n,d,s,u,a], Vertices,Correct,NotCorrect,Unknown),
+					{Answer, []};
 				false ->
 					{c,{NSortedVertices,Correct,NotCorrect,Unknown,
 		             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,Parent}}
 	        end;
 		_ ->
-			{Question,AnswerProblemEts} = build_question(Info),
-			io:format("~s",[Question]),
+			{_Question,AnswerProblemEts} = build_question(Info),
+			% io:format("~s\n~p\n",[_Question, AnswerProblemEts]),
 			case AnswerProblemEts of 
 				[] -> 
-					Options = "? [y/n/d/i/s/u/a]: ",
-					[_|Answer] = lists:reverse(io:get_line(Options)),
-					{list_to_atom(lists:reverse(Answer)),[]};
+					% Options = "? [y/n/d/i/s/u/a]: ",
+					% [_|Answer] = lists:reverse(io:get_line(Options)),
+					% {list_to_atom(lists:reverse(Answer)),[]};
+					Answer = 
+						FunGetAnswer(Selected, [y,n,d,i,s,u,a], Vertices,Correct,NotCorrect,Unknown),
+					{Answer, []};
 				_ -> 
 					AnswerProblem = ets:tab2list(AnswerProblemEts),
-					QuestionCase = "[" ++ [integer_to_list(AnswerNum)++"/"
-						 || {AnswerNum,_} <-  lists:sort(AnswerProblem)]++"d/s/u/a]? ",
-					Answer =
-					 get_answer(QuestionCase,
+					% QuestionCase = "[" ++ [integer_to_list(AnswerNum)++"/"
+					% 	 || {AnswerNum,_} <-  lists:sort(AnswerProblem)]++"d/s/u/a]? ",
+					% Answer =
+					%  get_answer(QuestionCase,
+					% 	[list_to_atom(integer_to_list(AnswerNum))
+					% 	 || {AnswerNum,_} <-  AnswerProblem]++[d,s,u,a]),
+					Answers = 
 						[list_to_atom(integer_to_list(AnswerNum))
-						 || {AnswerNum,_} <-  AnswerProblem]++[d,s,u,a]),
+						 || {AnswerNum,_} <-  AnswerProblem] ++ [d,s,u,a],
+					% io:format("Info: ~p\n", [Info]),
+					Answer = 
+						FunGetAnswer(Selected, Answers, Vertices,Correct,NotCorrect,Unknown),
 					case Answer of 
 						s -> {s,[]};
 						u -> {u,[]};
@@ -437,23 +465,21 @@ ask_question(G,Selected,CurrentState,NSortedVertices)->
 							{_, Problem} = 
 								hd(ets:lookup(AnswerProblemEts,list_to_integer(atom_to_list(Answer)))),
 							ets:delete(AnswerProblemEts),
-							{Vertices,Correct,NotCorrect,Unknown,State,Strategy,PreSelected} = CurrentState,
 							NState = 
 								case Problem of 
 									context -> 
 										DepsSelected = element(3,Info),
-							        	case DepsSelected of 
-							        		[{_,{_,NextQuestion}}] ->
-							        			{NSortedVertices -- digraph_utils:reachable([Selected],G),
-									             [Selected|Correct],NotCorrect,Unknown,
-									             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,NextQuestion};
-							        		_ -> 
-							        			NextQuestion = ask_question_dependeces(DepsSelected),
-							        			%Podria passar que estaguera entre els correct, notcorret o unknown?
-							        			{NSortedVertices -- digraph_utils:reachable([Selected],G),
-									             [Selected|Correct],NotCorrect,Unknown,
-									             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,NextQuestion}
-							        	end;
+										NextQuestion = 
+								        	case DepsSelected of 
+								        		[{_,{_,NextQuestion0}}] ->
+								        			NextQuestion0;
+								        		_ -> 
+								        			ask_question_dependeces(FunGetAnswer, DepsSelected, CurrentState)			
+								        	end,
+							        	%Podria passar que estaguera entre els correct, notcorret o unknown?
+							        	{NSortedVertices -- digraph_utils:reachable([Selected],G),
+								             [Selected|Correct],NotCorrect,Unknown,
+								             [{Vertices,Correct,NotCorrect,Unknown,PreSelected}|State],Strategy,NextQuestion};
 							        arg_value -> 
 										[Parent] = digraph:in_neighbours(G, Selected),
 										{Parent,ParentInfo} = digraph:vertex(G,Parent),
@@ -496,12 +522,18 @@ ask_question(G,Selected,CurrentState,NSortedVertices)->
 									        		_ ->
 									        			[]
 									        	end),
-								       	QuestionClauses = "[" ++ [integer_to_list(AnswerNum)++"/"
-											 || AnswerNum <-  lists:seq(1, TotalClauses)]++"u/a]? ",
-										AnswerClauses =
-										 get_answer("Which clauses did you expect to be selected " ++ QuestionClauses,
+								  %      	QuestionClauses = "[" ++ [integer_to_list(AnswerNum)++"/"
+										% 	 || AnswerNum <-  lists:seq(1, TotalClauses)]++"u/a]? ",
+										% AnswerClauses =
+										%  get_answer("Which clauses did you expect to be selected " ++ QuestionClauses,
+										% 	[list_to_atom(integer_to_list(AnswerNum))
+										% 	 || AnswerNum <-  lists:seq(1, TotalClauses)]++[u,a]),
+										AnswersClauses = 
 											[list_to_atom(integer_to_list(AnswerNum))
-											 || AnswerNum <-  lists:seq(1, TotalClauses)]++[u,a]),
+												|| AnswerNum <-  lists:seq(1, TotalClauses)] ++ [u,a],
+										AnswerClauses = 
+											FunGetAnswer("Which clauses did you expect to be selected ", 
+												AnswersClauses, Vertices,Correct,NotCorrect,Unknown),
 										case AnswerClauses of 
 											u ->
 												CurrentState;
@@ -978,8 +1010,6 @@ tupled_graph(G)->
 	% io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
 	Tupled_Erlang.
 	
-
-
 tupled_vertex({V,L}) ->
 	{Question,_} = build_question(L),
 	{

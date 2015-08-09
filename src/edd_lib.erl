@@ -28,7 +28,7 @@
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
 		ask/3, core_module/1, core_module/2, 
-		asking_loop/9, initial_state/2, get_call_string/2]).
+		asking_loop/9, initial_state/2, get_call_string/2, select_strategy/1]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -71,6 +71,42 @@ core_module(File, Dir) ->
 	{ok,_,Core} = compile:file(Dir ++ "/" ++ File,[to_core,binary,no_copt,{outdir,Dir},{i,Dir}]),
 	Core.
 
+
+%%------------------------------------------------------------------------------
+%% @doc Prints current strategy then select the new one.
+%% @end
+%%------------------------------------------------------------------------------
+-spec select_strategy( Strategy0 :: atom()) -> atom().
+select_strategy(Strategy0) -> 
+	PrintStrategy = 
+    	fun
+    		(top_down) -> "Top Down";
+    		(divide_query) -> "Didide & Query"
+    	end,
+    io:format("\nCurrent strategy is "++ PrintStrategy(Strategy0) ++ ".\n"),
+	SelectedStrategy = 
+    	case get_answer("Select the new strategy (Didide & Query or "
+              ++ "Top Down): [d/t] ",[d,t]) of
+              t -> 
+                 top_down;
+              d -> 
+                 divide_query
+         end,
+    io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
+    SelectedStrategy.
+
+%%------------------------------------------------------------------------------
+%% @doc Initial state for asking loop 
+%% @end
+%%------------------------------------------------------------------------------
+-spec initial_state( G :: digraph:graph(), TrustedFunctions :: list()) -> {list(), list(), list()}.
+initial_state(G, TrustedFunctions) ->
+	IniCorrect = [V || V <- digraph:vertices(G),
+	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
+	Root = look_for_root(G),
+	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
+	{Vertices,IniCorrect,[Root]}.
+
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
 %%      node. The tree 'G' must be a digraph representing the abbreviated proof 
@@ -89,13 +125,6 @@ ask(G,Strategy,Graph) ->
 	{Vertices0, Correct0, NoCorrect0} = 
 		initial_state(G, TrustedFunctions),		
 	ask_about(G,Strategy,Vertices0, Correct0, NoCorrect0, Graph).
-	
-initial_state(G, TrustedFunctions) ->
-	IniCorrect = [V || V <- digraph:vertices(G),
-	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
-	Root = look_for_root(G),
-	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
-	{Vertices,IniCorrect,[Root]}.
 
 ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) -> 
 	FunGetAnswer =
@@ -103,24 +132,7 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) ->
 			ask_question(G,Selected) 
 		end,
 	FunGetNewStrategy = 
-		fun(Strategy0) -> 
-			PrintStrategy = 
-	        	fun
-	        		(top_down) -> "Top Down";
-	        		(divide_query) -> "Didide & Query"
-	        	end,
-            io:format("\nCurrent strategy is "++ PrintStrategy(Strategy0) ++ ".\n"),
-        	SelectedStrategy = 
-	        	case get_answer("Select the new strategy (Didide & Query or "
-	                  ++ "Top Down): [d/t] ",[d,t]) of
-	                  t -> 
-	                     top_down;
-	                  d -> 
-	                     divide_query
-	             end,
-            io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
-            SelectedStrategy
-		end,
+		fun select_strategy/1,
 	{Correct,NotCorrect,Unknown,_,NStrategy} = 
 	   asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
 	   	Strategy,Vertices,Correct0,NotCorrect0,[],[]),
