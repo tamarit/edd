@@ -522,7 +522,7 @@ tupled_graph(G)->
 	Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
 	Tupled_Erlang = 
 		{
-			{vertices, lists:map(fun tupled_vertex/1,Vertices)},
+			{vertices, lists:map(fun(V) -> tupled_vertex(G,V) end,Vertices)},
 		 	{edges,lists:map(fun tupled_edge/1,Edges)}
 		},
 	% io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
@@ -530,7 +530,7 @@ tupled_graph(G)->
 	
 
 
-tupled_vertex({V,Info = {L,_,File,Line}}) ->
+tupled_vertex(G, {V,Info = {L,_,File,Line}}) ->
 	Question = 
 		changeNewLines(lists:flatten(transform_label(lists:flatten(L),[]))) 
 		++ 
@@ -545,7 +545,8 @@ tupled_vertex({V,Info = {L,_,File,Line}}) ->
 	{
 		{id, V},
 		{question, Question},
-		{info, Info}
+		{info, Info},
+		{mfa, get_MFA_Label(G, V)}
 	}.     
 	    
 tupled_edge({V1,V2}) -> 
