@@ -335,7 +335,7 @@ asking_loop(G,FunGetNewStrategy, FunGetAnswer,Strategy,Vertices,Correct,NotCorre
 			_ ->
 				{PreSelected, Vertices -- [PreSelected]}
 		end,
-	%io:format("Selected: ~p\nSortedVertices: ~p\n",[Selected,NSortedVertices]),
+	% io:format("Selected: ~p\nSortedVertices: ~p\n",[Selected,NSortedVertices]),
 	YesAnswer = %begin
 	             % EqualToSeleceted = 
 	             %    [V || V <- Vertices, begin {V,{L1,_}} = digraph:vertex(G,V),
@@ -461,9 +461,16 @@ ask_question(G,Selected,CurrentState,NSortedVertices,FunGetAnswer)->
 						u -> {u,[]};
 						a -> {a,[]};
 						d -> {d,[]}; %Could/Should be improved
-						_ -> 
+						_ ->
+							IntAnswer = 
+								case is_integer(Answer) of 
+									true -> 
+										Answer;
+									false ->
+										list_to_integer(atom_to_list(Answer))
+								end,  
 							{_, Problem} = 
-								hd(ets:lookup(AnswerProblemEts,list_to_integer(atom_to_list(Answer)))),
+								hd(ets:lookup(AnswerProblemEts,IntAnswer)),
 							ets:delete(AnswerProblemEts),
 							NState = 
 								case Problem of 
