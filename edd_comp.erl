@@ -49,7 +49,7 @@ compile() ->
   'src/edd_zoom.erl', 'src/edd_zoom_lib.erl', 'src/edd_con.erl', 
   'src/edd_con_lib.erl', 'src/edd_trace.erl', 'src/edd_tcp.erl'
   , 'src/edd_server.erl', 'src/edd_client.erl'
-  , 'src/mochijson.erl'],[{dir,doc}]).
+  , 'src/mochijson.erl', 'src/edd_jserver.erl'],[{dir,doc}]).
 
 %%------------------------------------------------------------------------------
 %% @doc Load all the files of the Erlang Declarative Debugger (edd).
