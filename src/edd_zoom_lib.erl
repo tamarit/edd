@@ -83,7 +83,7 @@ initial_state(G) ->
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
--spec ask( G :: digraph(), Strategy :: top_down | divide_query) -> ok.
+-spec ask( G :: graph(), Strategy :: top_down | divide_query) -> ok.
 ask(G,Strategy)->
 	Root = look_for_root(G),
 	Vertices = digraph:vertices(G) -- [Root],
@@ -969,7 +969,7 @@ only_one_fun_clause(AFun,ClauseNumber) ->
 %%      will not be created but the function will not throw any exception.
 %% @end
 %%------------------------------------------------------------------------------
--spec dot_graph_file( G :: digraph(), Name :: string() ) -> string().	   
+-spec dot_graph_file( G :: graph(), Name :: string() ) -> string().	   
 dot_graph_file(G,Name)->
 	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
