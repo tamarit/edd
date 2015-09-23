@@ -46,7 +46,7 @@
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
-%-spec ask( G :: digraph(), Strategy,Priority) -> ok.
+%-spec ask( G :: digraph:graph(), Strategy,Priority) -> ok.
 ask(G,Strategy,Priority)->
 	print_root_info(G),
 	% STrustedFunctions = 
@@ -868,7 +868,7 @@ get_context([{VarName,Value}|Deps],Acc) ->
 %%      will not be created but the function will not throw any exception.
 %% @end
 %%------------------------------------------------------------------------------
--spec dot_graph_file( G :: graph(), Name :: string() ) -> string().	   
+-spec dot_graph_file( G :: digraph:graph(), Name :: string() ) -> string().	   
 dot_graph_file(G,Name)->
 	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
