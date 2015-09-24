@@ -92,7 +92,7 @@ select_strategy(Strategy0) ->
               d -> 
                  divide_query
          end,
-    io:format("Strategy is set to "++ PrintStrategy(SelectedStrategy) ++ ".\n"),
+    io:format("Strategy is set to " ++ PrintStrategy(SelectedStrategy) ++ ".\n"),
     SelectedStrategy.
 
 %%------------------------------------------------------------------------------
@@ -101,11 +101,37 @@ select_strategy(Strategy0) ->
 %%------------------------------------------------------------------------------
 -spec initial_state( G :: digraph:graph(), TrustedFunctions :: list()) -> {list(), list(), list()}.
 initial_state(G, TrustedFunctions) ->
-	IniCorrect = [V || V <- digraph:vertices(G),
-	                   lists:member(get_MFA_Label(G,V),TrustedFunctions)],
+	CorrectTrusted = 
+		[V || 	V <- digraph:vertices(G),
+	        	lists:member(get_MFA_Label(G,V),TrustedFunctions)],
+	Modules = 
+		lists:usort(
+			[element(1, get_MFA_Label(G,V)) 
+		 	 || V <- digraph:vertices(G)]),
+	% io:format("Modules: ~p\n", [Modules]),
+	Tests = 
+		lists:flatten(
+			[edd_test_reader:read(Module) 
+			 || Module <- Modules]), 
+	CallTests = 
+		[ {App ++ " = " ++ Res, Type}
+		 || {App, Res, Type} <- Tests],
+	io:format("Tests Read:\n ~p\n", [CallTests]),
+	VerticesInTests = 
+		lists:flatten([begin 
+			{V,{Label,_,_,_}} = digraph:vertex(G,V),
+			[{V, Type} || {Call, Type} <- CallTests, Label == Call] 
+		 end || V <- digraph:vertices(G)]),
+	% io:format("VerticesInTests: ~p\n", [VerticesInTests]),
+	CorrectTest = 
+		[V || {V, equal} <- VerticesInTests],
+	IncorrectTest = 
+		[V || {V, not_equal} <- VerticesInTests],
 	Root = look_for_root(G),
-	Vertices = digraph:vertices(G) -- [Root|IniCorrect],
-	{Vertices,IniCorrect,[Root]}.
+	IniCorrect = lists:usort(CorrectTest ++ CorrectTrusted),
+	IniIncorrect = lists:usort([Root | IncorrectTest]),
+	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect),
+	{Vertices,IniCorrect,IniIncorrect}.
 
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
@@ -123,7 +149,7 @@ ask(G,Strategy,Graph) ->
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
 	{Vertices0, Correct0, NoCorrect0} = 
-		initial_state(G, TrustedFunctions),		
+		initial_state(G, TrustedFunctions),	
 	ask_about(G,Strategy,Vertices0, Correct0, NoCorrect0, Graph).
 
 ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) -> 
