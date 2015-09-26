@@ -27,7 +27,7 @@
 -module(edd_lib).
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
-		ask/3, core_module/1, core_module/2, 
+		ask/3, core_module/1, core_module/2, get_MFA_Label/2,
 		asking_loop/9, initial_state/2, get_call_string/2, select_strategy/1]).
 
 %%------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ initial_state(G, TrustedFunctions) ->
 	CallTests = 
 		[ {App ++ " = " ++ Res, Type}
 		 || {App, Res, Type} <- Tests],
-	io:format("Tests Read:\n ~p\n", [CallTests]),
+	% io:format("Tests Read:\n ~p\n", [CallTests]),
 	VerticesInTests = 
 		lists:flatten([begin 
 			{V,{Label,_,_,_}} = digraph:vertex(G,V),
@@ -193,6 +193,7 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) ->
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G,NotCorrectVertex,
 	               		"Call to a function that contains an error"),
+	               	edd_test_writer:write(G, Correct -- Correct0, NotCorrect -- NotCorrect0),
 	               	case get_answer("Do you want to continue the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
@@ -266,7 +267,10 @@ print_clause(G,NotCorrectVertex,Clause) ->
 			io:format("~s\n",[ClauseStr])
 	end.
 	
-	
+%%------------------------------------------------------------------------------
+%% @doc Returns a the MFA corresponding to a node in the tree
+%% @end
+%%------------------------------------------------------------------------------	
 get_MFA_Label(G,Vertex) ->
 	{Vertex,{Label,_,File,Line}} = digraph:vertex(G,Vertex),
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),

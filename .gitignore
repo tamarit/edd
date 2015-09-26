@@ -37,3 +37,5 @@ src/prova*
 src/test_pt.erl
 
 src/tcp.erl
+
+examples/test_reader/*
