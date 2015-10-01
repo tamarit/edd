@@ -131,6 +131,7 @@ initial_state(G, TrustedFunctions) ->
 	IniCorrect = lists:usort(CorrectTest ++ CorrectTrusted),
 	IniIncorrect = lists:usort([Root | IncorrectTest]),
 	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect ++ digraph_utils:reachable(IniCorrect,G)),
+	% io:format("Askable vertices: ~p\n", [Vertices]),
 	{Vertices,IniCorrect,IniIncorrect}.
 
 %%------------------------------------------------------------------------------
@@ -375,6 +376,7 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 		     end} || V <- Vertices]
 	  end,
 	SortedVertices = lists:keysort(2,VerticesWithValues),
+	% io:format("SortedVertices: ~p\n", [SortedVertices]),
 	Selected = element(1,hd(SortedVertices)),
 	NSortedVertices = [V || {V,_} <- tl(SortedVertices)],
 	YesAnswer = begin
@@ -393,7 +395,7 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	        y -> YesAnswer;
 	        i -> YesAnswer;
 	        n -> {digraph_utils:reachable([Selected],G)
-	              --([Selected|NotCorrect]++Correct++Unknown),
+	              -- ([Selected|NotCorrect] ++ digraph_utils:reachable(Correct,G) ++ Unknown),
 	              Correct,[Selected|NotCorrect],Unknown,
 	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
 	        d -> %Hacer memoization?
@@ -411,7 +413,8 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	                lists:flatten([digraph_utils:reachable([V], G) 
 	                               || V <- Vertices,
 	                                  get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)]),
-	             {Vertices -- NewCorrect,NewCorrect ++ Correct,NotCorrect,Unknown,
+	             {Vertices -- digraph_utils:reachable(NewCorrect,G),
+	              NewCorrect ++ Correct,NotCorrect,Unknown,
 	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
 	        s -> 
 	        	{Vertices,Correct,NotCorrect,Unknown,State,FunGetNewStrategy(Strategy)};
