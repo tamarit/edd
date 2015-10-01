@@ -130,7 +130,7 @@ initial_state(G, TrustedFunctions) ->
 	Root = look_for_root(G),
 	IniCorrect = lists:usort(CorrectTest ++ CorrectTrusted),
 	IniIncorrect = lists:usort([Root | IncorrectTest]),
-	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect),
+	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect ++ digraph_utils:reachable(IniCorrect,G)),
 	{Vertices,IniCorrect,IniIncorrect}.
 
 %%------------------------------------------------------------------------------
