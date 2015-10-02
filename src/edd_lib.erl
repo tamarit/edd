@@ -130,6 +130,21 @@ initial_state(G, TrustedFunctions) ->
 	Root = look_for_root(G),
 	IniCorrect = lists:usort(CorrectTest ++ CorrectTrusted),
 	IniIncorrect = lists:usort([Root | IncorrectTest]),
+	InitialCorrectTest = 
+		case lists:usort(CorrectTest) of 
+			IniCorrect ->
+				[];
+			_ ->
+				lists:usort(CorrectTrusted)
+		end,
+	InitialIncorrectTest = 
+		case lists:usort(IncorrectTest) of 
+			IniIncorrect ->
+				[];
+			_ ->
+				[Root]
+		end,
+	put(ini_test_to_store, {InitialCorrectTest, InitialIncorrectTest}),
 	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect ++ digraph_utils:reachable(IniCorrect,G)),
 	% io:format("Askable vertices: ~p\n", [Vertices]),
 	{Vertices,IniCorrect,IniIncorrect}.
@@ -194,7 +209,8 @@ ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) ->
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G,NotCorrectVertex,
 	               		"Call to a function that contains an error"),
-	               	edd_test_writer:write(G, Correct -- Correct0, NotCorrect -- NotCorrect0),
+	               	{InitialCorrectTest, InitialIncorrectTest} = get(ini_test_to_store),
+	               	edd_test_writer:write(G, Correct -- (Correct0 -- InitialCorrectTest), NotCorrect -- (NotCorrect0 -- InitialIncorrectTest)),
 	               	case get_answer("Do you want to continue the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
