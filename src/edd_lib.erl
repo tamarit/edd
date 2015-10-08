@@ -101,7 +101,7 @@ select_strategy(Strategy0) ->
 %%------------------------------------------------------------------------------
 -spec initial_state( G :: digraph:graph(), TrustedFunctions :: list()) -> {list(), list(), list()}.
 initial_state(G, TrustedFunctions) ->
-	CorrectTrusted = 
+	ValidTrusted = 
 		[V || 	V <- digraph:vertices(G),
 	        	lists:member(get_MFA_Label(G,V),TrustedFunctions)],
 	Modules = 
@@ -113,41 +113,58 @@ initial_state(G, TrustedFunctions) ->
 		lists:flatten(
 			[edd_test_reader:read(Module) 
 			 || Module <- Modules]), 
-	CallTests = 
-		[ {App ++ " = " ++ Res, Type}
-		 || {App, Res, Type} <- Tests],
+	% CallTests = 
+	% 	[ {App ++ " = " ++ Res, Type}
+	% 	 || {App, Res, Type} <- Tests],
 	% io:format("Tests Read:\n ~p\n", [CallTests]),
 	VerticesInTests = 
 		lists:flatten([begin 
-			{V,{Label,_,_,_}} = digraph:vertex(G,V),
-			[{V, Type} || {Call, Type} <- CallTests, Label == Call] 
+			{CallV,ValueV} = get_call_value_string(G,V),
+			[{V, Type} 
+				|| 	{CallT, ValueT, Type} <- Tests,
+				 	CallV == CallT, ValueV == ValueT] 
 		 end || V <- digraph:vertices(G)]),
+	VerticesNotValidFromPositiveTests = 
+		lists:flatten([begin 
+			{CallV,ValueV} = get_call_value_string(G,V),
+			[V 
+				|| 	{CallT, ValueT, equal} <- Tests,
+				 	CallV == CallT, ValueV /= ValueT] 
+		 end || V <- digraph:vertices(G)]),
+	% VerticesInTests = 
+	% 	lists:flatten([begin 
+	% 		{V,{Label,_,_,_}} = digraph:vertex(G,V),
+	% 		[{V, Type} || {Call, Type} <- CallTests, Label == Call] 
+	% 	 end || V <- digraph:vertices(G)]),
 	% io:format("VerticesInTests: ~p\n", [VerticesInTests]),
-	CorrectTest = 
+	ValidFromTest = 
 		[V || {V, equal} <- VerticesInTests],
-	IncorrectTest = 
-		[V || {V, not_equal} <- VerticesInTests],
+	NotValidFromTest = 
+		[V || {V, not_equal} <- VerticesInTests] 
+		++ VerticesNotValidFromPositiveTests,
 	Root = look_for_root(G),
-	IniCorrect = lists:usort(CorrectTest ++ CorrectTrusted),
-	IniIncorrect = lists:usort([Root | IncorrectTest]),
-	InitialCorrectTest = 
-		case lists:usort(CorrectTest) of 
-			IniCorrect ->
+	IniValid = lists:usort(ValidFromTest ++ ValidTrusted),
+	IniNotValid = lists:usort([Root | NotValidFromTest]),
+	NewValidTests = 
+		case lists:usort(ValidFromTest) of 
+			IniValid ->
+				% Trusted nodes were already as test cases
 				[];
 			_ ->
-				lists:usort(CorrectTrusted)
+				lists:usort(ValidTrusted)
 		end,
-	InitialIncorrectTest = 
-		case lists:usort(IncorrectTest) of 
-			IniIncorrect ->
+	NewNotValidTests = 
+		case lists:usort(NotValidFromTest) of 
+			IniNotValid ->
+				% Root was already as a test case
 				[];
 			_ ->
 				[Root]
 		end,
-	put(ini_test_to_store, {InitialCorrectTest, InitialIncorrectTest}),
-	Vertices = digraph:vertices(G) -- (IniCorrect ++ IniIncorrect ++ digraph_utils:reachable(IniCorrect,G)),
+	Vertices = digraph:vertices(G) -- (IniValid ++ IniNotValid ++ digraph_utils:reachable(IniValid,G)),
+	put(test_to_NOT_store, {IniValid -- NewValidTests, IniNotValid -- NewNotValidTests}),
 	% io:format("Askable vertices: ~p\n", [Vertices]),
-	{Vertices,IniCorrect,IniIncorrect}.
+	{Vertices,IniValid,IniNotValid}.
 
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
@@ -164,57 +181,57 @@ ask(G,Strategy,Graph) ->
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
-	{Vertices0, Correct0, NoCorrect0} = 
+	{Vertices0, Valid0, NoValid0} = 
 		initial_state(G, TrustedFunctions),	
-	ask_about(G,Strategy,Vertices0, Correct0, NoCorrect0, Graph).
+	ask_about(G,Strategy,Vertices0, Valid0, NoValid0, Graph).
 
-ask_about(G,Strategy,Vertices,Correct0,NotCorrect0,Graph) -> 
+ask_about(G,Strategy,Vertices,Valid0,NotValid0,Graph) -> 
 	FunGetAnswer =
 		fun(Selected, _, _, _, _) -> 
 			ask_question(G,Selected) 
 		end,
 	FunGetNewStrategy = 
 		fun select_strategy/1,
-	{Correct,NotCorrect,Unknown,_,NStrategy} = 
+	{Valid,NotValid,Unknown,_,NStrategy} = 
 	   asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-	   	Strategy,Vertices,Correct0,NotCorrect0,[],[]),
-	case NotCorrect of
+	   	Strategy,Vertices,Valid0,NotValid0,[],[]),
+	case NotValid of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
 	     _ -> 
-	        NotCorrectVertexs = [NCV || NCV <- NotCorrect, 
-	                                   (digraph:out_neighbours(G, NCV) -- Correct) == [] ],
-	        case NotCorrectVertexs of
+	        NotValidVertexs = [NCV || NCV <- NotValid, 
+	                                   (digraph:out_neighbours(G, NCV) -- Valid) == [] ],
+	        case NotValidVertexs of
 	             [] ->
 	             	io:format("Not enough information.\n"),
-	             	NotCorrectWithUnwnownVertexs = 
-			  			[NCV || NCV <- NotCorrect, 
-	                          (digraph:out_neighbours(G, NCV)--(Correct ++ Unknown)) =:= []],
+	             	NotValidWithUnwnownVertexs = 
+			  			[NCV || NCV <- NotValid, 
+	                          (digraph:out_neighbours(G, NCV)--(Valid ++ Unknown)) =:= []],
 	                Maybe0 = 
 	                         [U || U <- Unknown, 
-	                               NCV <- NotCorrectWithUnwnownVertexs,
+	                               NCV <- NotValidWithUnwnownVertexs,
 	                               lists:member(U,digraph:out_neighbours(G, NCV))],
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
 					case get_answer("Do you want to try to answer"
 					     ++" the needed information? [y/n]: ",[y,n]) of
-					     y -> ask_about(G,NStrategy,Maybe,Correct,NotCorrect,Graph);
+					     y -> ask_about(G,NStrategy,Maybe,Valid,NotValid,Graph);
 					     n -> 
 			                [print_buggy_node(G,V,
 			                        "Call to a function that could contain an error") 
-			                        || V <- NotCorrectWithUnwnownVertexs],
+			                        || V <- NotValidWithUnwnownVertexs],
 			                [print_buggy_node(G,V,
 			                         "This call has not been answered and could contain an error") 
 			                        || V <- Maybe]
 					end;
-	             [NotCorrectVertex|_] ->
-	               	print_buggy_node(G,NotCorrectVertex,
+	             [NotValidVertex|_] ->
+	               	print_buggy_node(G,NotValidVertex,
 	               		"Call to a function that contains an error"),
-	               	{InitialCorrectTest, InitialIncorrectTest} = get(ini_test_to_store),
-	               	edd_test_writer:write(G, Correct -- (Correct0 -- InitialCorrectTest), NotCorrect -- (NotCorrect0 -- InitialIncorrectTest)),
+	               	{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
+	               	edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest),
 	               	case get_answer("Do you want to continue the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
-					     	edd_zoom:zoom_graph(get_call_string(G,NotCorrectVertex),Graph);
+					     	edd_zoom:zoom_graph(get_call_string(G,NotValidVertex),Graph);
 					     n -> 
 			                ok
 					end
@@ -239,8 +256,8 @@ find_unknown_children(_,_,[]) ->
 	[].
 	 
  
-print_buggy_node(G,NotCorrectVertex,Message) ->
-	{NotCorrectVertex,{Label,Clause,File,Line}} = digraph:vertex(G,NotCorrectVertex),
+print_buggy_node(G,NotValidVertex,Message) ->
+	{NotValidVertex,{Label,Clause,File,Line}} = digraph:vertex(G,NotValidVertex),
 	io:format("~s:\n~s\n",[Message,transform_label(Label,[])]),
 	case File of 
 		none ->
@@ -248,11 +265,11 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 		_ ->
 			io:format("fun location: (~s, line ~p)\n",[File,Line])
 	end,
-	print_clause(G,NotCorrectVertex,Clause).
+	print_clause(G,NotValidVertex,Clause).
    
-print_clause(G,NotCorrectVertex,Clause) ->
+print_clause(G,NotValidVertex,Clause) ->
 	{Clauses,FunName,Arity} = 
-		case get_MFA_Label(G,NotCorrectVertex) of 
+		case get_MFA_Label(G,NotValidVertex) of 
 			{{'fun',_,_} = AnoFun ,_,_}  ->
 				{erl_syntax:fun_expr_clauses(AnoFun),none,none};
 			{ModName,FunName0,Arity0} ->
@@ -263,7 +280,7 @@ print_clause(G,NotCorrectVertex,Clause) ->
 		             FunName_ =:= FunName0, Arity_ =:= Arity0]),
 				{Clauses_,FunName0,Arity0} 
 		end,
-	% {ModName,FunName,Arity} = get_MFA_Label(G,NotCorrectVertex),
+	% {ModName,FunName,Arity} = get_MFA_Label(G,NotValidVertex),
 	% {ok,M} = smerl:for_file(atom_to_list(ModName) ++ ".erl"),
 	% Clauses = hd([Clauses_ || 
 	%               	{function,_,FunName_,Arity_,Clauses_} <- smerl:get_forms(M),
@@ -313,6 +330,13 @@ get_call_string(G,Vertex) ->
 		_ ->
 			{erl_prettypr:format(Call),File,Line}
 	end.
+
+get_call_value_string(G,Vertex) ->
+	{Vertex,{Label,_,_,_}} = digraph:vertex(G,Vertex),
+	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
+	{match,_,_,Value} = Aexpr,
+	{get_call_string(G,Vertex), Value}.
 	
 get_ordinal(1) -> "first";
 get_ordinal(2) -> "second";
@@ -370,16 +394,16 @@ look_for_root(G)->
 	     _ -> hd([V||V <- digraph:vertices(G), digraph:in_degree(G, V)==0])
 	end.
 
-asking_loop(_,_,_,Strategy,[],Correct,NotCorrect,Unknown,State) -> 
-	{Correct,NotCorrect,Unknown,State,Strategy};
+asking_loop(_,_,_,Strategy,[],Valid,NotValid,Unknown,State) -> 
+	{Valid,NotValid,Unknown,State,Strategy};
 asking_loop(_,_,_,Strategy,[-1],_,_,_,_) -> 
 	{[-1],[-1],[-1],[],Strategy};
 asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-	Strategy,Vertices,Correct,NotCorrect,Unknown,State) ->
+	Strategy,Vertices,Valid,NotValid,Unknown,State) ->
 	VerticesWithValues = 
 	  case Strategy of 
 	       top_down ->
-	        Children = digraph:out_neighbours(G, hd(NotCorrect)),
+	        Children = digraph:out_neighbours(G, hd(NotValid)),
 	        SelectableChildren = Children -- (Children -- Vertices), 
 	          [{V, -length(digraph_utils:reachable([V], G))} 
 	           || V <- SelectableChildren];
@@ -402,43 +426,43 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	                                           (L1 =:= L2) and (F1 =:= F2) and (Line1 =:= Line2)
 	                                     end],
 	             {NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
-	             EqualToSeleceted ++ Correct,NotCorrect,Unknown,
-	             [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy}
+	             EqualToSeleceted ++ Valid,NotValid,Unknown,
+	             [{Vertices,Valid,NotValid,Unknown}|State],Strategy}
 	            end, 
-	Answer = FunGetAnswer(Selected, Vertices, Correct, NotCorrect, Unknown),
-	{NVertices,NCorrect,NNotCorrect,NUnknown,NState,NStrategy} = 
+	Answer = FunGetAnswer(Selected, Vertices, Valid, NotValid, Unknown),
+	{NVertices,NValid,NNotValid,NUnknown,NState,NStrategy} = 
 	   case Answer of
 	        y -> YesAnswer;
 	        i -> YesAnswer;
 	        n -> {digraph_utils:reachable([Selected],G)
-	              -- ([Selected|NotCorrect] ++ digraph_utils:reachable(Correct,G) ++ Unknown),
-	              Correct,[Selected|NotCorrect],Unknown,
-	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
+	              -- ([Selected|NotValid] ++ digraph_utils:reachable(Valid,G) ++ Unknown),
+	              Valid,[Selected|NotValid],Unknown,
+	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
 	        d -> %Hacer memoization?
 	             {NSortedVertices -- [Selected],
-	              Correct,NotCorrect,[Selected|Unknown],
-	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
+	              Valid,NotValid,[Selected|Unknown],
+	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
 	        u -> case State of
 	                  [] ->
 	                     io:format("Nothing to undo\n"),
-	                     {Vertices,Correct,NotCorrect,Unknown,State};
-	                  [{PVertices,PCorrect,PNotCorrect,PUnknown}|PState] ->
-	                     {PVertices,PCorrect,PNotCorrect,PUnknown,PState,Strategy}
+	                     {Vertices,Valid,NotValid,Unknown,State};
+	                  [{PVertices,PValid,PNotValid,PUnknown}|PState] ->
+	                     {PVertices,PValid,PNotValid,PUnknown,PState,Strategy}
 	             end;
-	        t -> NewCorrect = 
+	        t -> NewValid = 
 	                lists:flatten([digraph_utils:reachable([V], G) 
 	                               || V <- Vertices,
 	                                  get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)]),
-	             {Vertices -- digraph_utils:reachable(NewCorrect,G),
-	              NewCorrect ++ Correct,NotCorrect,Unknown,
-	              [{Vertices,Correct,NotCorrect,Unknown}|State],Strategy};
+	             {Vertices -- digraph_utils:reachable(NewValid,G),
+	              NewValid ++ Valid,NotValid,Unknown,
+	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
 	        s -> 
-	        	{Vertices,Correct,NotCorrect,Unknown,State,FunGetNewStrategy(Strategy)};
-	        a -> {[-1],Correct,NotCorrect,Unknown,State,Strategy};
-	        _ -> {Vertices,Correct,NotCorrect,Unknown,State,Strategy}
+	        	{Vertices,Valid,NotValid,Unknown,State,FunGetNewStrategy(Strategy)};
+	        a -> {[-1],Valid,NotValid,Unknown,State,Strategy};
+	        _ -> {Vertices,Valid,NotValid,Unknown,State,Strategy}
 	   end, 
 	asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-		NStrategy,NVertices,NCorrect,NNotCorrect,NUnknown,NState).
+		NStrategy,NVertices,NValid,NNotValid,NUnknown,NState).
 	
 ask_question(G,V)->
 	{V,{Label,_,File,Line}} = digraph:vertex(G,V),

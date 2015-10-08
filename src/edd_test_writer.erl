@@ -69,7 +69,7 @@ read_file(IODevice,PrevData,Acc) ->
 	end.
 
 str_test_fun(Tests) ->
-	"edd_test() ->\n" ++ str_test_fun_body(Tests).
+	"\nedd_test() ->\n" ++ str_test_fun_body(Tests).
 
 str_test_fun_body([]) ->
 	"\tok.\n";
