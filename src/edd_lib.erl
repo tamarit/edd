@@ -149,13 +149,16 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 						 || Module <- Modules]
 						++ [ edd_test_reader:read_file(File)
 						 || File <- TestFiles]),
+				% io:format("Tests : ~p\n", [Tests]),
 				VerticesInTests = 
 					lists:flatten([begin 
 						{CallV,ValueV} = get_call_value_string(G,V),
+						% io:format("{CallV,ValueV} : ~p\n", [{CallV,ValueV} ]),
 						[{V, Type} 
 							|| 	{CallT, ValueT, Type} <- Tests,
 							 	CallV == CallT, ValueV == ValueT] 
 					 end || V <- digraph:vertices(G)]),
+				% io:format("VerticesInTests : ~p\n", [VerticesInTests]),
 				VerticesNotValidFromPositiveTests = 
 					lists:flatten([begin 
 						{CallV,ValueV} = get_call_value_string(G,V),
@@ -163,11 +166,13 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 							|| 	{CallT, ValueT, equal} <- Tests,
 							 	CallV == CallT, ValueV /= ValueT] 
 					 end || V <- digraph:vertices(G)]),
+				% io:format("VerticesNotValidFromPositiveTests : ~p\n", [VerticesNotValidFromPositiveTests]),
 				ValidFromTest = 
 					[V || {V, equal} <- VerticesInTests],
 				NotValidFromTest = 
 					[V || {V, not_equal} <- VerticesInTests] 
 					++ VerticesNotValidFromPositiveTests,
+				% io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
 				IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
 				IniNotValid_ = lists:usort([Root | NotValidFromTest]),
 				NewValidTests = 
@@ -176,7 +181,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 							% Trusted nodes were already as test cases
 							[];
 						_ ->
-							lists:usort(ValidTrusted)
+							lists:usort(ValidTrusted) -- lists:usort(ValidFromTest)
 					end,
 				NewNotValidTests = 
 					case lists:usort(NotValidFromTest) of 
@@ -267,6 +272,7 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               	case SaveTests of 
 	               		true -> 
 	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
+	               			% io:format("test_to_NOT_store: ~p\n", [{RemoveableValidTest, RemovableNotValidTest}]),
 	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest);
 	               		false -> 
 	               			ok 
@@ -379,7 +385,7 @@ get_call_value_string(G,Vertex) ->
 	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
 	{match,_,_,Value} = Aexpr,
-	{get_call_string(G,Vertex), Value}.
+	{get_call_string(G,Vertex), erl_prettypr:format(Value)}.
 	
 get_ordinal(1) -> "first";
 get_ordinal(2) -> "second";
