@@ -213,7 +213,6 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	% io:format("Ordered Selectable Trees: ~p\n", [[V || V <- lists:sort(OrderingFunction, SelectableTrees)]]),
 	[{InvalidSelected, Vertices} | _] = 
 		lists:sort(OrderingFunction, SelectableTrees),
-	% Poner el no valido seleecionado en el head, por si acaba
 	FinalIniNotValid = 
 		[InvalidSelected | (IniNotValid -- [InvalidSelected])],
 	{Vertices, IniValid, FinalIniNotValid}.
@@ -239,7 +238,8 @@ ask(G, Strategy, Graph, {Load, Save, Files}) ->
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
 	{Vertices0, Valid0, NoValid0} = 
-		initial_state(G, TrustedFunctions, Load, Files),	
+		initial_state(G, TrustedFunctions, Load, Files),
+	put(expected_values, []),	
 	ask_about(G,Strategy,Vertices0, Valid0, NoValid0, Graph, Save).
 
 ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) -> 
@@ -286,8 +286,10 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               	case SaveTests of 
 	               		true -> 
 	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
+	               			ExpectedValues = get(expected_values),
+	               			% Falta separar por modulos o que lo haga el writer
 	               			% io:format("test_to_NOT_store: ~p\n", [{RemoveableValidTest, RemovableNotValidTest}]),
-	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest);
+	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest, ExpectedValues);
 	               		false -> 
 	               			ok 
 	               	end,
@@ -316,14 +318,26 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	          [{V, -length(digraph_utils:reachable([V], G))} 
 	           || V <- SelectableChildren];
 	       divide_query ->
-		 [{V,begin
-		         Reach = digraph_utils:reachable([V], G),
-		         TotalReach = length(Reach) - (1 + length(Reach -- Vertices)),
-		         Rest = (length(Vertices) - 1) - TotalReach,
-		         abs(TotalReach - Rest)
-		     end} || V <- Vertices]
+			 [{V,begin
+			         Reach = digraph_utils:reachable([V], G) -- [V],
+			         TotalReach = Reach -- (Reach -- Vertices),
+			         Rest = Vertices -- (TotalReach ++ [V]),
+			         % TotalReach = length(Reach) - (1 + length(Reach -- Vertices)),
+			         % Rest = length(Vertices) - (1 + TotalReach),
+			         abs(length(TotalReach) - length(Rest))
+			     end} || V <- Vertices]
 	  end,
-	SortedVertices = lists:keysort(2,VerticesWithValues),
+	OrderingFunction = 
+		fun
+			({_, O1}, {_, O2}) when O1 < O2 -> 
+				true;
+			({V1, O1}, {V2, O2}) when O1 == O2 , V1 > V2 -> 
+				true;
+			(_, _) ->
+				false
+		end,
+	SortedVertices = 
+		lists:sort(OrderingFunction, VerticesWithValues),
 	% io:format("SortedVertices: ~p\n", [SortedVertices]),
 	Selected = element(1,hd(SortedVertices)),
 	NSortedVertices = [V || {V,_} <- tl(SortedVertices)],
@@ -337,15 +351,29 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	             EqualToSeleceted ++ Valid,NotValid,Unknown,
 	             [{Vertices,Valid,NotValid,Unknown}|State],Strategy}
 	            end, 
+	NoAnswer =
+		% Shouldn't look for nodes with the same value and mark them as not valid? 
+		{digraph_utils:reachable([Selected],G)
+          -- ([Selected|NotValid] ++ digraph_utils:reachable(Valid,G) ++ Unknown),
+          Valid,[Selected|NotValid],Unknown,
+          [{Vertices,Valid,NotValid,Unknown}|State],Strategy},
 	Answer = FunGetAnswer(Selected, Vertices, Valid, NotValid, Unknown),
 	{NVertices,NValid,NNotValid,NUnknown,NState,NStrategy} = 
 	   case Answer of
 	        y -> YesAnswer;
 	        i -> YesAnswer;
-	        n -> {digraph_utils:reachable([Selected],G)
-	              -- ([Selected|NotValid] ++ digraph_utils:reachable(Valid,G) ++ Unknown),
-	              Valid,[Selected|NotValid],Unknown,
-	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
+	        v -> 
+				ExpectedValue = 
+					io:get_line("What is the value you expected? "),
+				case ExpectedValue of 
+					[$\n] ->
+						[];
+					_ ->
+						put(expected_values, [{get_call_string(G,Selected), lists:droplast(ExpectedValue), equal} | get(expected_values)])
+				end,
+	        	NoAnswer;
+	        n ->
+	        	NoAnswer;
 	        d -> %Hacer memoization?
 	             {NSortedVertices -- [Selected],
 	              Valid,NotValid,[Selected|Unknown],
@@ -382,7 +410,7 @@ ask_question(G,V)->
 		_ ->
 			io:format("~s\nfun location: (~s, line ~p)",[NLabel,File,Line])
 	end,
-	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/d/i/s/u/a]: ")),
+	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/v/d/i/s/u/a]: ")),
 	list_to_atom(lists:reverse(Answer)).
 	
 get_answer(Message,Answers) ->

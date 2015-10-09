@@ -1,18 +1,52 @@
 -module(edd_test_writer).
 
--export([write/3]).
+-export([write/4]).
 
-write(G, NewCorrect, NewNotCorrect) ->
+write(G, NewCorrect, NewNotCorrect, OtherTests) ->
 	% io:format("~p\n", [{NewCorrect, NewNotCorrect}]),
 	LabeledVertex = 
 			[{V, element(1, edd_lib:get_MFA_Label(G,V)), equal} 
 			 || V <- NewCorrect] 
 		++ 	[{V, element(1, edd_lib:get_MFA_Label(G,V)), not_equal} 
 		 	 || V <- NewNotCorrect],
-	ModulesDict = create_modules_dict(LabeledVertex, dict:new()),
+	LabeledOtherTests = 
+		lists:flatten(
+			[begin
+				{ok,Toks,_} = erl_scan:string(lists:flatten(Call)++"."),
+				{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
+				case Aexpr of 
+					{call,_,{remote,_,{atom,_,ModName},_},APars} ->
+						[{{Call, Value}, ModName, Type}];
+					_ ->
+						[]
+				end	
+			 end 
+			|| {Call, Value, Type} <- OtherTests]),
+	ModulesDict = 
+		create_modules_dict(
+			LabeledVertex ++ LabeledOtherTests, 
+			dict:new()),
+	% OtherTestsDict = create_modules_dict(LabeledOtherTests, dict:new()),
 	% io:format("~p\n", [dict:to_list(ModulesDict)]),
-	[write_in_file(K, dict:fetch(K, ModulesDict), G) 
-	 || K <- dict:fetch_keys(ModulesDict)].
+	[begin
+		% TestsTree = 
+		% 	case dict:is_key(K, ModulesDict) of 
+		% 		true -> 
+		% 			dict:fetch(K, ModulesDict);
+		% 		false ->
+		% 			[]
+		% 	end,
+		% TestsOther =
+		% 	case dict:is_key(K, ModulesDict) of 
+		% 		true -> 
+		% 			dict:fetch(K, OtherTestsDict);
+		% 		false ->
+		% 			[]
+		% 	end,
+		% write_in_file(K, TestsTree, TestsOther, G) 
+		write_in_file(K, dict:fetch(K, ModulesDict), G) 
+	 end
+	 || K <- lists:usort(dict:fetch_keys(ModulesDict))].
 
 
 create_modules_dict([], Dict) ->
@@ -20,6 +54,12 @@ create_modules_dict([], Dict) ->
 create_modules_dict([{V, Module, Type} | Tail], Dict) ->
 	NDict = dict:append(Module, {V, Type}, Dict),
 	create_modules_dict(Tail, NDict).
+
+% create_modules_dict_test([], Dict) ->
+% 	Dict;
+% create_modules_dict_test([{Module, Call, Value, Type} | Tail], Dict) ->
+% 	NDict = dict:append(Module, {Call, Value, Type}, Dict),
+% 	create_modules_dict_test(Tail, NDict).
 
 write_in_file(Module, Tests, G) ->
 	{ok,Forms} = epp:parse_file(atom_to_list(Module) ++ ".erl", [], []),
@@ -81,13 +121,18 @@ str_test_fun_body([Test | Tests]) ->
 
 build_tests([{V, Type}|Tail], G, Acc) ->
 	try 
-		{V,{Test,_,_,_}} = digraph:vertex(G,V),
-		{ok,Toks,_} = erl_scan:string(lists:flatten(Test)++"."),
-		{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-		Call = erl_syntax:match_expr_pattern(Aexpr),
-		Value = erl_syntax:match_expr_body(Aexpr),
-		StrCall = erl_prettypr:format(Call),
-		StrValue = erl_prettypr:format(Value),
+		{StrCall, StrValue} = 
+			case V of 
+				{StrCall_, StrValue_} ->
+					{StrCall_, StrValue_};
+				_ ->
+					{V,{Test,_,_,_}} = digraph:vertex(G,V),
+					{ok,Toks,_} = erl_scan:string(lists:flatten(Test)++"."),
+					{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
+					Call = erl_syntax:match_expr_pattern(Aexpr),
+					Value = erl_syntax:match_expr_body(Aexpr),
+					{erl_prettypr:format(Call), erl_prettypr:format(Value)}
+			end,
 		StrTest = build_test_case(Type, StrCall, StrValue),
 		build_tests(Tail, G, [StrTest | Acc])
 	catch
