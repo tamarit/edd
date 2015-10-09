@@ -1,6 +1,6 @@
 -module(edd_test_reader).
 
--export([read/1, read_from_clause/1, put_attributes/1]).
+-export([read/1, read_file/1, read_from_clause/1, put_attributes/1]).
 
 read(Module) -> 
 	read_file(atom_to_list(Module) ++ ".erl").

@@ -30,6 +30,15 @@
 -export([dd/1,dd/2,dd/3, dd_server/2, ddc/2]).
 
 
+-record(edd_options, 
+	{
+	  strategy = divide_query
+	, tree = false
+	, load_tests = true
+	, save_tests = true
+	, test_modules = []
+	}).
+
 %%------------------------------------------------------------------------------
 %% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
 %%      whose evaluation yields an incorrect value. The arguments can be atom 
@@ -40,9 +49,9 @@
 -spec dd(Expr::string(), StrategyGraph1 :: top_down | tree, 
          StrategyGraph2 :: top_down | tree) -> ok.
 dd(Expr,top_down,tree) -> 
-	dd_internal(Expr,top_down,true);
+	dd_internal(Expr,#edd_options{strategy = top_down, tree = true});
 dd(Expr,tree,top_down) -> 
-	dd_internal(Expr,top_down,true);
+	dd_internal(Expr,#edd_options{strategy = top_down, tree = true});
 dd(Expr,tree,_) -> 
 	dd(Expr,tree);
 dd(Expr,_,tree) -> 
@@ -60,13 +69,42 @@ dd(Expr,_,_) ->
 %%      atom top_down, the strategy will be set to Top Down and the tree will
 %%      not be created. Contrarily, if the second argument is atom tree, the
 %%      tree will be created, but the strategy will be Divide and Query.
+%%		An alternative is to use a list of options. This list can include 
+%%		both atoms top_down and tree. Additionally there are three options 
+%%		related with eunit tests. not_load_tests/not_save_tests avoids load/
+%%		save tests from/to the debugged modules. Finally, given the tuple 
+%%		{test_files, Files :: list()} edd will automatically load additional 
+%%		eunit tests from the given files.
 %% @end
 %%------------------------------------------------------------------------------
--spec dd(Expr::string(), StrategyGraph :: top_down | tree) -> ok.	
+-spec dd(Expr::string(), Options :: top_down | tree | list()) -> ok.	
+dd(Expr,Options) when is_list(Options)->
+	Strategy = 
+		case lists:member(top_down, Options) of
+			true -> 
+				top_down;
+			false ->
+				divide_query
+		end,
+	TestFiles  =
+		case [Files || {test_files, Files} <- Options ] of 
+			[] ->
+				[];
+			[ListFiles] ->
+				ListFiles
+		end,
+	dd_internal(Expr,
+		#edd_options{
+			  strategy = Strategy
+			, tree = lists:member(tree, Options) 
+			, load_tests = not(lists:member(not_load_tests, Options))
+			, save_tests = not(lists:member(not_save_tests, Options))
+			, test_modules = TestFiles
+		});
 dd(Expr,top_down) ->
-	dd_internal(Expr,top_down,false);
+	dd_internal(Expr,#edd_options{strategy = top_down});
 dd(Expr,tree) ->
-	dd_internal(Expr,divide_query,true);
+	dd_internal(Expr,#edd_options{tree = true});
 dd(Expr,_) ->
 	dd(Expr).
 
@@ -91,7 +129,7 @@ ddc(Expr,TraceTimeout) ->
 dd_server(Expr, Dir) ->
 	code:add_patha(Dir), 
 	% io:format("PATHS: ~p\n",[code:get_path()]),
-	dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end).
+	dd_internal_core(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end).
 
 
 %%------------------------------------------------------------------------------
@@ -102,24 +140,30 @@ dd_server(Expr, Dir) ->
 %%------------------------------------------------------------------------------
 -spec dd(Expr::string()) -> ok.	
 dd(Expr) ->
-	dd_internal(Expr,divide_query,false).
+	dd_internal(Expr,#edd_options{}).
 
-dd_internal(Expr,Strategy,Graph) ->
-	G = dd_internal(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end),
+dd_internal(Expr, 
+	#edd_options{
+		  strategy = Strategy 
+		, tree = Graph
+		, load_tests = LoadTest
+		, save_tests = SaveTest
+		, test_modules = TestFiles}) ->
+	G = dd_internal_core(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end),
 	case Graph of
 	     true ->
 	       edd_lib:dot_graph_file(G,"dbg");
 	     false -> 
 	       ok
 	end,
-	%TO BE REMOVED %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
-	[_,{memory,Words},_] = digraph:info(G),
-	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
+	%TO BENCHAMARK ONLY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	% io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	% [_,{memory,Words},_] = digraph:info(G),
+	% io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	edd_lib:ask(G,Strategy,Graph).
+	edd_lib:ask(G,Strategy,Graph, {LoadTest, SaveTest, TestFiles}).
 
-dd_internal(Expr, FunCore) ->
+dd_internal_core(Expr, FunCore) ->
 	{ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
 	M1 = smerl:new(foo),
 	{ok, M2} = smerl:add_func(M1,"bar() ->" ++ Expr ++ " ."),

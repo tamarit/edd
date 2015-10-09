@@ -27,7 +27,7 @@
 -module(edd_lib).
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
-		ask/3, core_module/1, core_module/2, get_MFA_Label/2,
+		ask/4, core_module/1, core_module/2, get_MFA_Label/2,
 		asking_loop/9, initial_state/2, get_call_string/2, select_strategy/1]).
 
 %%------------------------------------------------------------------------------
@@ -99,70 +99,103 @@ select_strategy(Strategy0) ->
 %% @doc Initial state for asking loop 
 %% @end
 %%------------------------------------------------------------------------------
--spec initial_state( G :: digraph:graph(), TrustedFunctions :: list()) -> {list(), list(), list()}.
+-spec initial_state
+	( 
+		  G :: digraph:graph()
+		, TrustedFunctions :: list()
+	) 
+    -> 
+    {
+	      Askable :: list()
+	    , IniValid :: list()
+	    , IniNotValid :: list()
+    }.
 initial_state(G, TrustedFunctions) ->
+	initial_state(G, TrustedFunctions, false, []).
+
+%%------------------------------------------------------------------------------
+%% @doc Initial state for asking loop 
+%% @end
+%%------------------------------------------------------------------------------
+-spec initial_state
+	( 
+		  G :: digraph:graph()
+		, TrustedFunctions :: list()
+		, LoadTest :: boolean()
+		, TestFiles :: list()
+	) 
+    -> 
+    {
+	      Askable :: list()
+	    , IniValid :: list()
+	    , IniNotValid :: list()
+    }.
+initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	ValidTrusted = 
 		[V || 	V <- digraph:vertices(G),
 	        	lists:member(get_MFA_Label(G,V),TrustedFunctions)],
-	Modules = 
-		lists:usort(
-			[element(1, get_MFA_Label(G,V)) 
-		 	 || V <- digraph:vertices(G)]),
-	% io:format("Modules: ~p\n", [Modules]),
-	Tests = 
-		lists:flatten(
-			[edd_test_reader:read(Module) 
-			 || Module <- Modules]), 
-	% CallTests = 
-	% 	[ {App ++ " = " ++ Res, Type}
-	% 	 || {App, Res, Type} <- Tests],
-	% io:format("Tests Read:\n ~p\n", [CallTests]),
-	VerticesInTests = 
-		lists:flatten([begin 
-			{CallV,ValueV} = get_call_value_string(G,V),
-			[{V, Type} 
-				|| 	{CallT, ValueT, Type} <- Tests,
-				 	CallV == CallT, ValueV == ValueT] 
-		 end || V <- digraph:vertices(G)]),
-	VerticesNotValidFromPositiveTests = 
-		lists:flatten([begin 
-			{CallV,ValueV} = get_call_value_string(G,V),
-			[V 
-				|| 	{CallT, ValueT, equal} <- Tests,
-				 	CallV == CallT, ValueV /= ValueT] 
-		 end || V <- digraph:vertices(G)]),
-	% VerticesInTests = 
-	% 	lists:flatten([begin 
-	% 		{V,{Label,_,_,_}} = digraph:vertex(G,V),
-	% 		[{V, Type} || {Call, Type} <- CallTests, Label == Call] 
-	% 	 end || V <- digraph:vertices(G)]),
-	% io:format("VerticesInTests: ~p\n", [VerticesInTests]),
-	ValidFromTest = 
-		[V || {V, equal} <- VerticesInTests],
-	NotValidFromTest = 
-		[V || {V, not_equal} <- VerticesInTests] 
-		++ VerticesNotValidFromPositiveTests,
 	Root = look_for_root(G),
-	IniValid = lists:usort(ValidFromTest ++ ValidTrusted),
-	IniNotValid = lists:usort([Root | NotValidFromTest]),
-	NewValidTests = 
-		case lists:usort(ValidFromTest) of 
-			IniValid ->
-				% Trusted nodes were already as test cases
-				[];
-			_ ->
-				lists:usort(ValidTrusted)
+	{IniValid, IniNotValid} = 
+		case LoadTest of 
+			true -> 
+				Modules = 
+					lists:usort(
+						[element(1, get_MFA_Label(G,V)) 
+					 	 || V <- digraph:vertices(G)]),
+				% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
+				Tests = 
+					lists:flatten(
+						[edd_test_reader:read(Module) 
+						 || Module <- Modules]
+						++ [ edd_test_reader:read_file(File)
+						 || File <- TestFiles]),
+				VerticesInTests = 
+					lists:flatten([begin 
+						{CallV,ValueV} = get_call_value_string(G,V),
+						[{V, Type} 
+							|| 	{CallT, ValueT, Type} <- Tests,
+							 	CallV == CallT, ValueV == ValueT] 
+					 end || V <- digraph:vertices(G)]),
+				VerticesNotValidFromPositiveTests = 
+					lists:flatten([begin 
+						{CallV,ValueV} = get_call_value_string(G,V),
+						[V 
+							|| 	{CallT, ValueT, equal} <- Tests,
+							 	CallV == CallT, ValueV /= ValueT] 
+					 end || V <- digraph:vertices(G)]),
+				ValidFromTest = 
+					[V || {V, equal} <- VerticesInTests],
+				NotValidFromTest = 
+					[V || {V, not_equal} <- VerticesInTests] 
+					++ VerticesNotValidFromPositiveTests,
+				IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
+				IniNotValid_ = lists:usort([Root | NotValidFromTest]),
+				NewValidTests = 
+					case lists:usort(ValidFromTest) of 
+						IniValid_ ->
+							% Trusted nodes were already as test cases
+							[];
+						_ ->
+							lists:usort(ValidTrusted)
+					end,
+				NewNotValidTests = 
+					case lists:usort(NotValidFromTest) of 
+						IniNotValid_ ->
+							% Root was already as a test case
+							[];
+						_ ->
+							[Root]
+					end,
+				put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
+				{IniValid_, IniNotValid_};
+			false -> 
+				{ValidTrusted, [Root]}
 		end,
-	NewNotValidTests = 
-		case lists:usort(NotValidFromTest) of 
-			IniNotValid ->
-				% Root was already as a test case
-				[];
-			_ ->
-				[Root]
-		end,
-	Vertices = digraph:vertices(G) -- (IniValid ++ IniNotValid ++ digraph_utils:reachable(IniValid,G)),
-	put(test_to_NOT_store, {IniValid -- NewValidTests, IniNotValid -- NewNotValidTests}),
+	Vertices = 
+		digraph:vertices(G) 
+		-- 	(IniValid 
+			++ IniNotValid 
+			++ digraph_utils:reachable(IniValid,G)),
 	% io:format("Askable vertices: ~p\n", [Vertices]),
 	{Vertices,IniValid,IniNotValid}.
 
@@ -175,17 +208,22 @@ initial_state(G, TrustedFunctions) ->
 %%      argument.      
 %% @end
 %%------------------------------------------------------------------------------
--spec ask( G :: digraph:graph(), Strategy :: top_down | divide_query,Graph :: binary()) -> ok.
-ask(G,Strategy,Graph) ->
+-spec ask( 
+	  G :: digraph:graph() 
+	, Strategy :: top_down | divide_query
+	, Graph :: binary()
+	, TestInfo :: {Load :: boolean(), Save :: boolean(), Files :: list()}
+	) -> ok.
+ask(G, Strategy, Graph, {Load, Save, Files}) ->
 	% io:get_line(""),
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
 	{Vertices0, Valid0, NoValid0} = 
-		initial_state(G, TrustedFunctions),	
-	ask_about(G,Strategy,Vertices0, Valid0, NoValid0, Graph).
+		initial_state(G, TrustedFunctions, Load, Files),	
+	ask_about(G,Strategy,Vertices0, Valid0, NoValid0, Graph, Save).
 
-ask_about(G,Strategy,Vertices,Valid0,NotValid0,Graph) -> 
+ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) -> 
 	FunGetAnswer =
 		fun(Selected, _, _, _, _) -> 
 			ask_question(G,Selected) 
@@ -214,7 +252,7 @@ ask_about(G,Strategy,Vertices,Valid0,NotValid0,Graph) ->
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
 					case get_answer("Do you want to try to answer"
 					     ++" the needed information? [y/n]: ",[y,n]) of
-					     y -> ask_about(G,NStrategy,Maybe,Valid,NotValid,Graph);
+					     y -> ask_about(G,NStrategy,Maybe,Valid,NotValid,Graph, SaveTests);
 					     n -> 
 			                [print_buggy_node(G,V,
 			                        "Call to a function that could contain an error") 
@@ -226,8 +264,13 @@ ask_about(G,Strategy,Vertices,Valid0,NotValid0,Graph) ->
 	             [NotValidVertex|_] ->
 	               	print_buggy_node(G,NotValidVertex,
 	               		"Call to a function that contains an error"),
-	               	{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
-	               	edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest),
+	               	case SaveTests of 
+	               		true -> 
+	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
+	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest);
+	               		false -> 
+	               			ok 
+	               	end,
 	               	case get_answer("Do you want to continue the debugging session"
 					     ++" inside this function? [y/n]: ",[y,n]) of
 					     y -> 
