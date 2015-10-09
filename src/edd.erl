@@ -36,7 +36,7 @@
 	, tree = false
 	, load_tests = true
 	, save_tests = true
-	, test_modules = []
+	, test_files = []
 	}).
 
 %%------------------------------------------------------------------------------
@@ -99,7 +99,7 @@ dd(Expr,Options) when is_list(Options)->
 			, tree = lists:member(tree, Options) 
 			, load_tests = not(lists:member(not_load_tests, Options))
 			, save_tests = not(lists:member(not_save_tests, Options))
-			, test_modules = TestFiles
+			, test_files = TestFiles
 		});
 dd(Expr,top_down) ->
 	dd_internal(Expr,#edd_options{strategy = top_down});
@@ -148,7 +148,7 @@ dd_internal(Expr,
 		, tree = Graph
 		, load_tests = LoadTest
 		, save_tests = SaveTest
-		, test_modules = TestFiles}) ->
+		, test_files = TestFiles}) ->
 	G = dd_internal_core(Expr, fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end),
 	case Graph of
 	     true ->
