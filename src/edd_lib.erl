@@ -287,8 +287,7 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               		true -> 
 	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
 	               			ExpectedValues = get(expected_values),
-	               			% Falta separar por modulos o que lo haga el writer
-	               			% io:format("test_to_NOT_store: ~p\n", [{RemoveableValidTest, RemovableNotValidTest}]),
+	               			% io:format("test_to_NOT_store: ~w\n", [{RemoveableValidTest, RemovableNotValidTest}]),
 	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest, ExpectedValues);
 	               		false -> 
 	               			ok 
@@ -386,9 +385,11 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	                     {PVertices,PValid,PNotValid,PUnknown,PState,Strategy}
 	             end;
 	        t -> NewValid = 
-	                lists:flatten([digraph_utils:reachable([V], G) 
-	                               || V <- Vertices,
-	                                  get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)]),
+	                % lists:flatten([digraph_utils:reachable([V], G) 
+	               % [V || V <- Vertices,
+	               %       get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)],
+				   [V || V <- digraph:vertices(G),
+	                     get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)],
 	             {Vertices -- digraph_utils:reachable(NewValid,G),
 	              NewValid ++ Valid,NotValid,Unknown,
 	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
