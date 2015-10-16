@@ -91,9 +91,9 @@ following lines show a complete debugging session:
 
     > edd:dd( "merge:mergesort([b,a], fun merge:comp/2)", tree ).
     Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: 
-    merge:merge([b], [a], fun merge:comp/2) = [b, a]? [y/n/t/d/i/s/u/a]: n
-    merge:comp(b, a) = false? [y/n/t/d/i/s/u/a]: t
-    merge:merge([a], [], fun merge:comp/2) = [a]? [y/n/t/d/i/s/u/a]: y
+    merge:merge([b], [a], fun merge:comp/2) = [b, a]? [y/n/t/v/d/i/s/u/a]: n
+    merge:comp(b, a) = false? [y/n/t/v/d/i/s/u/a]: t
+    merge:merge([a], [], fun merge:comp/2) = [a]? [y/n/t/v/d/i/s/u/a]: y
     Call to a function that contains an error:
     merge:merge([b], [a], fun merge:comp/2) = [b, a]
     Please, revise the fourth clause:
@@ -115,7 +115,7 @@ If you do not want to mark any function as trusted, simply press 'Enter'.
 After the trusted functions the debugger will ask some question about function 
 and 'fun' applications of the shape
 
-    fun(val1, ..., valn) = val? [y/n/t/d/i/u/a]: 
+    fun(val1, ..., valn) = val? [y/n/t/v/d/i/u/a]: 
   
 to know whether the function 'fun' applied to values 'val1', ..., 'valn' must 
 return the value 'val' or not. The possible answers to these questions are:
@@ -124,6 +124,8 @@ return the value 'val' or not. The possible answers to these questions are:
  * Trusted (t): the evaluation is correct and the function is trusted, so any 
                 subsequent application of the function will be considered as
                 correct without asking.
+ * No + Value (v): the evaluation is incorrect and the user choose to provide
+                the expected value.
  * Don't know (d): the question is too hard to answer.
  * Inadmissible (i): the function call has no sense with those values as
                      arguments.
@@ -184,6 +186,15 @@ behaviour, and the second is the timeout (in miliseconds) for the tracing
 process needed in this kind of debugging. 
     
 
+edd and eunit
+-------------
+
+The Erlang Declarative Debugger can interact with eunit in two ways:
+  * It reads eunit tests from a given files and use this information to automatically answer some questions.
+  * It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
+  
+The default behaviour for edd is to read and store the eunit tests. However, there are some options to disable this functionality.
+
 Options for edd
 ---------------
 
@@ -198,17 +209,17 @@ function) is "Divide & Query", and the default strategy for the second step is
 'top_down' argument in the dd/2 call. For example:
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", top_down).
-    
+  
 Note that you can change the strategy at any point of the debugging session by 
 pressing the key 's'.
-    
+  
 The Erlang Declarative Debugger can also generate the proof tree in a DOT file
 (http://en.wikipedia.org/wiki/DOT_language) and a PDF file using the 'dot'
 command. To activate this option, use the 'tree' argument in dd/2. For
 example the call:
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", tree).
-    
+  
 will start a debugging session using the default strategy "Divide & Query" and
 generate the proof tree of the evaluation of the expression in the files 
 "dbg.dot"/"dbg.pdf" for the first step of the debugging session, and 
@@ -220,10 +231,16 @@ To generate the proof tree file and also use the "Top Down" strategy, use the
 dd/3 function:
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", tree, top_down).
-    
+  
 or 
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", top_down, tree).
+
+or dd/2 which also allows to use a list of options:
+
+    > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", [top_down, tree]).
+
+Additionally there are three options related with eunit tests. Option "not_load_tests"/"not_save_tests" avoids load/save tests from/to the debugged modules. Finally, given the tuple "{test_files, Files :: list()}" edd will automatically load additional eunit tests from the given files.
 
 
 
