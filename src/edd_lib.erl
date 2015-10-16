@@ -287,8 +287,14 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               		true -> 
 	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
 	               			ExpectedValues = get(expected_values),
+	               			ValidNodesToStore = Valid -- RemoveableValidTest,
+	               			NotValidNodesToStore0 = NotValid -- RemovableNotValidTest,
+	               			{ExpectedValuesNodes, ExpectedValuesTest} = 
+	               				lists:unzip(ExpectedValues),
+	               			NotValidNodesToStore = 
+	               				NotValidNodesToStore0 -- ExpectedValuesNodes,
 	               			% io:format("test_to_NOT_store: ~w\n", [{RemoveableValidTest, RemovableNotValidTest}]),
-	               			edd_test_writer:write(G, Valid -- RemoveableValidTest, NotValid -- RemovableNotValidTest, ExpectedValues);
+	               			edd_test_writer:write(G, ValidNodesToStore, NotValidNodesToStore, ExpectedValuesTest);
 	               		false -> 
 	               			ok 
 	               	end,
@@ -368,7 +374,7 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 					[$\n] ->
 						[];
 					_ ->
-						put(expected_values, [{get_call_string(G,Selected), lists:droplast(ExpectedValue), equal} | get(expected_values)])
+						put(expected_values, [{Selected, {get_call_string(G,Selected), lists:droplast(ExpectedValue), equal}} | get(expected_values)])
 				end,
 	        	NoAnswer;
 	        n ->
