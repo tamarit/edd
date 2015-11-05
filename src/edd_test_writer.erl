@@ -82,20 +82,35 @@ write_in_file(Module, Tests, G) ->
 	{ok, IODeviceR} = file:open(StrModule, [read]),
 	Read0 = read_file(IODeviceR),
 	file:close(IODeviceR),
-	Read = remove_previous_test(Read0, []),
+	Read1 = remove_previous_test(Read0, []),
+	Read = lists:reverse(Read1),
+	StrEunitInclude = 
+		case is_previous_include(Read) of 
+			true ->
+				"";
+			false ->
+				"\n-include_lib(\"eunit/include/eunit.hrl\").\n"
+		end,
 	{ok, IODeviceW} = file:open(StrModule, [write]),
-	file:write(IODeviceW, list_to_binary(lists:reverse(Read) ++ StrTestFun)),
+	StrProgram = 
+		Read ++ StrEunitInclude ++ StrTestFun,
+	file:write(IODeviceW, list_to_binary(StrProgram)),
 	file:close(IODeviceW),
 	ok.
 
-remove_previous_test([],Acc) ->
-	Acc;
-% remove_previous_test([$d, $d, $e | _],Acc) ->
-% 	Acc;
 remove_previous_test([$e,$d,$d,$_,$t,$e,$s,$t,$(,$),$ ,$-,$> | _],Acc) ->
 	Acc;
 remove_previous_test([Other | Content],Acc) ->
-	remove_previous_test(Content, [Other|Acc]).
+	remove_previous_test(Content, [Other|Acc]);
+remove_previous_test([],Acc) ->
+	Acc.
+
+is_previous_include([$-,$i,$n,$c,$l,$u,$d,$e,$_,$l,$i,$b,$(,$",$e,$u,$n,$i,$t,$/,$i,$n,$c,$l,$u,$d,$e,$/,$e,$u,$n,$i,$t,$.,$h,$r,$l,$",$),$.,$\n | _]) ->
+	true;
+is_previous_include([Other | Content]) ->
+	is_previous_include(Content);
+is_previous_include([]) ->
+	false.
 
 read_file(IODevice) -> 
 	read_file(IODevice,[],[]).
