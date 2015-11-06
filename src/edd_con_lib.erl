@@ -175,7 +175,13 @@ print_buggy_node(G,NotCorrectVertex,Message) ->
 		{'receive',{AReceive,_,LineR,FileR},_,_,_,_,_,_,_} ->
 			io:format("with the receive expression:\n~s.\n",[build_receive(AReceive,FileR,LineR,0,none)]);
 		{'call',ACall__,FileCall,LineCall} ->
-			io:format("with the call ~s.\n",[erl_prettypr:format(ACall__)]),
+			io:format("with the call ~s.\n",
+				[ case is_list(ACall__) of 
+					true -> 
+						ACall__;
+					false -> 
+						erl_prettypr:format(ACall__)
+				  end]),
 			case FileCall of 
 				none ->
 					ok;
@@ -299,7 +305,7 @@ ask_initial_process(G) ->
 	Answer = get_answer(pids_wo_quotes(Question),lists:seq(0,LastId)),
 	Result = [Data || {Option,Data} <- NDict, Answer =:= Option],
 	case Result of 
-		none ->
+		[none] ->
 			[Pid || {_,Pid} <- Dict];
 		_ -> 
 			Result 
@@ -528,7 +534,7 @@ analyze_tokens([H|T]) ->
 
 
 question_to_receive_value(ACallReceive,ToValueReceive,Pid,Sent,Spawned,Transition_,Bindings) ->
-	%io:format("ACallReceive: ~p\n",[ACallReceive]),
+	% io:format("ACallReceive: ~p\n",[ACallReceive]),
 	{Transition,Context} = 
 		case ACallReceive of
 			{'receive',_,_,_,Context_,_,_,_,_} ->
@@ -543,13 +549,19 @@ question_to_receive_value(ACallReceive,ToValueReceive,Pid,Sent,Spawned,Transitio
 			{'receive',{AReceive,_,LineR,FileR},Clause,Consumed,_,_,_,_,_} ->
 				" evaluates the receive expression:\n" ++ build_receive(AReceive,FileR,LineR,Clause,Consumed);
 			{'call',ACall,FileCall,LineCall} ->
-				" calls " ++ erl_prettypr:format(ACall) ++
-				case FileCall of 
+				" calls " 
+				++ case is_list(ACall) of 
+					true -> 
+						ACall;
+					false -> 
+						erl_prettypr:format(ACall) 
+				   end
+				++ case FileCall of 
 					none ->
 						"";
 					_ -> 
 						io_lib:format("\nfun location: (~s, line ~p)",[FileCall, LineCall])
-				end
+				   end
 		end ++
 		"\nIs there anything incorrect?",
 	{StrOption1,CurrenOption1, CurrenDict1} = 
@@ -595,13 +607,29 @@ question_to_receive_value(ACallReceive,ToValueReceive,Pid,Sent,Spawned,Transitio
 	StrValue = 
 		case ToValueReceive of 
 			{'receive',AExpr,File,Line} -> 
-				io_lib:format("\n~p. - To reach the receive expression:\n",[CurrenOption4]) ++ 
-				 erl_prettypr:format(AExpr,[{paper, 300},{ribbon, 300}])++
-				 io_lib:format("\nlocation (~s, line ~p)",[File,Line]);
+				io_lib:format("\n~p. - To reach the receive expression:\n",[CurrenOption4]) 
+				 ++ case is_list(AExpr) of 
+					 	true -> 
+					 		AExpr;
+					 	false ->
+					 		erl_prettypr:format(AExpr,[{paper, 300},{ribbon, 300}])
+					 end
+				 ++ io_lib:format("\nlocation (~s, line ~p)",[File,Line]);
 			stuck_receive ->
 				io_lib:format("\n~p. - To get blocked.",[CurrenOption4]);
+			none ->
+				% TODO: Remove
+				io_lib:format("\n~p. - Not has value.",[CurrenOption4]);
 			_ ->
-				io_lib:format("\n~p. - To evaluate to ",[CurrenOption4]) ++ erl_prettypr:format(ToValueReceive)					
+				% io:format("~p\n", [ToValueReceive]),
+				% io:format("~p\n", [is_list(ToValueReceive)]),
+				io_lib:format("\n~p. - To evaluate to ",[CurrenOption4]) ++ 
+					case is_list(ToValueReceive) of 
+						true -> 
+							ToValueReceive;
+						false -> 
+							erl_prettypr:format(ToValueReceive)
+					end
 		end,
 	{StrOption5,CurrenOption5,CurrenDict5} =
 		{StrValue,CurrenOption4 + 1,[{CurrenOption4,incorrect}|CurrenDict4]},
@@ -780,8 +808,19 @@ build_transition({{AReceive,Line,File},Clause,{Sender,Msg,_},_NodeReceive,Value}
 		none ->
 			"";
 		_ ->
-			"\nthat evalautes to " ++ erl_prettypr:format(Value) ++ "."
+			"\nthat evalautes to " ++ 
+				case is_list(Value) of 
+					false -> 
+						erl_prettypr:format(Value);
+					true -> 
+						Value 
+				end ++ "."
 	end.
+
+build_receive(AExpr,File,Line,_,_) when is_list(AExpr) ->
+	%"Receive expression:\n" ++
+	AExpr ++
+	io_lib:format("\nlocation (~s, line ~p)",[File,Line]);
 
 build_receive(AExpr,File,Line,_,_) ->
 	%"Receive expression:\n" ++
@@ -868,6 +907,7 @@ get_context([{VarName,Value}|Deps],Acc) ->
 %%      will not be created but the function will not throw any exception.
 %% @end
 %%------------------------------------------------------------------------------
+
 -spec dot_graph_file( G :: digraph:graph(), Name :: string() ) -> string().	   
 dot_graph_file(G,Name)->
 	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),

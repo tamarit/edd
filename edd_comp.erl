@@ -32,6 +32,9 @@ files() ->
   , "edd_con", "edd_con_lib", "edd_trace", "edd_tcp"
   , "edd_server", "edd_client", "edd_jserver"
   , "edd_test_reader", "edd_test_writer"
+  , "edd_con_pt"
+  % TO BE REMOVED WHEN INTEGRATED
+  , "edd_trace_new"
   , "mochijson", "smerl"
   ].
 

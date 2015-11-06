@@ -626,9 +626,17 @@ scheduler(State0) ->
 			PidAnswer!State#scheduler_state.g,
 			scheduler(State);
 		{execute_code_on_the_fly,PidAnswer} ->
-			Result = foo:bar(),
+			Result = 
+				try 
+					foo:bar()
+				catch 
+					_:_ -> 
+						% throw({error,"Unable to execute code on the fly"}),
+						io:format("Unable to execute code on the fly"),
+						{c_literal,[],true}
+				end,
 			%io:format("~p\n",[Result]),
-			PidAnswer!foo:bar(),
+			PidAnswer!Result,
 			scheduler(State);
 		_Msg -> 
 			io:format("Unknown message ~p\n",[_Msg])
@@ -1147,6 +1155,10 @@ get_tree_call(State) ->
 	     	     			% 	{c_literal,_,ListNth} = cerl:fold_literal(lists:nth(2,BArgs)),
 	     	     			% 	%io:format("~p ~p\n",[Index,ListNth]),
 	     	     			% 	lists:nth(Index,ListNth);
+	     	     			{erlang,register} ->
+	     	     				{c_literal,[],true};
+	     	     			% {erlang,purge_module} ->
+	     	     			% 	{c_literal,[],true};
 	     	    			_ ->
 								try
 				           % Posible problema si el ya existe un módulo foo
@@ -1160,8 +1172,6 @@ get_tree_call(State) ->
 								                               {atom,1,FunName}},ABArgs}]}]}),
 			                         smerl:compile(M2,[nowarn_format]),
 			                         get_from_scheduler(SchedulerPid,{execute_code_on_the_fly,self()})
-				                     %foo:bar() %Genera el valor utilizando el módulo creado
-						                               %on de fly
 								catch
 								   Exception:Reason -> {Exception,Reason}
 								end
