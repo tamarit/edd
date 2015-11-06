@@ -337,123 +337,135 @@ asking_loop(State0) ->
 	NotCorrect = State#debugger_state.not_correct,
 	Unknown = State#debugger_state.unknown,
 	PreviousState = State#debugger_state.previous_state,
-	{Selected,NSortedVertices} =
-		case Preselected of 
-			none ->
-				VerticesPid = [V || V <- State#debugger_state.vertices, lists:member(get_pid_vertex(V,G),Pids)],
-				VerticesNoPid = [V || V <- State#debugger_state.vertices, not lists:member(get_pid_vertex(V,G),Pids)],
-				VerticesWithValues = 
-				  case Strategy of 
-				       top_down ->
-					        Children = digraph:out_neighbours(G, hd(NotCorrect)),
-					        SelectableChildren = Children -- (Children -- VerticesPid), 
-					          [{V, -length(digraph_utils:reachable([V], G))} 
-					           || V <- SelectableChildren];
-				       divide_query ->
-							 [{V,begin
-							         Reach = digraph_utils:reachable([V], G),
-							         TotalReach = length(Reach) - (1 + length(Reach -- VerticesPid)),
-							         Rest = (length(VerticesPid) - 1) - TotalReach,
-							         abs(TotalReach - Rest)
-							     end} || V <- VerticesPid]
-				  end,
-				%io:format("VerticesWithValues: ~p\n",[VerticesWithValues]),
-				SortedVertices = lists:keysort(2,VerticesWithValues),
-				%En caso de empate
-				FirstValue = element(2,hd(SortedVertices)),
-				SameThanFirst = lists:usort([V || {V,VValue} <- SortedVertices, VValue == FirstValue]),
-				Selected_ = 
-					case Priority of 
-						old -> hd(SameThanFirst);
-						new -> hd(lists:reverse(SameThanFirst));
-						indet -> element(1,hd(SortedVertices))
-					end,
-				{Selected_, [V || {V,_} <- SortedVertices, V /= Selected_] ++ VerticesNoPid};
-			_ ->
-				%io:format("Vertices: ~p\n",[Vertices]),
-				{Preselected,Vertices -- [Preselected]}
-		end,
-	YesAnswer = begin
-	             EqualToSeleceted = 
-	                [V || V <- Vertices, begin {V,L1} = digraph:vertex(G,V),
-	                                           {Selected,L2} = digraph:vertex(G,Selected),
-	                                           (L1 =:= L2) 
-	                                     end],
-	             State#debugger_state{
-	             	vertices = NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
-	             	correct = EqualToSeleceted ++ Correct,
-	             	previous_state = State
-	             }
-	            end, 
-	Answer = ask_question(G,Selected),
-	%io:format("Answer: ~p\n",[Answer]),
 	NState = 
-	   case Answer of
-	        y -> YesAnswer;
-	        %i -> YesAnswer;
-	        n -> 
-	        	State#debugger_state{
-	             	vertices = digraph_utils:reachable([Selected],G) -- ([Selected|NotCorrect]++Correct++Unknown),
-	             	not_correct = [Selected|NotCorrect],
-	             	previous_state = State
-	             };
-	        d ->
-	        	State#debugger_state{
-	             	vertices = NSortedVertices -- [Selected],
-	             	unknown = [Selected|Unknown],
-	             	previous_state = State
-	             };
-	        u -> case PreviousState of
-	                  [] ->
-	                     io:format("Nothing to undo\n"),
-	                     State;
-	                  _ ->
-	                  	PreviousState
-	             end;
-	        s -> case get_answer("Select a strategy (Didide & Query or "
-	                  ++"Top Down) [d/t]: ",[t,d]) of
-	                  t -> 
-	                  	State#debugger_state{
-			             	strategy = top_down
+		case [V || 
+				V <- Vertices, 
+			   	lists:member(get_pid_vertex(V,G),Pids)] 
+		of 
+			[] ->
+				State#debugger_state{
+	             	vertices = []
+	            };
+			_ ->
+				{Selected,NSortedVertices} =
+					case Preselected of 
+						none ->
+							% io:format("State: ~p\n",[State]),
+							VerticesPid = [V || V <- Vertices, lists:member(get_pid_vertex(V,G),Pids)],
+							VerticesNoPid = [V || V <- Vertices, not lists:member(get_pid_vertex(V,G),Pids)],
+							% io:format("{VerticesPid, VerticesNoPid}: ~p\n",[{VerticesPid, VerticesNoPid}]),
+							VerticesWithValues = 
+							  case Strategy of 
+							       top_down ->
+								        Children = digraph:out_neighbours(G, hd(NotCorrect)),
+								        SelectableChildren = Children -- (Children -- VerticesPid), 
+								          [{V, -length(digraph_utils:reachable([V], G))} 
+								           || V <- SelectableChildren];
+							       divide_query ->
+										 [{V,begin
+										         Reach = digraph_utils:reachable([V], G),
+										         TotalReach = length(Reach) - (1 + length(Reach -- VerticesPid)),
+										         Rest = (length(VerticesPid) - 1) - TotalReach,
+										         abs(TotalReach - Rest)
+										     end} || V <- VerticesPid]
+							  end,
+							%io:format("VerticesWithValues: ~p\n",[VerticesWithValues]),
+							SortedVertices = lists:keysort(2,VerticesWithValues),
+							%En caso de empate
+							FirstValue = element(2,hd(SortedVertices)),
+							SameThanFirst = lists:usort([V || {V,VValue} <- SortedVertices, VValue == FirstValue]),
+							Selected_ = 
+								case Priority of 
+									old -> hd(SameThanFirst);
+									new -> hd(lists:reverse(SameThanFirst));
+									indet -> element(1,hd(SortedVertices))
+								end,
+							{Selected_, [V || {V,_} <- SortedVertices, V /= Selected_] ++ VerticesNoPid};
+						_ ->
+							%io:format("Vertices: ~p\n",[Vertices]),
+							{Preselected,Vertices -- [Preselected]}
+					end,
+				YesAnswer = begin
+				             EqualToSeleceted = 
+				                [V || V <- Vertices, begin {V,L1} = digraph:vertex(G,V),
+				                                           {Selected,L2} = digraph:vertex(G,Selected),
+				                                           (L1 =:= L2) 
+				                                     end],
+				             State#debugger_state{
+				             	vertices = NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
+				             	correct = EqualToSeleceted ++ Correct,
+				             	previous_state = State
+				             }
+				            end, 
+				Answer = ask_question(G,Selected),
+				%io:format("Answer: ~p\n",[Answer]),
+			   case Answer of
+			        y -> YesAnswer;
+			        %i -> YesAnswer;
+			        n -> 
+			        	State#debugger_state{
+			             	vertices = digraph_utils:reachable([Selected],G) -- ([Selected|NotCorrect]++Correct++Unknown),
+			             	not_correct = [Selected|NotCorrect],
+			             	previous_state = State
 			             };
-	                  d -> 
-	                  	State#debugger_state{
-			             	strategy = divide_query
-			             }
-	             end;
-	        p -> case get_answer("Select priority (Old, New or Indeterminate) [o/n/i]: ",[o,n,i]) of
-	                  o -> 
-	                  	State#debugger_state{
-			             	priority = old
+			        d ->
+			        	State#debugger_state{
+			             	vertices = NSortedVertices -- [Selected],
+			             	unknown = [Selected|Unknown],
+			             	previous_state = State
 			             };
-			          n -> 
-	                  	State#debugger_state{
-			             	priority = new
-			             };
-	                  i -> 
-	                  	State#debugger_state{
-			             	priority = indet
-			             }
-	             end;
-	        a -> 
-	        	State#debugger_state{
-			        vertices = [-1]
-			    };
-	        r -> 
-	        	print_root_info(G),
-	        	State;
-	        {c,Node} ->
-	        	%io:format("NSortedVertices: ~p\n",[NSortedVertices]),
-	        	State#debugger_state{
-	        		vertices = NSortedVertices -- digraph_utils:reachable([Selected],G),
-	        		correct = [Selected| Correct],
-			     	preselected = Node,
-			     	%pids = [lists:flatten(io_lib:format("~p",[get_pid_vertex(Node,G)]))]
-			     	pids = [lists:flatten(get_pid_vertex(Node,G))]
-			    };
-	        _ -> State
-	   end,
-	%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
+			        u -> case PreviousState of
+			                  [] ->
+			                     io:format("Nothing to undo\n"),
+			                     State;
+			                  _ ->
+			                  	PreviousState
+			             end;
+			        s -> case get_answer("Select a strategy (Didide & Query or "
+			                  ++"Top Down) [d/t]: ",[t,d]) of
+			                  t -> 
+			                  	State#debugger_state{
+					             	strategy = top_down
+					             };
+			                  d -> 
+			                  	State#debugger_state{
+					             	strategy = divide_query
+					             }
+			             end;
+			        p -> case get_answer("Select priority (Old, New or Indeterminate) [o/n/i]: ",[o,n,i]) of
+			                  o -> 
+			                  	State#debugger_state{
+					             	priority = old
+					             };
+					          n -> 
+			                  	State#debugger_state{
+					             	priority = new
+					             };
+			                  i -> 
+			                  	State#debugger_state{
+					             	priority = indet
+					             }
+			             end;
+			        a -> 
+			        	State#debugger_state{
+					        vertices = [-1]
+					    };
+			        r -> 
+			        	print_root_info(G),
+			        	State;
+			        {c,Node} ->
+			        	%io:format("NSortedVertices: ~p\n",[NSortedVertices]),
+			        	State#debugger_state{
+			        		vertices = NSortedVertices -- digraph_utils:reachable([Selected],G),
+			        		correct = [Selected| Correct],
+					     	preselected = Node
+					     	% TODO: Something similar can be needed to improve search, but not in this way, because in certain case make imposible to finde the bug source
+					     	% pids = [lists:flatten(get_pid_vertex(Node,G))]
+					    };
+			        _ -> State
+			   end
+				%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
+		end,
 	asking_loop(NState).
 	
 ask_question(G,V)->
