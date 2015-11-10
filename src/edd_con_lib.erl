@@ -79,6 +79,7 @@ ask(G,Strategy,Priority)->
 
 ask_about(State) -> 
 	%{Correct,NotCorrect,Unknown,_,NStrategy} = 
+	% io:format("Initial state: ~p\n",[State]),
 	NState = 
 	   asking_loop(State),
 	Correct = NState#debugger_state.correct,
@@ -296,12 +297,20 @@ print_root_info(G) ->
 ask_initial_process(G) ->
 	Root = look_for_root(G),
     {Root,{{root,_,_,Summary},_}} = digraph:vertex(G,Root),
-	Pids = [PidSummary || {PidSummary,_,_,_} <- lists:usort(Summary)],
-	{StrPidsDict,LastId} = lists:mapfoldl(fun(Pid, Id) -> {{io_lib:format("~p.- ~s\n",[Id,Pid]),{Id,Pid}}, Id+1} end, 0, Pids),
+	Pids = 
+		[lists:flatten(io_lib:format("~p", [PidSummary]))
+			|| {PidSummary,_,_,_} <- lists:usort(Summary)],
+	{StrPidsDict,LastId} = 
+		lists:mapfoldl(
+			fun(Pid, Id) -> 
+				{{io_lib:format("~p.- ~s\n",[Id,Pid]),{Id,Pid}}, Id+1} 
+			end, 
+		0, 
+		Pids),
 	{StrPids, Dict} = lists:unzip(StrPidsDict),
 	Options = lists:concat(StrPids) ++ io_lib:format("~p.- None\n",[LastId]),
 	NDict = [{LastId,none} | Dict],
-	Question = io_lib:format("\nList of pids:\n" ++ Options ++ "\nPlease, insert a PID where you have observed a wrong beahviour: [0...~p]: ",[LastId]),
+	Question = io_lib:format("\nList of pids:\n" ++ Options ++ "\nPlease, insert a PID where you have observed a wrong behaviour: [0..~p]: ",[LastId]),
 	Answer = get_answer(pids_wo_quotes(Question),lists:seq(0,LastId)),
 	Result = [Data || {Option,Data} <- NDict, Answer =:= Option],
 	case Result of 
