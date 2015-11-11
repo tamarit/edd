@@ -2155,7 +2155,6 @@ build_graph(Trace, _, PidInit) ->
 
     DictTraces = 
         separate_by_pid(Trace, dict:new()),
-    io:format("DictTrace: ~p\n",[DictTraces]),
     edd_graph!{add_vertex, 0},
     SystemSends = 
         lists:sort(
@@ -2257,7 +2256,40 @@ get_send({Order, {edd_trace,send_sent,Pid,Info}} ) ->
 get_send(_) ->
     [].   
 
-
+build_pid_node_call_to_receive(Blocked, {InfoCall, Sends, Spawns, FinishedCalls}, {Free, LastNode},  {StrReceive, File, Line, Pid, CurrentReceive}) ->
+    Spawned = 
+        lists:map(fun get_pid_from_spwan_info/1, Spawns),
+    Sent = 
+        lists:map(fun get_pid_msg_from_send_info/1, Sends),
+    Transition =
+        get_transition(CurrentReceive),
+    Content = 
+        case Blocked of 
+            true -> 
+                {
+                   {
+                        to_value, 
+                        {call, {build_call_string(InfoCall), stuck_receive},
+                         none, none, Transition},
+                        0, Sent, Spawned
+                    },
+                    lists:flatten(io_lib:format("~p",[Pid]))
+                };
+            false -> 
+                {
+                    {
+                        to_receive, StrReceive, 
+                        {'call', build_call_string(InfoCall), none, none}, 
+                         File, Line, Sent, Spawned, Transition
+                     }, 
+                     lists:flatten(io_lib:format("~p",[Pid]))
+                }
+        end,
+    edd_graph!{add_vertex, Free, Content},
+    edd_graph!{add_edge, LastNode, Free},
+    [edd_graph!{add_edge, Free, NodeCall} || NodeCall <- FinishedCalls],
+    % io:format("~p\n",[Free]),
+    {Free + 1, Free}.
 
 % extract_send({Pid, _, _, Sends, _}) ->
 %     lists:map(fun get_pid_msg_from_send_info/1, Sends).
@@ -2334,8 +2366,6 @@ build_args_list_string([E | Rest]) ->
 %             ok
 %     end. 
 
-
-
 build_graph_pids(Pid, Free, Dict, SystemSends) ->
     TracePid = 
         lists:sort(dict:fetch(Pid, Dict)),
@@ -2388,7 +2418,7 @@ build_graph_pids(Pid, Free, Dict, SystemSends) ->
 %     {Pid, NNodes, InfoFirstCall, Sends, Spawns}.
 
 
-% get_no_consumed([{PidSend, MsgSend} | Rest], Pid, Consumed, Acc) ->
+% get_no_consumed([{PidSend, MsgSend} | Rest], Pid, Consumed, Acc) ->
 %     % io:format("~p\n", [{PidSend, MsgSend, Consumed}]),
 %     % io:format("~p\n", [{PidSend == Pid, lists:member(MsgSend, Consumed)}]),
 %     % io:format("~p\n", [Consumed -- MsgSend]),
@@ -2409,61 +2439,6 @@ build_graph_pids(Pid, Free, Dict, SystemSends) ->
 % get_consumed_message(_, Acc) ->
 %     Acc.
 
-
-build_pid_node_call_to_receive(Blocked, {InfoCall, Sends, Spawns, FinishedCalls}, {Free, LastNode},  {StrReceive, File, Line, Pid, CurrentReceive}) ->
-    Spawned = 
-        lists:map(fun get_pid_from_spwan_info/1, Spawns),
-    Sent = 
-        lists:map(fun get_pid_msg_from_send_info/1, Sends),
-    Transition =
-        get_transition(CurrentReceive),
-    Content = 
-        case Blocked of 
-            true -> 
-                {
-                   {
-                        to_value, 
-                        case InfoCall of 
-                        	{evaluated, {ReceiveInfo, Clause, SenderMsg, NodeReceive, ValueStr}, Context, Bindings} ->
-								{'receive',{StrReceive, stuck_receive, Line, File}, SenderMsg ,Context, Bindings, []};
-							_ ->
-                        		{'call', {build_call_string(InfoCall), stuck_receive}
-                        		  	, none, none, Transition}
-                        end,
-                        0, Sent, Spawned
-                    },
-                    lists:flatten(io_lib:format("~p",[Pid]))
-                };
-            false -> 
-                {
-                    {
-                        to_receive, StrReceive, 
-                        case InfoCall of 
-                        	{evaluated, {ReceiveInfo, Clause, SenderMsg, NodeReceive, ValueStr}, Context, Bindings} ->
-								{'receive',{StrReceive, ValueStr, Line, File}, SenderMsg ,Context, Bindings, []};
-							_ ->
-                        		{'call', build_call_string(InfoCall), none, none}
-                        end,
-                        % {'call', build_call_string(InfoCall), none, none}, 
-                        File, Line, Sent, Spawned, Transition
-                     }, 
-                     lists:flatten(io_lib:format("~p",[Pid]))
-                }
-        end,
-    {NFree, CurrentNode} = 
-    	case InfoCall of 
-    		{evaluated, {_, _, _, NodeReceive1, _}, _, _} ->
-    			{Free, NodeReceive1};
-    		_ ->
-    			{Free + 1, Free}
-    	end,
-    edd_graph!{add_vertex, CurrentNode, Content},
-    io:format("METE VERTICE REACHED RECEIVE ~p\n", [CurrentNode]),
-    edd_graph!{add_edge, LastNode, CurrentNode},
-    [edd_graph!{add_edge, CurrentNode, NodeCall} || NodeCall <- FinishedCalls],
-    % io:format("~p\n",[Free]),
-    {NFree, CurrentNode}.
-
 build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest], 
         GraphPidInfo = 
             #graph_pid_info{
@@ -2478,7 +2453,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                 last_receive_conected = LastReceiveConected,
                 system_sends = SystemSends
             }) ->
-    io:format("Tag ~p\n", [Tag]),
+    % io:format("Tag ~p\n", [Tag]),
     % io:format("CallStack ~p\n", [CallStack]),
     % TO_VALUE:
     % {{to_value,Expr, Clause, Sent, Spawned},Pid}
@@ -2551,13 +2526,13 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
             made_spawn ->
                 {CInfo, CSents, CSpawns, CFinished} = hd(CallStack),
                 GraphPidInfo#graph_pid_info{
-                    call_stack = [{CInfo, CSents, [Info | CSpawns], CFinished} | tl(CallStack)],
+                    call_stack = [{CInfo, CSents, [Info | CSpawns], CFinished} | tl(CallStack)],
                     all_spawns = [Info | AllSpawns]
                 };
             send_sent ->
                 {CInfo, CSents, CSpawns, CFinished} = hd(CallStack),
                 GraphPidInfo#graph_pid_info{
-                    call_stack = [{CInfo, [Info | CSents], CSpawns, CFinished} | tl(CallStack)],
+                    call_stack = [{CInfo, [Info | CSents], CSpawns, CFinished} | tl(CallStack)],
                     all_sends = [Info | AllSends]
                 };
             receive_reached ->
@@ -2601,7 +2576,6 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                                             []},
                                             lists:flatten(io_lib:format("~p",[Pid]))}},
                                 edd_graph!{add_edge,NFree1_ - 1 , NFree1_},
-                            io:format("METE VERTICE RECEIVE STUCK ~p\n", [NFree1_]),
                             {NFree1_ + 1, stuck_receive};
                         _ ->
                             {NFree0, FinalValue}
@@ -2631,9 +2605,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                                 lists:flatten(io_lib:format("~p",[Pid]))}},
                 NCurrentReceive0 = 
                     {evaluated, {ReceiveInfo, Clause, {Sender, lists:flatten(io_lib:format("~p",[Msg])) , 0}, Free, none}, Context, Bindings},
-                io:format("METE VERTICE EVALUATED ~p\n", [Free]),
                 GraphPidInfo#graph_pid_info{
-                	call_stack = [{NCurrentReceive0, [], [], []} | CallStack],
                     current_receive = NCurrentReceive0,
                     free =  Free + 1,
                     system_sends = NSystemSends0
@@ -2642,7 +2614,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                 NCurrentReceive0 = 
                     case CurrentReceive of 
                         {evaluated, {ReceiveInfo = {StrReceive,Line,File}, Clause, SenderMsg, NodeReceive, none}, Context, Bindings} ->   
-                            {CurrentReceive, CSents, CSpawns, CFinished} = hd(CallStack),
+                            {_, CSents, CSpawns, CFinished} = hd(CallStack),
                             {Value} = Info,
                             ValueStr = 
                                 lists:flatten(io_lib:format("~p", [Value])),
@@ -2656,14 +2628,12 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                                             lists:map(fun get_pid_msg_from_send_info/1, CSents), 
                                             lists:map(fun get_pid_from_spwan_info/1, CSpawns)},
                                             lists:flatten(io_lib:format("~p",[Pid]))}},
-                            % [edd_graph!{add_edge, NodeReceive, NodeCall} || NodeCall <- CFinished],
-                            io:format("METE VERTICE FINISHED ~p\n", [NodeReceive]),
+                            [edd_graph!{add_edge, NodeReceive, NodeCall} || NodeCall <- CFinished],
                             {evaluated, {ReceiveInfo, Clause, SenderMsg, NodeReceive, ValueStr}, Context, Bindings};
                         _ ->
                             CurrentReceive
                     end,
                 GraphPidInfo#graph_pid_info{
-                	call_stack = tl(CallStack),
                     current_receive = NCurrentReceive0
                 }
         end,
@@ -2713,13 +2683,6 @@ get_sender_and_discarded(Pid, Msg, [_ | Tail]) ->
     get_sender_and_discarded(Pid, Msg, Tail);
 get_sender_and_discarded(_, _, []) ->
     {unknown, [], []}.
-
-% search_in_call_stack([Info = {LF,_,_,_}|_], LF) ->
-% 	Info;
-% search_in_call_stack([_|Rest], LF) ->
-% 	search_in_call_stack(Rest, LF);
-% search_in_call_stack([], LF) ->
-% 	{}.
 
 
 % G!{add_vertex,Node,{{to_receive,AExpr,NCall,File,Line,
@@ -2781,4 +2744,3 @@ get_new_dict(Pid,Dict,Trace) ->
         error ->
             dict:store(Pid, [Trace], Dict) 
     end.
-

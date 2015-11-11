@@ -33,19 +33,26 @@ trace(InitialCall, Timeout) ->
     instrument_and_reload(ModName),
     PidMain = self(),
     PidCall = execute_call(InitialCall, self()),
+    TimeoutServer = Timeout,
     PidTrace = 
     spawn(
         fun() ->
-        receive_loop(0, [],[ModName], dict:new(), PidMain)
+            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer)
         end),
     register(edd_tracer, PidTrace),
     PidCall!start,
     receive 
         {result,Result} ->
-            io:format("Execution result: ~p\n",[Result])
+            % io:format("TimeoutServer: ~p\n", [TimeoutServer]),
+            receive 
+                idle ->
+                    % io:format("Recibe IDLE\n"),
+                    ok
+            end,
+            io:format("\nExecution result: ~p\n",[Result])
     after 
         Timeout ->
-            io:format("Tracing timeout\n")
+            io:format("\nTracing timeout\n")
     end,
     PidTrace!stop,
     unregister(edd_tracer),
@@ -75,42 +82,47 @@ trace(InitialCall, Timeout) ->
     % ok.
     {Trace, DictFun, PidCall}.
 
-receive_loop(Current, Trace, Loaded, FunDict, PidMain) ->
+receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
+    % io:format("Itera\n"),
     receive 
-    TraceItem = {edd_trace, _, _, _} ->
-        receive_loop(
-            Current + 1, 
-            [{Current,TraceItem} | Trace],
-            Loaded, FunDict, PidMain);
-    {edd_load_module, Module, PidAnswer} ->
-        NLoaded = 
-            case lists:member(Module, Loaded) of 
-                true ->
-                    PidAnswer!loaded,
-                    Loaded;
-                false ->
-                    % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
-                   instrument_and_reload(Module),
-                   PidAnswer!loaded,
-                   [Module | Loaded] 
-            end, 
-        receive_loop(Current, Trace, NLoaded, FunDict, PidMain);
-    {edd_store_fun, Name, FunInfo} ->
-        NFunDict = 
-            case dict:is_key(Name, FunDict) of 
-                true ->
-                    FunDict;
-                false ->
-                    dict:append(Name, FunInfo, FunDict) 
-            end, 
-        receive_loop(Current, Trace, Loaded, NFunDict, PidMain);
-    stop -> 
-        PidMain!{trace, Trace},
-        PidMain!{loaded, Loaded},
-        PidMain!{fun_dict, FunDict};
-    Other -> 
-        io:format("Untracked msg ~p\n", [Other]),
-        receive_loop(Current, Trace, Loaded, FunDict, PidMain)
+        TraceItem = {edd_trace, _, _, _} ->
+            receive_loop(
+                Current + 1, 
+                [{Current,TraceItem} | Trace],
+                Loaded, FunDict, PidMain, Timeout);
+        {edd_load_module, Module, PidAnswer} ->
+            NLoaded = 
+                case lists:member(Module, Loaded) of 
+                    true ->
+                        PidAnswer!loaded,
+                        Loaded;
+                    false ->
+                        % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
+                       instrument_and_reload(Module),
+                       PidAnswer!loaded,
+                       [Module | Loaded] 
+                end, 
+            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout);
+        {edd_store_fun, Name, FunInfo} ->
+            NFunDict = 
+                case dict:is_key(Name, FunDict) of 
+                    true ->
+                        FunDict;
+                    false ->
+                        dict:append(Name, FunInfo, FunDict) 
+                end, 
+            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout);
+        stop -> 
+            PidMain!{trace, Trace},
+            PidMain!{loaded, Loaded},
+            PidMain!{fun_dict, FunDict};
+        Other -> 
+            io:format("Untracked msg ~p\n", [Other]),
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
+    after 
+        Timeout ->
+            PidMain!idle,
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
     end.
 
 
