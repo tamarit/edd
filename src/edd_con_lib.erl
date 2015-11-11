@@ -699,14 +699,23 @@ build_question({{root,AExpr,AResult,Summary},Pid}) ->
 		stuck_receive ->
 			" is blocked";
 		_ ->
-			" = " ++ AResult
+			" = " ++ io_lib:format("~p", [AResult])
 	end
 	++ "\n" ++
 	"Summary:\n" ++
 	lists:flatten([io_lib:format("Pid: ~p; Call: ~s; Spawned: ~p; Sent: [",[PidSummary,Call,Spawned]) ++ print_sent(Sent) ++"]\n"
 	|| {PidSummary,Call,Spawned,Sent} <- lists:usort(Summary)]),[]};
 build_question({{to_receive,AExpr,ACall,File,Line,Sent,Spawned,Transition_},Pid}) ->
-	question_to_receive_value(ACall,{'receive',AExpr,File,Line},Pid,Sent,Spawned,Transition_,[]);
+	% io:format("ACall: ~p\n",[ACall]),
+	% question_to_receive_value(ACall,{'receive',AExpr,File,Line},Pid,Sent,Spawned,Transition_,[]);
+
+	case ACall of 
+			{'receive',{RAExpr,Value,LineRec,FileRec}, MsgSender,Context,Bindings,DiscardedMessages} ->
+				question_to_receive_value({'receive',{RAExpr,Value,LineRec,FileRec},0,MsgSender,Context,none,none,none,DiscardedMessages},Value,Pid,Sent,Spawned,{},Bindings);
+			_ ->
+				question_to_receive_value(ACall,{'receive',AExpr,File,Line},Pid,Sent,Spawned,Transition_,[])
+	end;
+
 	% io_lib:format("Pid ~p",[Pid]) ++
 	% case ACall of 
 	% 	{'receive',{AReceive,LineR,FileR},Clause,Consumed} ->
@@ -889,7 +898,7 @@ get_messages(Msgs) ->
 
 get_messages([{Sender,Msg}|Msgs],Acc) ->
 	StrMsg =
-		"\t" ++ io_lib:format("Message ~s sent by ~p",[Msg,Sender]),
+		"\t" ++ io_lib:format("Message ~p sent by ~p",[Msg,Sender]),
 	case Msgs of 
 		[] -> 
 			Acc ++ StrMsg;
