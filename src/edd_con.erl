@@ -243,7 +243,16 @@ digraph_server(G) ->
 			digraph_server(G);	
 		{get,Pid} ->
 			Pid!G,
-			digraph_server(G);	
+			digraph_server(G);
+		del_disconected_vertices ->
+			[case digraph:in_degree(G, V) +  digraph:out_degree(G, V) of 
+				0 -> 
+					digraph:del_vertex(G, V);
+				_ ->
+					ok
+			 end
+			 || V <- digraph:vertices(G)],
+			digraph_server(G);
 		stop ->
 			ok
 	end. 
@@ -2216,6 +2225,8 @@ build_graph(Trace, _, PidInit) ->
              lists:flatten(io_lib:format("~p",[PidInit]))}},
     % lists:foldl(fun build_pid_nodes/2, 1, GraphInfo),
     % io:format("~p\n", [{digraph:vertices(G), digraph:edges(G)}]).
+
+    edd_graph!del_disconected_vertices,
     ok.
 
 % build_pid_nodes({Pid, Nodes, _, _, _}, Free) ->
