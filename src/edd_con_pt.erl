@@ -301,7 +301,7 @@ inst_fun_clauses(Clauses, FunId) ->
 					 % ), 
 					 ++ [ erl_syntax:list(ParValues)], 
 			SendCallStart = 
-				build_send_trace(start_call, CallRep), 
+				build_send_trace(start_call, CallRep ), 
 			LastExpr = 
 				lists:last(NBody0),
 			BodyWOLast =
@@ -376,7 +376,7 @@ inst_spawn(T, SpawnArgs) ->
 	{VarArgs, StoreArgs} = 
 		args_assign("EDDSpawnArg", SpawnArgs),
 	SendSpawn = 
-		build_send_trace(made_spawn, VarArgs ++ [VarReceiveResult] ++ pos_and_pp(T)), 
+		build_send_trace(made_spawn, [erl_syntax:tuple(VarArgs) ,VarReceiveResult] ++ pos_and_pp(T)), 
 
 	SpawnCall = 
 		erl_syntax:application(erl_syntax:application_operator(T), VarArgs), 

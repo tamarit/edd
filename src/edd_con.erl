@@ -45,6 +45,12 @@
 % 	 first_call = none,
 % 	 current_stack_id = 1}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% State to build the evaluation tree
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -record(graph_pid_info, 
     {
         pid,
@@ -58,6 +64,47 @@
         last_receive_conected,
         system_sends
     }).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Records for evaluation tree node's info
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% -record(summary_node, 
+%     {
+%     	pids_info, %[pid_info]
+%     	messages %[(sender, receiver, msg)]
+%     }).
+
+% -record(pid_info, 
+%     {
+%     	pid,
+%     	first_call,
+%     	spawned,
+%     	sent,
+%     	consumed_messages %[(Consumed:msg,Available:[msg])]
+%     }).
+
+% -record(funrec_to_recval, 
+%     {
+%     	pid,
+%     	funcall_rec,
+%     	sent,
+%     	spawned,
+%     	reached_rec_val
+%     }).
+
+% -record(funrec_to_recval_after_rec, 
+%     {
+%     	funrec_to_recval,
+%     	context,
+%     	receipt_messages,
+%     	consumed_message
+%     }).
+
+
+
 
 ddc(Expr,Timeout) ->
 	ddc(Expr,Timeout,divide_query,indet).
@@ -94,6 +141,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
     end,
 	register(edd_graph, PidG),
 	build_graph(Trace, DictFun, PidCall), 
+
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 	%%%% BEGIN REMOVED NEW TRACE VERSION
@@ -209,6 +257,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	%%%% END REMOVED NEW TRACE VERSION
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	build_graph_old(Trace, DictFun, PidCall), 
 	PidG!{get,self()},
 	receive 
 		G -> ok
@@ -221,6 +270,8 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	       ok
 	end,
     edd_con_lib:ask(G,Strategy,Priority),
+
+
     %edd_lib:ask(G,{top_down,old}),
     %edd_lib:ask(G,{top_down,new}),
     PidG!stop,
@@ -2154,13 +2205,16 @@ get_funs_from_abstract(Abstract,Line) ->
 % 			|| {Pid,Data} <- dict:to_list(Dict)]).
 
 
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % New graph building functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-build_graph(Trace, _, PidInit) ->
+build_graph_old(Trace, _, PidInit) ->
 
     DictTraces = 
         separate_by_pid(Trace, dict:new()),
@@ -2449,6 +2503,7 @@ build_graph_pids(Pid, Free, Dict, SystemSends) ->
 %     [Msg | Acc];
 % get_consumed_message(_, Acc) ->
 %     Acc.
+
 
 build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest], 
         GraphPidInfo = 
@@ -2755,3 +2810,482 @@ get_new_dict(Pid,Dict,Trace) ->
         error ->
             dict:store(Pid, [Trace], Dict) 
     end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Newest graph building functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-record(evaltree_state,
+	{
+		pids_info = [],
+		communication = [], % History of send, receive and spawn events
+		free = 0
+	}).
+
+
+-record(pid_info, 
+    {
+    	pid = none,
+    	first_call = none,
+    	spawned = [],
+    	sent = [],
+    	receipt = [],
+    	consumed = [],
+    	is_first = false,
+    	callrec_stack = []
+    }).
+
+-record(message,
+	{
+		from = none,
+		to = none,
+		msg = none
+	}).
+
+-record(spawn_info,
+	{
+		spawner = none,
+		spawned = none
+	}).
+
+-record(call_info,
+	{
+		call = none,
+		pos_pp = none
+	}).
+
+-record(callrec_stack_item,
+	{
+		origin_callrec = none,
+		reached_rec_val = none,
+		context = [],
+		spawned = [],
+    	sent =[],
+    	receipt = [],
+    	consumed = [],
+    	children_nodes = []
+	}).	
+
+
+
+
+
+
+build_graph(Trace, DictFuns, PidInit) ->
+  DictTraces = 
+        separate_by_pid(Trace, dict:new()),
+    edd_graph!{add_vertex, 0},
+    InitialState = 
+    	#evaltree_state{
+    		free = 1,
+    		pids_info = [#pid_info{pid = PidInit, is_first = true}]
+    	},
+    FinalState = 
+  		lists:foldl(fun build_graph_trace/2, InitialState, Trace),
+
+  	{_, DictPids} = 
+  		lists:foldl(fun assign_node_num/2, {0, dict:new()}, FinalState#evaltree_state.pids_info),
+  	PidsTree = digraph:new(),
+  	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
+  	 || PidInfo <- FinalState#evaltree_state.pids_info],
+  	io:format("~p\n", [FinalState]),
+	dot_graph_file_int(PidsTree, "pids_tree"),
+
+	
+	communication_sequence_diagram(
+		FinalState#evaltree_state.pids_info,
+		FinalState#evaltree_state.communication),
+
+
+  	% io:format("~p\n", [DictFuns]),
+    edd_graph!del_disconected_vertices,
+    ok.
+
+
+
+% -record(callrec_stack_item,
+% 	{
+% 		origin_callrec = none,
+% 		reached_recval = none,
+% 		spawned = [],
+%     	sent =[],
+%     	context = [],
+%     	receipt_messages = [],
+%     	consumed_message = [],
+%     	children_nodes = []
+% 	}).
+
+build_graph_trace(
+		{_, {edd_trace, start_call, Pid, Call}}, 
+		State = #evaltree_state{pids_info = PidsInfo}) ->
+	% Store the first call. Only for first process, rest of process will use spawn to fill thi info
+	NPidsInfo0 = 
+		case PidsInfo of 
+			[PidInfo = #pid_info{pid = Pid, first_call = none}] ->
+				[PidInfo#pid_info{first_call = #call_info{call = Call}}]; 
+			_ -> 
+				PidsInfo
+		end,
+	% Add call to the process stack
+	NPidsInfo = 
+		lists:map(
+			fun(PI) -> add_new_callrec_stack(PI, {Pid, #call_info{call = Call}}) end,
+			NPidsInfo0),
+	State#evaltree_state{
+		pids_info = NPidsInfo
+	};
+build_graph_trace(
+		{_, {edd_trace, end_call, Pid, Call}}, 
+		State = #evaltree_state{pids_info = PidsInfo}) ->
+	State;
+build_graph_trace(
+		{_, {edd_trace, made_spawn, Pid, Info }}, 
+		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
+	{Args, NewPid, PosAndPP} = Info,
+	NPidsInfo0 = 
+		lists:map(fun(PI) -> add_spawn(PI, {Pid, NewPid}) end, PidsInfo),
+	NPidsInfo = 
+		[#pid_info{
+			pid = NewPid, 
+			first_call = #call_info{call = Args, pos_pp = PosAndPP}
+		} 
+		| NPidsInfo0],
+	NCommunication = 
+		[{spawned, #spawn_info{spawner = Pid, spawned = NewPid}} | Communication],
+	State#evaltree_state{
+		pids_info = NPidsInfo,
+		communication = NCommunication
+	};
+build_graph_trace(
+		{_, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
+		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
+	MessageRecord = 
+		#message{from = Pid, to = PidReceive, msg = Msg},
+	% Add to the commuincation history
+	NCommunication = 
+		[{sent,MessageRecord} | Communication],
+	% Add to the stack info in sent
+	NPidsInfo0 = 
+		lists:map(fun(PI) -> add_msg_sent_stack(PI, {Pid, MessageRecord}) end, PidsInfo),
+	% Add to the stack info in receipt
+	NPidsInfo = 
+		lists:map(fun(PI) -> add_msg_receipt_stack(PI, {PidReceive, MessageRecord}) end, NPidsInfo0),
+	State#evaltree_state{
+		communication = NCommunication,
+		pids_info = NPidsInfo
+	};
+build_graph_trace(
+		{_, {edd_trace, receive_reached, Pid, _}}, 
+		State = #evaltree_state{communication = Communication}) ->
+	State;
+build_graph_trace(
+		{_, {edd_trace, receive_evaluated, Pid, {Msg, _Context, _Bindings, _Clause}}}, 
+		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
+	MsgSender = 
+		[PidSenderCom || 
+			{sent, #message{from = PidSenderCom, to = PidReceiverCom, msg = MsgCom}} <- Communication,
+			MsgCom == Msg, PidReceiverCom == Pid],
+	MsgRecord = 
+		case MsgSender of 
+			[MsgSender_] ->
+				#message{from = MsgSender_, to = Pid, msg = Msg};
+			_ ->
+				none 
+		end,
+	{NCommunication, NPidsInfo} = 
+		case MsgSender of 
+			[_] ->
+				{
+					% Add to the communication history
+					[{received, MsgRecord} | Communication], 
+					% Add to the stack info in consumed
+					lists:map(
+						fun(PI) -> add_msg_consumed_stack(PI, {Pid, MsgRecord}) end, 
+						PidsInfo)
+				};
+			[] ->
+				{Communication, PidsInfo}
+		end,	
+	State#evaltree_state{
+		communication = NCommunication,
+		pids_info = NPidsInfo
+	};
+build_graph_trace(
+		{_, {edd_trace, receive_finished, Pid, _}}, 
+		State = #evaltree_state{communication = Communication}) ->
+	State.
+% build_graph_trace(_, State) ->	
+% 	State.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% State modifiers
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+add_spawn(
+		PidInfo = #pid_info{pid = Pid, spawned = Spawned}, 
+		{Pid, NewPid})->
+	PidInfo#pid_info{spawned = [NewPid|Spawned]};
+add_spawn(PidInfo, _)->
+	PidInfo.
+
+add_new_callrec_stack(
+		PidInfo = #pid_info{pid = Pid, spawned = Spawned}, 
+		{Pid, CallRec})->
+	PidInfo#pid_info{
+		callrec_stack=		
+			[ #callrec_stack_item{origin_callrec = CallRec}
+			| PidInfo#pid_info.callrec_stack] 
+	};
+add_new_callrec_stack(PidInfo, _)->
+	PidInfo.
+
+add_msg_sent_stack(
+		PidInfo = #pid_info{pid = Pid, spawned = Spawned}, 
+		{Pid, Msg})->
+	[HeadStack = #callrec_stack_item{sent = Sent} | TailCallStack] = 
+		PidInfo#pid_info.callrec_stack,
+	PidInfo#pid_info{
+		callrec_stack=		
+			[ HeadStack#callrec_stack_item{sent = Sent ++ [Msg]}
+			| TailCallStack] 
+	};
+add_msg_sent_stack(PidInfo, _)->
+	PidInfo.
+
+add_msg_receipt_stack(
+		PidInfo = #pid_info{pid = Pid, spawned = Spawned}, 
+		{Pid, Msg})->
+	[HeadStack = #callrec_stack_item{receipt = Receipt} | TailCallStack] = 
+		PidInfo#pid_info.callrec_stack,
+	PidInfo#pid_info{
+		callrec_stack=		
+			[ HeadStack#callrec_stack_item{receipt = Receipt ++ [Msg]}
+			| TailCallStack] 
+	};
+add_msg_receipt_stack(PidInfo, _)->
+	PidInfo.
+
+add_msg_consumed_stack(
+		PidInfo = #pid_info{pid = Pid, spawned = Spawned}, 
+		{Pid, Msg})->
+	[HeadStack = #callrec_stack_item{consumed = Consumed} | TailCallStack] = 
+		PidInfo#pid_info.callrec_stack,
+	PidInfo#pid_info{
+		callrec_stack=		
+			[ HeadStack#callrec_stack_item{consumed = Consumed ++ [Msg]}
+			| TailCallStack] 
+	};
+add_msg_consumed_stack(PidInfo, _)->
+	PidInfo.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Drawing pids tree functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+assign_node_num(#pid_info{pid = Pid},{Num, Dict}) ->
+	{Num + 1, dict:append(Pid, Num, Dict)}.
+
+build_pids_tree(#pid_info{pid = Pid, spawned = Spawned, first_call = #call_info{call = FunCall}}, DictPids, DictFuns, PidsTree) ->
+	[V] = dict:fetch(Pid, DictPids),
+	StrFun = 
+		case FunCall of 
+			{M,F,As} ->
+				build_call_string(FunCall);
+			{AnoFun} -> 
+				PosInfo = {pos_info,{Mod,_,_,_}} = hd(dict:fetch(AnoFun, DictFuns)),
+				build_call_string({Mod, PosInfo, []})
+		end,
+	Label = 
+		lists:flatten(io_lib:format("~p\n~s", [Pid, StrFun])),
+	digraph:add_vertex(PidsTree, V, Label),
+	[digraph:add_edge(PidsTree, V, hd(dict:fetch(PidSpawned, DictPids))) 
+		|| PidSpawned <- Spawned],
+	ok.
+
+
+% TODO: Use always the same, but having the vertex printing function as a a parameter
+
+dot_graph_file_int(G,Name) ->
+	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),
+	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
+
+dot_graph(G)->
+	Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
+	Edges = [{V1,V2}||V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+	lists:flatten(lists:map(fun dot_vertex/1,Vertices))++
+	lists:flatten(lists:map(fun dot_edge/1,Edges)).
+	
+dot_vertex({V,L}) ->
+	integer_to_list(V) ++ " " ++ "[shape=ellipse, label=\""
+	++ L
+	++"\"];\n".     
+	    
+dot_edge({V1,V2}) -> 
+	integer_to_list(V1)++" -> "++integer_to_list(V2)
+	++" [color=black, penwidth=3];\n".	
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Drawing communication sequence diagram
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+lines(Lines) ->
+	lists:foldl(
+		fun(Line,Acc) -> Acc ++ Line ++ "\n" end 
+		, "", Lines).
+
+quote_enclosing(Str) ->
+	"\"" ++ Str ++ "\"".
+
+str_term(Pid) ->
+	lists:flatten(io_lib:format("~p", [Pid]) ).
+
+build_pid_line(Pid, Call, NumPoints) ->
+	Steps = 
+		lists:foldl(
+			fun(Num, Acc) -> Acc ++ " -> " ++ quote_enclosing(Pid ++ integer_to_list(Num)) end
+			, "", lists:seq(1, NumPoints)), 
+	lines(
+		["{" 
+		,"  rank=\"same\";" 
+		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ build_call_string(Call) ) ++ "] "
+		,"  "++ quote_enclosing(Pid) ++ Steps ++ ";"
+		,"} "]).
+
+
+divide_list(Pred, [H|T], Prev) ->
+	case Pred(H) of 
+		true -> 
+			{Prev, T};
+		false ->
+			divide_list(Pred, T, Prev ++ [H])
+	end;
+divide_list(Pred, [], Prev) ->
+	{Prev,[]}.
+
+acc_search_in_list(Pred, [H|T]) ->
+	case Pred(H) of 
+		true -> 
+			{[H],true};
+		false ->
+			{List ,Found} = acc_search_in_list(Pred, T),
+			{[H|List] ,Found}
+	end;
+acc_search_in_list(Pred, []) ->
+	{[],false}.
+
+distribute_edge([Pid]) ->
+	quote_enclosing(Pid) ++ "[style=invis];\n";
+distribute_edge([Pid| Tail]) ->
+	quote_enclosing(Pid) ++ " -> " ++ distribute_edge(Tail).
+
+build_line_until_to([N1, N2], CurrentStep, CommonEdgeProperties, LastEdgeProperties) ->
+	[	
+			quote_enclosing(N1 ++ integer_to_list(CurrentStep)) 
+		++ 	" -> " 
+		++ 	quote_enclosing(N2 ++ integer_to_list(CurrentStep)) 
+		++  LastEdgeProperties];
+build_line_until_to([N1, N2 | Tail], CurrentStep, CommonEdgeProperties, LastEdgeProperties) ->
+	[	
+			quote_enclosing(N1 ++ integer_to_list(CurrentStep)) 
+		++ 	" -> " 
+		++ 	quote_enclosing(N2 ++ integer_to_list(CurrentStep)) 
+		++ 	CommonEdgeProperties
+	| build_line_until_to([N2 | Tail], CurrentStep, CommonEdgeProperties, LastEdgeProperties)];
+build_line_until_to(_, _, _, _) ->
+	[].
+
+
+build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep) ->
+	{Before0, After} = 
+		divide_list(fun(Pid) -> str_term(From)  ==  Pid end, Pids, []),
+	Before = 
+		lists:reverse(Before0), 
+	PredTo = 
+		fun(Pid) -> str_term(To)  ==  Pid end,
+	{ToInBefore, FoundBefore} = acc_search_in_list(PredTo, Before),
+	{ToInAfter, FoundAfter} = acc_search_in_list(PredTo, After),
+	ListWhereIsTo = 
+		case {FoundBefore, FoundAfter} of 
+			{true, _} ->
+				ToInBefore;
+			{_, true} ->
+				 ToInAfter
+		end,
+	% io:format("ListWhereIsTo: ~p\n",[ListWhereIsTo]),
+	build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties).
+
+communication_lines(
+		{sent, #message{from = From , to = To, msg = Msg}}, 
+		Pids, CurrentStep) -> 
+	LastEdgeProperties = 
+		" [label=" ++ quote_enclosing(str_term(Msg)) ++ ", arrowhead=\"normal\"];",
+	CommonEdgeProperties = 
+		";",
+	{build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1};
+communication_lines(
+		{received, #message{from = From , to = To, msg = Msg}}, 
+		Pids, CurrentStep) -> 
+	Label = 
+		lists:flatten(io_lib:format("~p (from ~p)", [Msg, From]) ), 
+	ReceiveEdge = 
+		[	
+			quote_enclosing(str_term(To) ++ integer_to_list(CurrentStep)) 
+		++ 	" -> " 
+		++ 	quote_enclosing(str_term(To) ++ integer_to_list(CurrentStep + 1)) 
+		++  " [label=" ++ quote_enclosing(Label) ++ "];"],
+	{ReceiveEdge, CurrentStep + 2};
+communication_lines(
+		{spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
+		Pids, CurrentStep) -> 
+	LastEdgeProperties = 
+		" [label=" ++ "\"\"" ++ ", penwidth = 3, color = red, arrowhead=\"normal\"];",
+	CommonEdgeProperties = 
+		" [label=" ++ "\"\"" ++ ", penwidth = 3, color = red];",
+	{build_transitive_edge(Spawner, Spawned, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1}.
+
+communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) > 1 ->
+	Header = 
+		["digraph G {"
+		,"  rankdir=\"LR\";"
+		,"  node[shape=\"point\"];"
+		,"  edge[arrowhead=\"none\"]"],
+	LengthReceives = 
+		length([0||{received,_} <- Communications]),
+	NumPoints = 
+		(length(Communications) - LengthReceives)
+		+ (2 * LengthReceives),
+	{PidsStr, PidsCall} = 
+		lists:unzip([{str_term(Pid), FirsCall} || #pid_info{pid = Pid, first_call = #call_info{call = FirsCall}} <- PidsInfo]),
+	PidLines = 
+		lists:map(
+			fun({Pid, Call}) -> build_pid_line(Pid, Call, NumPoints) end 
+			, lists:zip(PidsStr, PidsCall) ),
+	Distribution = distribute_edge(PidsStr), 
+	{CommLines0,_} = 
+		lists:mapfoldl(
+			fun(Com, CurrentStep) -> communication_lines(Com, PidsStr, CurrentStep) end,
+			1,
+			lists:reverse(Communications)),
+	CommLines = lists:concat(CommLines0),
+
+	Closer = "}",
+	DotContent = 
+		lines(Header ++ PidLines ++ [Distribution] ++ CommLines ++ [Closer]),
+
+	Name = "comm_seq_diag",
+	file:write_file(Name ++ ".dot", list_to_binary(DotContent)),
+	os:cmd("dot -Tpdf "++ Name ++ ".dot > " ++ Name ++ ".pdf");
+communication_sequence_diagram(_, _) ->
+	ok. 
+

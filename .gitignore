@@ -43,3 +43,13 @@ examples/test_reader/*
 examples/tcp/prova.pdf
 
 examples/tcp/prova.dot
+
+src/edd_con.erl
+
+examples/tcp/comm_seq_diag.dot
+
+examples/tcp/comm_seq_diag.pdf
+
+examples/tcp/pids_tree.dot
+
+examples/tcp/pids_tree.pdf
