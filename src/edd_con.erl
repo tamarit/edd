@@ -1390,18 +1390,30 @@ build_line_until_to([N1, N2], CurrentStep, CommonEdgeProperties, LastEdgePropert
 			quote_enclosing(N1 ++ integer_to_list(CurrentStep)) 
 		++ 	" -> " 
 		++ 	quote_enclosing(N2 ++ integer_to_list(CurrentStep)) 
-		++  LastEdgeProperties];
+		++  " [" ++ LastEdgeProperties  ++ "];"];
 build_line_until_to([N1, N2 | Tail], CurrentStep, CommonEdgeProperties, LastEdgeProperties) ->
 	[	
 			quote_enclosing(N1 ++ integer_to_list(CurrentStep)) 
 		++ 	" -> " 
 		++ 	quote_enclosing(N2 ++ integer_to_list(CurrentStep)) 
-		++ 	CommonEdgeProperties
+		++ 	" [" ++ CommonEdgeProperties  ++ "];"
 	| build_line_until_to([N2 | Tail], CurrentStep, CommonEdgeProperties, LastEdgeProperties)];
 build_line_until_to(_, _, _, _) ->
 	[].
 
-
+build_transitive_edge(From, From, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep) ->
+	OtherSteps = 
+		[quote_enclosing(Pid ++ integer_to_list(CurrentStep)) 
+		 ++ 	" -> " 
+		 ++ 	quote_enclosing(Pid ++ integer_to_list(CurrentStep)) 
+		 ++  " [" ++ LastEdgeProperties ++ ", style=invis];" 
+		 || Pid <- Pids, Pid /= str_term(From)],
+	LoopEdge = 
+		quote_enclosing(str_term(From) ++ integer_to_list(CurrentStep)) 
+		++ 	" -> " 
+		++ 	quote_enclosing(str_term(From) ++ integer_to_list(CurrentStep)) 
+		++  " [" ++ LastEdgeProperties ++ "];",
+	[LoopEdge | OtherSteps];
 build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep) ->
 	{Before0, After} = 
 		divide_list(fun(Pid) -> str_term(From)  ==  Pid end, Pids, []),
@@ -1425,9 +1437,9 @@ communication_lines(
 		{sent, #message_info{from = From , to = To, msg = Msg}}, 
 		Pids, CurrentStep) -> 
 	LastEdgeProperties = 
-		" [label=" ++ quote_enclosing(str_term(Msg)) ++ ", arrowhead=\"normal\"];",
+		"label=" ++ quote_enclosing(str_term(Msg)) ++ ", arrowhead=\"normal\"",
 	CommonEdgeProperties = 
-		";",
+		"",
 	{build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1};
 communication_lines(
 		{received, #message_info{from = From , to = To, msg = Msg}}, 
@@ -1445,9 +1457,9 @@ communication_lines(
 		{spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
 		Pids, CurrentStep) -> 
 	LastEdgeProperties = 
-		" [label=" ++ "\"\"" ++ ", penwidth = 3, color = red, arrowhead=\"normal\"];",
+		"label=" ++ "\"\"" ++ ", penwidth = 3, color = red, arrowhead=\"normal\"",
 	CommonEdgeProperties = 
-		" [label=" ++ "\"\"" ++ ", penwidth = 3, color = red];",
+		"label=" ++ "\"\"" ++ ", penwidth = 3, color = red",
 	{build_transitive_edge(Spawner, Spawned, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1}.
 
 communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) > 1 ->
