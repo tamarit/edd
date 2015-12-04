@@ -886,8 +886,16 @@ build_graph(Trace, DictFuns, PidInit) ->
 		FinalState#evaltree_state.pids_info,
 		FinalState#evaltree_state.communication),
 
-
-    edd_graph!{add_vertex, 0, FinalState#evaltree_state.communication},
+	PidsSummary = 
+		[ {Pid, Call, Sent, Spawned, Result}
+		|| #pid_info{
+				pid = Pid,
+				first_call = Call,
+				sent = Sent,
+				spawned = Spawned,
+				result = Result
+		   } <- lists:reverse(FinalState#evaltree_state.pids_info)],
+    edd_graph!{add_vertex, 0, {PidsSummary, lists:reverse(FinalState#evaltree_state.communication)}},
     lists:foldl(fun build_eval_tree/2, 1 , lists:reverse(FinalState#evaltree_state.pids_info)),
     edd_graph!{get,self()},
 	receive 
