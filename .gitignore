@@ -53,3 +53,7 @@ examples/tcp/comm_seq_diag.pdf
 examples/tcp/pids_tree.dot
 
 examples/tcp/pids_tree.pdf
+
+examples/tcp/eval_tree.pdf
+
+examples/tcp/eval_tree.dot

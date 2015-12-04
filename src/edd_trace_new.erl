@@ -26,9 +26,9 @@
 
 -module(edd_trace_new).
 
--export([trace/2]).
+-export([trace/3]).
 
-trace(InitialCall, Timeout) -> 
+trace(InitialCall, Timeout, PidAnswer) -> 
     ModName = get_mod_name(InitialCall),
     instrument_and_reload(ModName),
     PidMain = self(),
@@ -80,7 +80,7 @@ trace(InitialCall, Timeout) ->
     % io:format("Initial PID: ~p\n",[PidCall]),
     % Trace,
     % ok.
-    {Trace, DictFun, PidCall}.
+    PidAnswer!{Trace, DictFun, PidCall}.
 
 receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
     % io:format("Itera\n"),
