@@ -71,7 +71,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	compile:file(atom_to_list(ModName)++".erl"),
 	% {{first_pid,FirstPid},{traces,Traces0}} = 
 	Self = self(),
-	spawn(fun() -> edd_trace_new:trace(Expr,Timeout, Self) end),
+	spawn(fun() -> edd_trace:trace(Expr,Timeout, Self) end),
 	receive 
 		{Trace, DictFun, PidCall} ->
 			ok

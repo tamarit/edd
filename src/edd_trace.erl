@@ -21,106 +21,165 @@
 %%% @doc Erlang Declarative Debugger tracer
 %%% @end
 %%%-----------------------------------------------------------------------------
+
+% TODO: We should instrument the arguments of the initial call (p.e. if it is a fun_expr)
+
 -module(edd_trace).
 
--export([trace/2]).
+-export([trace/3]).
 
-trace(Call,Timeout) -> 
-  Self = self(),
-	Pid = execute_call(Call,Self),
-  dbg:tracer(process,{fun handler/2, Self}),
-  dbg:p(Pid,[p,sos,m]),
-  %dbg:p(new,[p,sos,m]),
-  %dbg:p(existing,[p,sos,m]),
-  %dbg:tp(tcp,cx),
-  %dbg:tpl(tcp,cx),
-  Pid!start,
-  receive 
-    {result,Result} ->
-      %ok
-      io:format("Result: ~p\n",[Result])
-  after 
-    Timeout ->
-      io:format("Tracing timeout\n")
-  end,
-  dbg:stop_clear(),
-  Traces0 = lists:reverse(receive_loop([])),
-  Trace = clean_trace(Traces0,[Pid,Self],[],1),
-  %io:format("~p\n",[Trace]),
-  Dict = dict:new(),
-  NDict = separate_by_pid(Trace,Dict),
-  % FirstPid = 
-  %   case Trace of 
-  %     [{trace,1,FirstPid_,_,_}|_] ->
-  %       FirstPid_;
-  %     [{trace,1,FirstPid_,_,_,_}|_] ->
-  %       FirstPid_;
-  %     _ ->
-  %       no_pid
-  %   end,
-  [exit(Key, kill) || Key <- dict:fetch_keys(NDict)],
-  %io:format("~p\n",[dict:to_list(NDict)]),
-  %io:format("First PID: ~p\n",[FirstPid]),
-  %io:format("First PID: ~p\n",[Pid]),
-  {{first_pid,Pid},{traces,NDict}}.
+trace(InitialCall, Timeout, PidAnswer) -> 
+    ModName = get_mod_name(InitialCall),
+    instrument_and_reload(ModName),
+    PidMain = self(),
+    PidCall = execute_call(InitialCall, self()),
+    TimeoutServer = Timeout,
+    PidTrace = 
+    spawn(
+        fun() ->
+            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer)
+        end),
+    register(edd_tracer, PidTrace),
+    PidCall!start,
+    receive 
+        {result,Result} ->
+            % io:format("TimeoutServer: ~p\n", [TimeoutServer]),
+            receive 
+                idle ->
+                    % io:format("Recibe IDLE\n"),
+                    ok
+            end,
+            io:format("\nExecution result: ~p\n",[Result])
+    after 
+        Timeout ->
+            io:format("\nTracing timeout\n")
+    end,
+    PidTrace!stop,
+    unregister(edd_tracer),
+    Trace = 
+        receive 
+            {trace,Trace0} ->
+                lists:reverse(Trace0)
+        end,
+    Loaded = 
+        receive 
+            {loaded,Loaded0} ->
+                Loaded0
+        end,
+    [undo_instrument_and_reload(Mod) || Mod <- Loaded],
+    DictFun = 
+        receive 
+            {fun_dict,FunDict0} ->
+                FunDict0
+        end,
+    % io:format("~p\n",[dict:to_list(DictFun)]),
 
-handler(M,Pid) ->
-  Pid!M,
-  Pid.
+    % build_graph(Trace, DictFun, PidCall), 
 
-receive_loop(Res) ->
-	receive
-		M -> 
-			%io:format("~p\n",[M]),
-			receive_loop([M|Res])
-	after 
-		100 -> Res
-	end.
+    % io:format("~p\n",[dict:to_list(DictTraces)]),
+    % io:format("Initial PID: ~p\n",[PidCall]),
+    % Trace,
+    % ok.
+    PidAnswer!{Trace, DictFun, PidCall}.
 
-clean_trace([],_,Res,_) ->
-  Res;
-clean_trace([{trace,Main,'receive',start}|T],Pids = [Main,_],Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,Main,send,{result,_},Parent}|T],Pids = [Main,Parent],Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,Parent,_,_}|T],Pids = [_,Parent],Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,Parent,_,_,_}|T],Pids = [_,Parent],Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,_,'receive',{code_server,_}}|T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,_,send,{io_request,_,_,_},_}|T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,_,'receive',{io_reply,_,ok}}, {trace,_,'receive',timeout} |T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,_,'receive',{io_reply,_,ok}} |T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids,Acc,CurrentId);
-clean_trace([{trace,Pid,Info1,Info2}|T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids, Acc ++ [{trace,CurrentId,Pid,Info1,Info2}],CurrentId + 1);
-clean_trace([{trace,Pid,Info1,Info2,Info3}|T],Pids,Acc,CurrentId) ->
-  clean_trace(T,Pids, Acc ++ [{trace,CurrentId,Pid,Info1,Info2,Info3}],CurrentId + 1).
+receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
+    % io:format("Itera\n"),
+    receive 
+        TraceItem = {edd_trace, _, _, _} ->
+            receive_loop(
+                Current + 1, 
+                [{Current,TraceItem} | Trace],
+                Loaded, FunDict, PidMain, Timeout);
+        {edd_load_module, Module, PidAnswer} ->
+            NLoaded = 
+                case lists:member(Module, Loaded) of 
+                    true ->
+                        PidAnswer!loaded,
+                        Loaded;
+                    false ->
+                        % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
+                       instrument_and_reload(Module),
+                       PidAnswer!loaded,
+                       [Module | Loaded] 
+                end, 
+            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout);
+        {edd_store_fun, Name, FunInfo} ->
+            NFunDict = 
+                case dict:is_key(Name, FunDict) of 
+                    true ->
+                        FunDict;
+                    false ->
+                        dict:append(Name, FunInfo, FunDict) 
+                end, 
+            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout);
+        stop -> 
+            PidMain!{trace, Trace},
+            PidMain!{loaded, Loaded},
+            PidMain!{fun_dict, FunDict};
+        Other -> 
+            io:format("Untracked msg ~p\n", [Other]),
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
+    after 
+        Timeout ->
+            PidMain!idle,
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
+    end.
 
-separate_by_pid([],Dict) ->
-  Dict;
-separate_by_pid([Trace = {trace,_,Pid,_,_}|T],Dict) ->
-  NDict = get_new_dict(Pid,Dict,Trace),
-  separate_by_pid(T,NDict);
-separate_by_pid([Trace = {trace,_,Pid,_,_,_}|T],Dict) ->
-  NDict = get_new_dict(Pid,Dict,Trace),
-  separate_by_pid(T,NDict).
-
-
-get_new_dict(Pid,Dict,Trace) ->
-  case dict:find(Pid,Dict) of
-    {ok, PidTrace} ->
-      dict:store(Pid, PidTrace ++ [Trace], Dict);
-    error ->
-      dict:store(Pid, [Trace], Dict) 
-  end.
 
 execute_call(Call,PidParent) ->
-	M1 = smerl:new(foo),
-	{ok, M2} = 
-	  smerl:add_func(M1, "bar() ->" ++ Call ++ " ."),
-	smerl:compile(M2,[nowarn_format]),
-	spawn(fun() -> receive start -> ok end,Res = foo:bar(), PidParent!{result,Res} end).
+    M1 = smerl:new(foo),
+    {ok, M2} = 
+    smerl:add_func(M1, "bar() -> try " ++ Call ++ " catch E1:E2 -> {E1,E2} end."),
+    smerl:compile(M2,[nowarn_format]),
+    spawn(
+        fun() -> 
+            receive 
+                start -> ok 
+            end,
+            Res = foo:bar(), 
+            PidParent!{result,Res} 
+        end).
+
+get_mod_name(InitialCall) ->
+    AExpr = 
+        case is_list(InitialCall) of 
+            true ->
+                hd(parse_expr(InitialCall++"."));
+            false ->
+                InitialCall
+        end,
+    {call,_,{remote,_,{atom,_,ModName},_},_} = AExpr,
+    ModName.
+
+instrument_and_reload(ModName) ->
+    % io:format("~p\n", [ModName]),
+    {ok,ModName,Binary} = 
+        compile:file(atom_to_list(ModName) ++ ".erl", [{parse_transform,edd_con_pt}, binary]),
+    reload_module(ModName, Binary).
+
+undo_instrument_and_reload(ModName) ->
+    {ok,ModName,Binary} = 
+        compile:file(atom_to_list(ModName) ++ ".erl", [binary]),
+    reload_module(ModName, Binary).
+
+reload_module(ModName, Binary) ->
+    try
+        erlang:purge_module(ModName)
+    catch 
+        _:_ -> ok
+    end,
+    code:load_binary(ModName, atom_to_list(ModName) ++ ".erl", Binary).
+    % code:load_abs(atom_to_list(ModName)).
+
+parse_expr(Func) ->
+    case erl_scan:string(Func) of
+        {ok, Toks, _} ->
+            case erl_parse:parse_exprs(Toks) of
+                {ok, _Term} ->
+                    _Term;
+                _Err ->
+                    {error, parse_error}
+            end;
+        _Err ->
+            {error, parse_error}
+    end.
