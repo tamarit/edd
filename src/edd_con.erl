@@ -351,7 +351,10 @@ build_call_string({ModFun,IdFun,ArgsFun}) ->
                 io_lib:format(
                     "~p:~p(~s)", 
                     [ModFun,IdFun,build_args_list_string(ArgsFun)]))
-    end.
+    end;
+% TODO: This clause is temporal. Should be removed
+build_call_string(_) ->
+    "".
 
 build_args_list_string([]) ->
     "";
