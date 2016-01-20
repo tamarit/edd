@@ -83,7 +83,7 @@ server_listener(Socket) ->
     	end,
     {Correct,NotCorrect,Unknown,_,_} =
 	    edd_lib:asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-		   	Strategy,Vertices0,Correct0,NotCorrect0,[],[]),
+		   	Strategy,Vertices0,Correct0,NotCorrect0,[],[],-1),
 	case NotCorrect of
 	     [-1] ->
 	     	ok;

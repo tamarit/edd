@@ -42,7 +42,7 @@ edd_loop() ->
 			    io:format("Start question - answer loop\n"),
 			    {CorrectFinal,NotCorrectFinal,_UnknownFinal,_,_} =
 		    		edd_lib:asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-			   			Strategy,Vertices,Correct,NotCorrect,Unknown, []),
+			   			Strategy,Vertices,Correct,NotCorrect,Unknown, [],-1),
 		    	io:format("Finished question - answer loop\n"),
 				case NotCorrect of
 				     [-1] ->
