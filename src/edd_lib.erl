@@ -315,7 +315,7 @@ asking_loop(_,_,_,Strategy,[-1],_,_,_,_,_) ->
 	{[-1],[-1],[-1],[],Strategy};
 asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
 	Strategy,Vertices,Valid,NotValid,Unknown,State, Preselected) ->
-		{Selected, SortedVertices} = 
+		{Selected, NSortedVertices} = 
 			case Preselected of 
 				-1 ->
 					VerticesWithValues = 
@@ -344,15 +344,15 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 							(_, _) ->
 								false
 						end,
-					SortedVertices0 = 
+					SortedVertices = 
 						lists:sort(OrderingFunction, VerticesWithValues),
 					% io:format("SortedVertices: ~p\n", [SortedVertices]),
-					Selected0 = element(1,hd(SortedVertices0)),
-					{Selected0, SortedVertices0};
+					Selected0 = element(1,hd(SortedVertices)),
+					NSortedVertices0 = [V || {V,_} <- tl(SortedVertices)],
+					{Selected0, NSortedVertices0};
 				_ ->
 					{Preselected, Vertices -- [Preselected]}
 			end,
-	NSortedVertices = [V || {V,_} <- tl(SortedVertices)],
 	YesAnswer = begin
 	             EqualToSelected = 
 	                [V || V <- Vertices, begin {V,{L1,_,F1,Line1}} = digraph:vertex(G,V),
