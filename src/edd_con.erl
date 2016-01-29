@@ -24,7 +24,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd_con).
--export([ddc/2,ddc/4]).
+-export([ddc/2, ddc/4, ddc_server/3]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,43 +50,27 @@
 ddc(Expr,Timeout) ->
 	ddc(Expr,Timeout,divide_query,indet).
 
+ddc_server(Expr, Dir, Timeout) ->
+    code:add_patha(Dir), 
+    % io:format("PATHS: ~p\n",[code:get_path()]),
+    {_, PidComm} = 
+        ddc_internal_core(
+            Expr, 
+            Timeout, 
+            fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
+            Dir),
+    PidComm.
+
+
+
 ddc(Expr,Timeout,Strategy,Priority) ->
-	Graph = true,
-	{ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
-	M1 = smerl:new(foo),
-	{ok, M2} = smerl:add_func(M1,"bar() ->" ++ Expr ++ " ."),
-	%Obtiene el CORE de la expresión Expr
-	{ok,_,CoreP} = smerl:compile2(M2,[to_core,binary,no_copt]), 
-	InitialCall = extract_call(CoreP),
-	%io:format("InitialCall: ~p\n",[InitialCall]),
-	FunOperator = erl_syntax:application_operator(AExpr),
-	{remote,_,{atom,_,ModName},_} = FunOperator,
-	Core = edd_lib:core_module(atom_to_list(ModName)++".erl"),
-	%io:format("Core: ~p\n",[Core]),
-	
-	%to get the .core file. ONLY FOR DEBUGGING 
-	%compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
-	
-	FunsInitialCall = get_funs_from_abstract(AExpr,-1),
-	compile:file(atom_to_list(ModName)++".erl"),
-	% {{first_pid,FirstPid},{traces,Traces0}} = 
-	Self = self(),
-	spawn(fun() -> edd_trace:trace(Expr,Timeout, Self) end),
-	receive 
-		{Trace, DictFun, PidCall} ->
-			ok
-	end,
-	% Traces = dict_keys_to_str(Traces0),
-
-	PidG = spawn(fun() -> digraph_server() end),
-	try 
-        unregister(edd_graph)
-    catch 
-        _:_ -> ok 
-    end,
-	register(edd_graph, PidG),
-	build_graph(Trace, DictFun, PidCall), 
-
+    Graph = true,
+    {{Trace, DictFun, PidCall},_} = 
+        ddc_internal_core(
+            Expr, 
+            Timeout, 
+            fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
+            none),
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 	%%%% REMOVE COMMENTS TO ENABLE DEBUGGING
@@ -101,19 +85,57 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 	%io:format("G: ~p\n",[G]),
 	case Graph of
 	     true ->
-	       edd_con_lib:dot_graph_file(G,"dbg");
+	       edd_con_lib_new:dot_graph_file(G,"dbg");
 	     false -> 
 	       ok
 	end,
- 	edd_con_lib:ask(G,Strategy,Priority),
+ 	edd_con_lib_new:ask(G,Strategy,Priority),
 
  	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 	%%%% REMOVE COMMENTS TO ENABLE DEBUGGING
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    PidG!stop,
+    % PidG!stop,
+    edd_graph!stop,
     unregister(edd_graph),
     ok.
+
+ddc_internal_core(Expr, Timeout, FunCore, Dir) ->
+    {ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
+    M1 = smerl:new(foo),
+    {ok, M2} = smerl:add_func(M1,"bar() ->" ++ Expr ++ " ."),
+    %Obtiene el CORE de la expresión Expr
+    {ok,_,CoreP} = smerl:compile2(M2,[to_core,binary,no_copt]), 
+    InitialCall = extract_call(CoreP),
+    %io:format("InitialCall: ~p\n",[InitialCall]),
+    FunOperator = erl_syntax:application_operator(AExpr),
+    {remote,_,{atom,_,ModName},_} = FunOperator,
+    Core = FunCore(ModName),
+    %io:format("Core: ~p\n",[Core]),
+    
+    %to get the .core file. ONLY FOR DEBUGGING 
+    %compile:file(atom_to_list(ModName)++".erl",[to_core,no_copt]),
+    
+    FunsInitialCall = get_funs_from_abstract(AExpr,-1),
+    compile:file(atom_to_list(ModName)++".erl"),
+    % {{first_pid,FirstPid},{traces,Traces0}} = 
+    Self = self(),
+    spawn(fun() -> edd_trace:trace(Expr,Timeout, Self, Dir) end),
+    receive 
+        {Trace, DictFun, PidCall} ->
+            ok
+    end,
+    % Traces = dict_keys_to_str(Traces0),
+
+    PidG = spawn(fun() -> digraph_server() end),
+    try 
+        unregister(edd_graph)
+    catch 
+        _:_ -> ok 
+    end,
+    register(edd_graph, PidG),
+    PidInfoAndComms = build_graph(Trace, DictFun, PidCall),
+    {{Trace, DictFun, PidCall}, PidInfoAndComms}.
 
 digraph_server() ->
 	digraph_server(digraph:new([acyclic])).
@@ -877,11 +899,15 @@ build_graph(Trace, DictFuns, PidInit) ->
   	{_, DictPids} = 
   		lists:foldl(fun assign_node_num/2, {0, dict:new()}, FinalState#evaltree_state.pids_info),
 
-  	io:format("~p\n", [dict:to_list(DictPids)]),
   	PidsTree = digraph:new(),
   	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
   	 || PidInfo <- FinalState#evaltree_state.pids_info],
-  	io:format("~p\n", [FinalState]),
+
+
+   %  io:format("~p\n", [dict:to_list(DictPids)]),
+  	% io:format("~p\n", [FinalState]),
+
+
 	dot_graph_file_int(PidsTree, "pids_tree", fun dot_vertex_pids_tree/1),
 
 	
@@ -907,7 +933,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun dot_vertex_eval_tree/1),
     % edd_graph!del_disconected_vertices,
-    ok.
+    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication}.
 
 
 build_graph_trace(
@@ -1258,27 +1284,39 @@ add_result_info_pid(
 		PidInfo = #pid_info{
 			pid = Pid,
 			result = Result,
-			callrec_stack = Stack
+			callrec_stack = Stack,
+            snapshots = Snapshots
 		}) ->
-	NResult = 
+	{NResult, NSnapshots} = 
 		case Result of 
 			none -> 
 				case Stack of 
-					[#callrec_stack_item{
+					[Head = #callrec_stack_item{
 						origin_callrec = #receive_info{clause = none}
-					}|_] ->
-						stuck_receive;
+					}| _] ->
+						{stuck_receive, Snapshots ++ stuck_receive_snapshots(Stack)};
 					_ ->
-						none 
+						{none, Snapshots}
 				end;
 			_ ->
-				Result 
+				{Result, Snapshots}
 		end,
-	PidInfo#pid_info{result = NResult}.
+	PidInfo#pid_info{result = NResult, snapshots = NSnapshots}.
+
+
+stuck_receive_snapshots([Head| Tail]) ->
+    NSnapshot =  
+        #snapshot_info{
+            top = Head#callrec_stack_item{result = stuck_receive}, 
+            rest = Tail
+        },  
+    [NSnapshot | stuck_receive_snapshots(Tail)];
+stuck_receive_snapshots([]) ->
+    [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Drawing pids tree functions
+% Functions for drawing process trees 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1503,11 +1541,14 @@ communication_sequence_diagram(_, _) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-build_eval_tree(#pid_info{pid = Pid, snapshots = Snapshots}, Free) ->
-	build_eval_tree_snap(Free, Pid, Snapshots, []).
+build_eval_tree(#pid_info{
+            pid = Pid, 
+            result = Result, 
+            snapshots = Snapshots}, Free) ->
+	build_eval_tree_snap(Free, Pid, Snapshots, Result, []).
 
 
-build_eval_tree_snap(Free, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapshots], Pending) ->
+build_eval_tree_snap(Free, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapshots], Result, Pending) ->
 	{NFree, NPending} = 
 		case Top of 
 			none -> 
@@ -1517,8 +1558,8 @@ build_eval_tree_snap(Free, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapsh
 				[edd_graph!{add_edge, Free, Node} || {Node, _} <- Pending],
 				{Free + 1, [{Free, length(Rest)}]}
 		end,
-	build_eval_tree_snap(NFree, Pid, Snapshots, NPending);
-build_eval_tree_snap(Free, Pid, [], Pending) ->
+	build_eval_tree_snap(NFree, Pid, Snapshots, Result, NPending);
+build_eval_tree_snap(Free, Pid, [], _, Pending) ->
 	[edd_graph!{add_edge, 0, Node} || {Node, _} <- Pending],
 	Free.
 

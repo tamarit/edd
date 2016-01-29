@@ -118,6 +118,20 @@ edd_loop() ->
 					ok
 			end 
 			;
+		{buggy_con_call, Call, Dir, Timeout, State} ->
+			try 
+				io:format("Received a concurrent debugging request\n"),
+				{PidsInfo, Communications} = 
+					edd_con:ddc_server(Call, Dir, Timeout),
+				?JAVA_NODE_NAME ! {pids_info, PidsInfo},
+				?JAVA_NODE_NAME ! {communcations, lists:reverse(Communications)}
+			catch 
+				_:_ = Error -> 
+					io:format("An error ocurred: ~p\n", [Error]),
+					?JAVA_NODE_NAME ! {error, Error},
+					ok
+			end 
+			;
 		Msg -> 
 			io:format("Message not expected: ~p\n", [Msg]),
 			ok

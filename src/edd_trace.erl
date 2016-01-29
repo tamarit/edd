@@ -26,18 +26,18 @@
 
 -module(edd_trace).
 
--export([trace/3]).
+-export([trace/4]).
 
-trace(InitialCall, Timeout, PidAnswer) -> 
+trace(InitialCall, Timeout, PidAnswer, Dir) -> 
     ModName = get_mod_name(InitialCall),
-    instrument_and_reload(ModName),
+    instrument_and_reload(ModName, Dir),
     PidMain = self(),
     PidCall = execute_call(InitialCall, self()),
     TimeoutServer = Timeout,
     PidTrace = 
     spawn(
         fun() ->
-            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer)
+            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer, Dir)
         end),
     register(edd_tracer, PidTrace),
     PidCall!start,
@@ -66,7 +66,7 @@ trace(InitialCall, Timeout, PidAnswer) ->
             {loaded,Loaded0} ->
                 Loaded0
         end,
-    [undo_instrument_and_reload(Mod) || Mod <- Loaded],
+    [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded],
     DictFun = 
         receive 
             {fun_dict,FunDict0} ->
@@ -82,14 +82,14 @@ trace(InitialCall, Timeout, PidAnswer) ->
     % ok.
     PidAnswer!{Trace, DictFun, PidCall}.
 
-receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
+receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
     % io:format("Itera\n"),
     receive 
         TraceItem = {edd_trace, _, _, _} ->
             receive_loop(
                 Current + 1, 
                 [{Current,TraceItem} | Trace],
-                Loaded, FunDict, PidMain, Timeout);
+                Loaded, FunDict, PidMain, Timeout, Dir);
         {edd_load_module, Module, PidAnswer} ->
             NLoaded = 
                 case lists:member(Module, Loaded) of 
@@ -98,11 +98,11 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
                         Loaded;
                     false ->
                         % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
-                       instrument_and_reload(Module),
+                       instrument_and_reload(Module, Dir),
                        PidAnswer!loaded,
                        [Module | Loaded] 
                 end, 
-            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout);
+            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout, Dir);
         {edd_store_fun, Name, FunInfo} ->
             NFunDict = 
                 case dict:is_key(Name, FunDict) of 
@@ -111,18 +111,18 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout) ->
                     false ->
                         dict:append(Name, FunInfo, FunDict) 
                 end, 
-            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout);
+            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout, Dir);
         stop -> 
             PidMain!{trace, Trace},
             PidMain!{loaded, Loaded},
             PidMain!{fun_dict, FunDict};
         Other -> 
             io:format("Untracked msg ~p\n", [Other]),
-            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir)
     after 
         Timeout ->
             PidMain!idle,
-            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout)
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir)
     end.
 
 
@@ -151,15 +151,23 @@ get_mod_name(InitialCall) ->
     {call,_,{remote,_,{atom,_,ModName},_},_} = AExpr,
     ModName.
 
-instrument_and_reload(ModName) ->
+get_file_path(ModName, Dir) ->
+    case Dir of 
+        none -> 
+            atom_to_list(ModName) ++ ".erl";
+        _ ->
+            Dir ++ "/" ++ atom_to_list(ModName) ++ ".erl"
+    end.
+
+instrument_and_reload(ModName, Dir) ->
     % io:format("~p\n", [ModName]),
     {ok,ModName,Binary} = 
-        compile:file(atom_to_list(ModName) ++ ".erl", [{parse_transform,edd_con_pt}, binary]),
+        compile:file(get_file_path(ModName, Dir), [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}]),
     reload_module(ModName, Binary).
 
-undo_instrument_and_reload(ModName) ->
+undo_instrument_and_reload(ModName, Dir) ->
     {ok,ModName,Binary} = 
-        compile:file(atom_to_list(ModName) ++ ".erl", [binary]),
+        compile:file(get_file_path(ModName, Dir), [binary, {i,Dir}, {outdir,Dir}]),
     reload_module(ModName, Binary).
 
 reload_module(ModName, Binary) ->
