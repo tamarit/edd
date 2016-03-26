@@ -145,10 +145,16 @@ inst_expr(T) ->
 						NClauses, 
 						erl_syntax:receive_expr_timeout(T), 
 						erl_syntax:receive_expr_action(T)),
+				VarsContext = 
+					get_ann_info(env, T),
+				Context = 
+					build_dict_var(VarsContext),
 				SendReceive = 
 						build_send_trace(
 							receive_reached, 
-							pos_and_pp(T)), 
+							[Context,
+							erl_syntax:tuple(pos_and_pp(T))]), 
+							% pos_and_pp(T)),
 				BlockReceive = 
 					erl_syntax:block_expr([SendReceive, NReceive]),
 				% io:format("~p\n",[BlockReceive]),
@@ -295,24 +301,32 @@ inst_fun_clauses(Clauses, FunId) ->
 			% io:format("~p: ~p\n", [self(),get(module_name)]),
 			{ParValues, NPars} = 
 				args_assign("EDDFunPar", erl_syntax:clause_patterns(Clause)),
+			VarsContextStart = 
+				get_ann_info(env, hd(erl_syntax:clause_body(Clause))),
+			ContextStart = 
+				build_dict_var(VarsContextStart),
 			CallRep = 
 					[get_ann_info(module_name, Clause),
 					 FunId] 
 					 % ), 
 					 ++ [ erl_syntax:list(ParValues)], 
 			SendCallStart = 
-				build_send_trace(start_call, CallRep ), 
+				build_send_trace(start_call, [erl_syntax:tuple(CallRep), ContextStart] ), 
 			LastExpr = 
 				lists:last(NBody0),
 			BodyWOLast =
 				lists:droplast(NBody0),
 			VarFunResult = free_named_var("EDDResultFun"),
+			VarsContextEnd = 
+				get_ann_info(env, lists:last(erl_syntax:clause_body(Clause))),
+			ContextEnd = 
+				build_dict_var(VarsContextEnd),
 			NLastExpr = 
 				erl_syntax:match_expr(
 					VarFunResult, 
 					LastExpr),
 			SendResult =
-				build_send_trace(end_call, [erl_syntax:tuple(CallRep), VarFunResult]), 
+				build_send_trace(end_call, [erl_syntax:tuple(CallRep), VarFunResult, ContextEnd]), 
 			NOldBody = 
 				BodyWOLast ++ [NLastExpr, SendResult, VarFunResult],
 			% Salida = 
@@ -375,6 +389,7 @@ inst_spawn(T, SpawnArgs) ->
 		free_named_var("EDDSpawnResult"),
 	{VarArgs, StoreArgs} = 
 		args_assign("EDDSpawnArg", SpawnArgs),
+
 	SendSpawn = 
 		build_send_trace(made_spawn, [erl_syntax:tuple(VarArgs) ,VarReceiveResult] ++ pos_and_pp(T)), 
 
@@ -397,7 +412,7 @@ inst_receive_clause(Clause, CurrentClause) ->
 	% io:format("~p\n", [hd(erl_syntax:get_ann(
 	% 		hd(erl_syntax:clause_body(Clause))) )]),
 	% io:format("~p\n", [hd(Patterns)]),
-	VarsContext = 
+	VarsContextStart = 
 		get_ann_info(env, hd(erl_syntax:clause_body(Clause))),
 	VarsBindings = 
 		get_ann_info(bound, hd(erl_syntax:clause_patterns(Clause))),
@@ -415,15 +430,15 @@ inst_receive_clause(Clause, CurrentClause) ->
 	% 		erl_syntax_zip(
  % 				[erl_syntax:string(V) || V <- Vars],
  % 				[erl_syntax:variable(V)  || V <- Vars])  ), 
-	Context = 
-		build_dict_var(VarsContext),
+	ContextStart = 
+		build_dict_var(VarsContextStart),
 	Bindings = 
 		build_dict_var(VarsBindings),
 
 	SendEvaluated =
 		build_send_trace(
 			receive_evaluated, 
-			[VarMsg, Context, Bindings, erl_syntax:integer(CurrentClause)]), 
+			[VarMsg, ContextStart, Bindings, erl_syntax:integer(CurrentClause)]), 
 
 	LastExpr = 
 		lists:last(erl_syntax:clause_body(Clause)),
@@ -434,10 +449,14 @@ inst_receive_clause(Clause, CurrentClause) ->
 		erl_syntax:match_expr(
 			VarReceiveResultName , 
 			LastExpr),
+	VarsContextEnd = 
+		get_ann_info(env,lists:last(erl_syntax:clause_body(Clause))),
+	ContextEnd = 
+		build_dict_var(VarsContextEnd),
 	SendResult =
 		build_send_trace(
 			receive_finished, 
-			[VarReceiveResultName]), 
+			[VarReceiveResultName, ContextEnd]), 
 	% NOldBody = 
 	NBody = 
 		[SendEvaluated] ++ BodyWOLast ++ [NLastExpr, SendResult, VarReceiveResultName],

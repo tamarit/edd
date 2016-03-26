@@ -529,7 +529,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                 };
             end_call ->
                 % io:format("End ~p\n", [CallStack]), 
-                {_, Result} = Info,
+                {_Call, Result, _Context} = Info,
                 case CallStack of 
                     [{InfoCall ,SentCall, SpawnedCall, FinishedCalls}| _] -> 
                         edd_graph!
@@ -588,7 +588,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                     all_sends = [Info | AllSends]
                 };
             receive_reached ->
-                {{pos_info,{_, File, Line, StrReceive}}} = Info,
+                {_Context, {{pos_info,{_, File, Line, StrReceive}}}} = Info,
                 {NFree0, _} = 
                     lists:foldl(
                         fun(Node, CFreeLastNode) -> 
@@ -667,7 +667,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                     case CurrentReceive of 
                         {evaluated, {ReceiveInfo = {StrReceive,Line,File}, Clause, SenderMsg, NodeReceive, none}, Context, Bindings} ->   
                             {_, CSents, CSpawns, CFinished} = hd(CallStack),
-                            {Value} = Info,
+                            {Value, _ContextEnd} = Info,
                             ValueStr = 
                                 lists:flatten(io_lib:format("~p", [Value])),
                             edd_graph!
@@ -818,7 +818,7 @@ get_new_dict(Pid,Dict,Trace) ->
     	spawned = [],
     	sent = [],
     	result = none,
-    	% receipt = [],
+    	% received = [],
     	% consumed = [],
     	is_first = false,
     	callrec_stack = [],
@@ -829,13 +829,15 @@ get_new_dict(Pid,Dict,Trace) ->
 	{
 		from = none,
 		to = none,
-		msg = none
+		msg = none,
+        trace = none
 	}).
 
 -record(spawn_info,
 	{
 		spawner = none,
-		spawned = none
+		spawned = none,
+        trace = none
 	}).
 
 -record(call_info,
@@ -859,10 +861,11 @@ get_new_dict(Pid,Dict,Trace) ->
 		context = [],
 		spawned = [],
     	sent =[],
-    	receipt = [],
+    	received = [],
     	consumed = [],
     	% children_nodes = [],
-    	result = none
+    	result = none,
+        trace = none
 	}).	
 
 -record(snapshot_info,
@@ -880,8 +883,9 @@ get_new_dict(Pid,Dict,Trace) ->
 
 
 build_graph(Trace, DictFuns, PidInit) ->
-  DictTraces = 
+    DictTraces = 
         separate_by_pid(Trace, dict:new()),
+    % io:format("~p\n", [dict:to_list(DictTraces) ]), 
     InitialState = 
     	#evaltree_state{
     		free = 1,
@@ -898,6 +902,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 
   	{_, DictPids} = 
   		lists:foldl(fun assign_node_num/2, {0, dict:new()}, FinalState#evaltree_state.pids_info),
+
 
   	PidsTree = digraph:new(),
   	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
@@ -925,19 +930,22 @@ build_graph(Trace, DictFuns, PidInit) ->
 				result = Result
 		   } <- lists:reverse(FinalState#evaltree_state.pids_info)],
     edd_graph!{add_vertex, 0, {PidsSummary, lists:reverse(FinalState#evaltree_state.communication)}},
-    lists:foldl(fun build_eval_tree/2, 1 , lists:reverse(FinalState#evaltree_state.pids_info)),
+    {_,DictNodes} = lists:foldl(fun build_eval_tree/2, {1, dict:new()} , lists:reverse(FinalState#evaltree_state.pids_info)),
+    io:format("~p\n", [dict:to_list(DictNodes)]), 
     edd_graph!{get,self()},
 	receive 
 		G -> ok
 	end,
+    DictQuestions = build_questions(G, DictNodes),
+    % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
-    dot_graph_file_int(G, "eval_tree", fun dot_vertex_eval_tree/1),
+    dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
     % edd_graph!del_disconected_vertices,
     {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication}.
 
 
 build_graph_trace(
-		{_, {edd_trace, start_call, Pid, Call}}, 
+		{TraceId, {edd_trace, start_call, Pid, {Call, Context}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
 	% Store the first call. Only for first process, rest of process will use spawn to fill thi info
 	NPidsInfo0 = 
@@ -950,34 +958,34 @@ build_graph_trace(
 	% Add call to the process stack
 	NPidsInfo = 
 		lists:map(
-			fun(PI) -> add_new_callrec_stack(PI, {Pid, #call_info{call = Call}}) end,
+			fun(PI) -> add_new_callrec_stack(PI, {Pid, #call_info{call = Call}, Context}, TraceId) end,
 			NPidsInfo0),
 	% New state
 	State#evaltree_state{
 		pids_info = NPidsInfo
 	};
 build_graph_trace(
-		{_, {edd_trace, end_call, Pid, {_Call, Result}}}, 
+		{TraceId, {edd_trace, end_call, Pid, {_Call, Result, Context}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
 	% Add call to the snapshot and remove it from the stack. 
 	% If the stack is empty, assign the final value to pid
 	NPidsInfo = 
 		lists:map(
-			fun(PI) -> remove_callrec_stack(PI, {Pid, Result}) end,
+			fun(PI) -> remove_callrec_stack(PI, {Pid, Result, Context}, TraceId) end,
 			PidsInfo),
 	% New state
 	State#evaltree_state{
 		pids_info = NPidsInfo
 	};
 build_graph_trace(
-		{_, {edd_trace, made_spawn, Pid, Info }}, 
+		{TraceId, {edd_trace, made_spawn, Pid, Info }}, 
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
 	{Args, NewPid, PosAndPP} = Info,
 	% NPidsInfo0 = 
 	% 	lists:map(fun(PI) -> add_spawn(PI, {Pid, NewPid}) end, PidsInfo),
 
 	SpawnRecord = 
-		#spawn_info{spawner = Pid, spawned = NewPid},
+		#spawn_info{spawner = Pid, spawned = NewPid, trace = TraceId},
 
 	% Add to the communication history
 	NCommunication = 
@@ -998,38 +1006,38 @@ build_graph_trace(
 		communication = NCommunication
 	};
 build_graph_trace(
-		{_, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
+		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
 	MessageRecord = 
-		#message_info{from = Pid, to = PidReceive, msg = Msg},
+		#message_info{from = Pid, to = PidReceive, msg = Msg, trace = TraceId},
 	% Add to the communication history
 	NCommunication = 
 		[{sent,MessageRecord} | Communication],
 	% Add sent info to the stack 
 	NPidsInfo0 = 
 		lists:map(fun(PI) -> add_msg_sent_stack(PI, {Pid, MessageRecord}) end, PidsInfo),
-	% Add receipt info to the stack 
+	% Add received info to the stack 
 	NPidsInfo = 
-		lists:map(fun(PI) -> add_msg_receipt_stack(PI, {PidReceive, MessageRecord}) end, NPidsInfo0),
+		lists:map(fun(PI) -> add_msg_received_stack(PI, {PidReceive, MessageRecord}) end, NPidsInfo0),
 	% New state
 	State#evaltree_state{
 		communication = NCommunication,
 		pids_info = NPidsInfo
 	};
 build_graph_trace(
-		{_, {edd_trace, receive_reached, Pid, Receive = {{pos_info,{_Module, _File, _Line, _StrReceive}}}}}, 
+		{TraceId, {edd_trace, receive_reached, Pid, {Context, Receive = {{pos_info,{_Module, _File, _Line, _StrReceive}}}}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
 	% Add receive to the stack
 	NPidsInfo0 = 
 		lists:map(
-			fun(PI) -> add_new_callrec_stack(PI, {Pid, #receive_info{pos_pp = Receive}}) end,
+			fun(PI) -> add_new_callrec_stack(PI, {Pid, #receive_info{pos_pp = Receive}, Context}, TraceId) end,
 			PidsInfo),
 	% Store a snapshot of the current stack
 	NPidsInfo1 = 
 		lists:map(
 			fun(PI) -> add_snapshot(PI, Pid) end,
 			NPidsInfo0),
-	% Empty recursively sent,receipt,consumed and spwan info in the stack
+	% Empty recursively sent,received,consumed and spwan info in the stack
 	NPidsInfo = 
 		lists:map(
 			fun(PI) -> empty_info_stack(PI, Pid) end,
@@ -1039,7 +1047,7 @@ build_graph_trace(
 		pids_info = NPidsInfo
 	};
 build_graph_trace(
-		{_, {edd_trace, receive_evaluated, Pid, {Msg, Context, Bindings, Clause}}}, 
+		{TraceId, {edd_trace, receive_evaluated, Pid, {Msg, Context, Bindings, Clause}}}, 
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
 	MsgSender = 
 		[PidSenderCom || 
@@ -1050,13 +1058,13 @@ build_graph_trace(
 			% Only if a sender for the consumed message is found
 			[MsgSender_] ->
 				MsgRecord = 
-					#message_info{from = MsgSender_, to = Pid, msg = Msg},
+					#message_info{from = MsgSender_, to = Pid, msg = Msg, trace = TraceId},
 				{
 					% Add to the communication history
 					[{received, MsgRecord} | Communication], 
 					% Add consumed info to the stack 
 					lists:map(
-						fun(PI) -> add_msg_consumed_stack(PI, {Pid, MsgRecord, Context, Bindings, Clause}) end, 
+						fun(PI) -> add_msg_consumed_stack(PI, {Pid, MsgRecord, Context, Bindings, Clause}, TraceId) end, 
 						PidsInfo)
 				};
 			[] ->
@@ -1068,12 +1076,12 @@ build_graph_trace(
 		pids_info = NPidsInfo
 	};
 build_graph_trace(
-		{_, {edd_trace, receive_finished, Pid, {Result}}}, 
+		{TraceId, {edd_trace, receive_finished, Pid, {Result, Context}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
 	% Add call to the snapshot and remove it from the stack
 	NPidsInfo = 
 		lists:map(
-			fun(PI) -> remove_callrec_stack(PI, {Pid, Result}) end,
+			fun(PI) -> remove_callrec_stack(PI, {Pid, Result, Context}, TraceId) end,
 			PidsInfo),
 	% New state
 	State#evaltree_state{
@@ -1100,13 +1108,16 @@ add_new_callrec_stack(
 		PidInfo = #pid_info{
 			pid = Pid, 
 			callrec_stack = CallRecStack}, 
-		{Pid, CallRec}) ->
+		{Pid, CallRec, Context},
+        TraceId) ->
+    NCallRecStack = 
+        [CSI#callrec_stack_item{reached_rec_val = TraceId} || CSI <-  CallRecStack],
 	PidInfo#pid_info{
 		callrec_stack=		
-			[ #callrec_stack_item{origin_callrec = CallRec}
-			| CallRecStack] 
+			[ #callrec_stack_item{origin_callrec = CallRec, context = Context, trace = TraceId}
+			| NCallRecStack] 
 	};
-add_new_callrec_stack(PidInfo, _)->
+add_new_callrec_stack(PidInfo, _, _)->
 	PidInfo.
 
 remove_callrec_stack(
@@ -1116,13 +1127,14 @@ remove_callrec_stack(
 				[ CallRec 
 				| CallRecStack],
 			snapshots = Snapshots}, 
-		{Pid, Result}) ->
+		{Pid, Result, Context},
+        TraceId) ->
 	PidInfo#pid_info{
 		callrec_stack =	CallRecStack,
 		snapshots = 
 			Snapshots ++ 
 			[#snapshot_info{
-				top = CallRec#callrec_stack_item{result = Result}, 
+				top = CallRec#callrec_stack_item{result = Result, context = Context, trace = TraceId}, 
 				rest = CallRecStack
 			}],
 		result = 
@@ -1133,7 +1145,7 @@ remove_callrec_stack(
 					none 
 			end
 	};
-remove_callrec_stack(PidInfo, _)->
+remove_callrec_stack(PidInfo, _, _)->
 	PidInfo.
 
 
@@ -1165,19 +1177,19 @@ add_msg_sent_stack(
 add_msg_sent_stack(PidInfo, _)->
 	PidInfo.
 
-add_msg_receipt_stack(
+add_msg_received_stack(
 		PidInfo = #pid_info{
 			pid = Pid, 
 			callrec_stack = 
-				[HeadStack = #callrec_stack_item{receipt = Receipt} 
+				[HeadStack = #callrec_stack_item{received = Received} 
 				| TailCallStack]}, 
 		{Pid, Msg}) ->
 	PidInfo#pid_info{
 		callrec_stack =		
-			[ HeadStack#callrec_stack_item{receipt = Receipt ++ [Msg]}
+			[ HeadStack#callrec_stack_item{received = Received ++ [Msg]}
 			| TailCallStack] 
 	};
-add_msg_receipt_stack(PidInfo, _)->
+add_msg_received_stack(PidInfo, _)->
 	PidInfo.
 
 add_msg_consumed_stack(
@@ -1190,7 +1202,8 @@ add_msg_consumed_stack(
 						origin_callrec = CallRec
 					} 
 				| TailCallStack]}, 
-		{Pid, Msg, Context, Bindings, Clause}) ->
+		{Pid, Msg, Context, Bindings, Clause},
+        TraceId) ->
 	PidInfo#pid_info{
 		callrec_stack =		
 			[ HeadStack#callrec_stack_item{
@@ -1200,11 +1213,12 @@ add_msg_consumed_stack(
 						context = Context,
 						bindings = Bindings,
 						clause = Clause
-					} 
+					},
+                trace = TraceId
 				}
 			| TailCallStack] 
 	};
-add_msg_consumed_stack(PidInfo, _)->
+add_msg_consumed_stack(PidInfo, _, _)->
 	PidInfo.
 
 add_spawn_stack(
@@ -1232,7 +1246,7 @@ empty_info_stack(
 			consumed = [],
 			spawned = [],
 			sent = [],
-			receipt = []
+			received = []
 		 }
 		 || CallStackItem <- CallStack],
 	PidInfo#pid_info{
@@ -1292,9 +1306,10 @@ add_result_info_pid(
 			none -> 
 				case Stack of 
 					[Head = #callrec_stack_item{
-						origin_callrec = #receive_info{clause = none}
+						origin_callrec = #receive_info{clause = none},
+                        trace = TraceId
 					}| _] ->
-						{stuck_receive, Snapshots ++ stuck_receive_snapshots(Stack)};
+						{stuck_receive, Snapshots ++ stuck_receive_snapshots(Stack, TraceId, [$s|integer_to_list(TraceId)])};
 					_ ->
 						{none, Snapshots}
 				end;
@@ -1304,14 +1319,38 @@ add_result_info_pid(
 	PidInfo#pid_info{result = NResult, snapshots = NSnapshots}.
 
 
-stuck_receive_snapshots([Head| Tail]) ->
+stuck_receive_snapshots(
+        [Head = 
+            #callrec_stack_item{
+                reached_rec_val = ReachedRec,
+                trace = CurrTraceId
+            }| Tail], 
+        PrevReachedRec, TraceId) ->
     NSnapshot =  
         #snapshot_info{
-            top = Head#callrec_stack_item{result = stuck_receive}, 
+            top = 
+                Head#callrec_stack_item{
+                    result = stuck_receive, 
+                    trace = 
+                        case CurrTraceId of 
+                            PrevReachedRec ->
+                                TraceId;
+                            _ ->
+                                CurrTraceId
+
+                        end,
+                    reached_rec_val = 
+                        case ReachedRec of 
+                            PrevReachedRec ->
+                                TraceId;
+                            _ ->
+                                ReachedRec
+                        end
+                }, 
             rest = Tail
         },  
-    [NSnapshot | stuck_receive_snapshots(Tail)];
-stuck_receive_snapshots([]) ->
+    [NSnapshot | stuck_receive_snapshots(Tail, PrevReachedRec, TraceId)];
+stuck_receive_snapshots([], _, _) ->
     [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1537,6 +1576,261 @@ communication_sequence_diagram(_, _) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Build questions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-record(question,
+    {
+        text = none,
+        answers = [],
+        str_callrec = none
+    }).
+
+-record(answer,
+    {
+        text = none,
+        when_chosen = none
+    }).
+
+any2str(Any) ->
+    format("~p", [Any]).
+
+build_answer(Str, Beh) ->
+    #answer{
+        text = Str,
+        when_chosen = Beh
+    }.
+
+question_list(Text, []) ->
+    "no " ++ Text;
+question_list(Text, List) ->
+    PPList = 
+        lists:foldl(fun(E, Acc) -> Acc ++ [$\t|pp_item(E)] ++ "\n" end, "", List), 
+    Text ++ ":\n" ++ lists:droplast(PPList).
+
+tab_lines(String) ->
+    Lines = string:tokens(String, "\n"),
+    NLines = [[$\t|L] || L <- Lines],
+    string:join(NLines, "\n").
+
+list_ans(#answer{text = Text}) ->
+    Text ++ "\n".
+
+pp_item(#message_info{from = From, to = To, msg = Msg}) ->
+    format("~p (from ~p to ~p)", [Msg, From, To]);
+pp_item(#spawn_info{spawner = Spawner, spawned = Spawned}) ->
+    format("~p", [Spawned]);
+pp_item({Var, Value}) ->
+    format("~p = ~p", [Var, Value]).
+
+format(Format, Data) ->
+    lists:flatten(io_lib:format(Format, Data)).
+
+
+prev_recieve_answer(PrevRec, DictNodes, G) ->
+    % io:format("\nPREV: ~p\n", [PrevRec]),
+    case dict:find(PrevRec, DictNodes) of 
+        {ok, NodeDests} ->
+            NodeDest = lists:last(NodeDests),
+            {NodeDest, NodeInfo} = digraph:vertex(G, NodeDest),
+            #question{
+                str_callrec = StrPrevReceive,
+                answers = AnsPrevReceive
+            } = 
+                build_question(NodeInfo, DictNodes, G, NodeDest),
+            PreRecInfoStr = 
+                StrPrevReceive ++ "\n" ++ lists:flatten(lists:map(fun list_ans/1,lists:droplast(AnsPrevReceive))),
+            [build_answer(
+                "previous evaluated receive:\n" 
+                ++ tab_lines(PreRecInfoStr), 
+                {correct, {goto, NodeDest}})];       
+        _ ->
+            []   
+    end.
+
+behaviour_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
+    case SentSpawned of 
+        [] ->
+            BehEmptySame;
+        _ ->
+            #question{
+                text = "Which one is not expected?",
+                answers = 
+                [ 
+                    begin
+                        {ok, [NodeDest]} = dict:find(MS, DictNodes),
+                        case NodeDest of 
+                            Node -> 
+                                build_answer(pp_item(MS), BehEmptySame);
+                            _ ->
+                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}) 
+                        end
+                    end
+                || MS <- SentSpawned
+                ]
+            } 
+    end.
+
+
+reached_value_answer(none, none) ->
+    [];
+reached_value_answer(none, PrevRec) ->
+    % {ok, [NodeReceive]} = 
+    %     dict:find(PrevRec, DictNodes),
+    % {_,#callrec_stack_item{
+    %     origin_callrec = 
+    %         #receive_info{
+    %             pos_pp = {{pos_info,{_, _, _, ReceiveStr}}}
+    %         }}} = 
+    %     element(2,digraph:vertex(G, NodeReceive)), 
+    % [build_answer("Reached receive\n" ++ ReceiveStr, {goto, NodeReceive})];
+    [build_answer("reached receive:\n" ++ PrevRec, incorrect)];
+reached_value_answer(stuck_receive, _) ->
+    [build_answer("blocked because it is waiting for a message", incorrect)];
+reached_value_answer(Val, _) ->
+    [build_answer("evaluated to value: " ++ any2str(Val), incorrect)].
+
+build_questions(G, DictNodes) ->
+    DictQuestions = 
+        lists:foldl(
+            fun(V, CurrDictQuestions) ->
+                NodeInfo = element(2,digraph:vertex(G, V)), 
+                Question = build_question(NodeInfo, DictNodes, G, V),
+                dict:append(V, Question, CurrDictQuestions) 
+            end, 
+            dict:new(), 
+            digraph:vertices(G)),
+    % io:format("Questions: ~p\n~p\n", [dict:size(DictQuestions), lists:sort(dict:to_list(DictQuestions)) ]),
+    DictQuestions. 
+
+
+% * Pregunta:
+% La función ____ ha alcanzado el receive/valor ____, enviando por el camino
+% los mensajes ___ y creando los procesos ___. ¿Qué es incorrecto?
+% 1. La expresión alcanzada.
+% 2. Los mensajes enviados.
+% 3. Los procesos creados.
+% 4. Nada
+build_question(
+    {Pid,#callrec_stack_item{
+            origin_callrec = #call_info{call = {M,F,A}, pos_pp = Pos},
+            reached_rec_val = PrevRec,
+            context = Context,
+            spawned = Spawned,
+            sent = Sent,
+            received = Received,
+            consumed = Consumed,
+            result = Result,
+            trace = TraceId}
+        },
+        DictNodes, G, Node) -> 
+    % StrList0 = 
+    %     lists:foldl(fun(A_, Acc) -> Acc ++ any2str(A_) ++ ", " end, "", A), 
+    % StrList = 
+    %     case StrList0 of 
+    %         "" ->
+    %             "";
+    %         _ ->
+    %             lists:droplast(lists:droplast(StrList0))
+    %     end,
+    % io:format("~s\n", [StrList]),         
+    CallStr = 
+        lists:flatten(
+            io_lib:format(
+                "~p:~p(~s)", 
+                [M,F,string:join(lists:map(fun any2str/1, A), ", ") ]
+            )
+        ),
+    Question = 
+        "Process " ++ any2str(Pid) ++ " called " 
+        ++ CallStr ++ ".\nWhat is wrong?",
+    % io:format(Question),
+    PrevReceive = 
+        prev_recieve_answer(PrevRec, DictNodes, G),
+    Answers = 
+        reached_value_answer(Result, PrevRec) ++ 
+        PrevReceive ++ 
+        [
+         build_answer(question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer("nothing", correct)
+        ],
+    % Question ++ "\n" ++ any2str(Answers);
+    #question{
+        text = Question,
+        answers = Answers,
+        str_callrec = CallStr
+    };
+% Al receive ___ le han llegado estos mensajes, con lo que ha procesado el mensaje ___ usando
+% la rama i y ha alcanzado la expresión ___ enviando por el camino estos mensajes y creado
+% estos procesos, dado el contexto ___. ¿Qué está mal?
+% 1. El contexto.
+% 2. La lista de mensajes.
+% 3. El mensaje consumido.
+% 4. La expresión alcanzada.
+% 5. Los mensajes generados.
+% 6. Los procesos generados.
+% 7. Nada.
+build_question(
+    {Pid,#callrec_stack_item{
+            origin_callrec = 
+                #receive_info{
+                    clause = Clause,
+                    context = ContextRec,
+                    bindings = Bindings, 
+                    pos_pp = {{pos_info,{M, F, L, ReceiveStr0}}}
+                },
+            reached_rec_val = PrevRec,
+            context = Context,
+            spawned = Spawned,
+            sent = Sent,
+            received = Received,
+            consumed = Consumed,
+            result = Result,
+            trace = TraceId}
+        },
+        DictNodes, G, Node) ->    
+    ReceiveStr = 
+        lists:flatten(io_lib:format("~s\nin ~s:~p", [ReceiveStr0, F, L])),
+    Question = 
+        "Process " ++ any2str(Pid) ++ " evaluated\n" 
+        ++ ReceiveStr ++ "\nWhat is wrong?",
+    PrevReceive = 
+        prev_recieve_answer(PrevRec, DictNodes, G),
+    Answers = 
+        PrevReceive ++
+        [
+         build_answer(question_list("context",Context), correct),
+         % build_answer("ContextRec: " ++ any2str(ContextRec), correct),
+         build_answer(question_list("received messages",Received),behaviour_question(Received, DictNodes, Node, correct, correct)),
+         build_answer(question_list("consumed messages",Consumed), incorrect)
+        ]
+        ++ reached_value_answer(Result, PrevRec) ++
+        [
+         build_answer(question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer("nothing", correct)
+        ],
+    #question{
+        text = Question,
+        answers = Answers,
+        str_callrec = ReceiveStr
+    };
+build_question(NodeInfo, _, _, _) -> 
+    #question{}.
+
+list_answers( 
+        #answer{
+            text = Text,
+            when_chosen = Beh
+        }, {Opt, Acc}) ->
+    StrAnswer = 
+        io_lib:format("~p. - ~s (Behaviour: ~p)\n", [Opt, Text, Beh]),
+    {Opt + 1, lists:flatten(Acc ++ StrAnswer)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Build the evaluation tree
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1544,55 +1838,149 @@ communication_sequence_diagram(_, _) ->
 build_eval_tree(#pid_info{
             pid = Pid, 
             result = Result, 
-            snapshots = Snapshots}, Free) ->
-	build_eval_tree_snap(Free, Pid, Snapshots, Result, []).
+            snapshots = Snapshots}, {Free, Dict}) ->
+    build_eval_tree_snap(Free, Dict, Pid, Snapshots, Result, [], [], [], none).
 
 
-build_eval_tree_snap(Free, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapshots], Result, Pending) ->
-	{NFree, NPending} = 
-		case Top of 
-			none -> 
-				build_stack_nodes(Free, Pid, Rest, none, Pending);
-			_ ->
-				edd_graph!{add_vertex, Free, {Pid, Top}},
-				[edd_graph!{add_edge, Free, Node} || {Node, _} <- Pending],
-				{Free + 1, [{Free, length(Rest)}]}
-		end,
-	build_eval_tree_snap(NFree, Pid, Snapshots, Result, NPending);
-build_eval_tree_snap(Free, Pid, [], _, Pending) ->
-	[edd_graph!{add_edge, 0, Node} || {Node, _} <- Pending],
-	Free.
+build_eval_tree_snap(Free, Dict, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapshots], Result, Pending, PrevSent, PrevSpawned, PrevEvalRec) ->
+    % {NFree, NPending, NDict} = 
+    io:format("Top: ~p. - ~p\n", [Free, Top]),
+    io:format("PrevEvalRec: ~p\n", [PrevEvalRec]),
+    Res = 
+        case Top of 
+            none -> 
+                {build_stack_nodes(Free, Dict, Pid, Rest, none, Pending, none, [], []), 
+                 [], [], none};
+            #callrec_stack_item{origin_callrec = CallRec, sent = Sent, spawned = Spawned, trace = TraceId} ->
+                NPrevSent_ = PrevSent ++ Sent,
+                NPrevSpawned_ = PrevSpawned ++ Spawned,
+                NTop0 = Top#callrec_stack_item{sent = NPrevSent_, spawned = NPrevSpawned_},
+                NTop = 
+                    case PrevEvalRec of 
+                        none -> 
+                            NTop0;
+                        _ ->
+                           NTop0#callrec_stack_item{reached_rec_val = PrevEvalRec}
+                    end,
+                edd_graph!{add_vertex, Free, {Pid, NTop}},
+                [edd_graph!{add_edge, Free, Node} || {Node, _} <- Pending],
+                NDict0 = 
+                    lists:foldl(
+                        fun(M, CurrDict) -> dict:append(M, Free, CurrDict) end,
+                        Dict, Sent ++ Spawned),
+                NDict1 = 
+                    case TraceId of 
+                        none ->
+                            NDict0;
+                        _ ->
+                            dict:append(TraceId, Free, NDict0)
+                    end,
+                NPrevEvalRec_ = 
+                    case CallRec of 
+                        #receive_info{} ->
+                            TraceId;
+                        _ ->
+                            PrevEvalRec
+                    end,
+                {{Free + 1, [{Free, length(Rest)}], NDict1}, NPrevSent_, NPrevSpawned_, NPrevEvalRec_}
+        end,
+    % io:format("~p\n", [Res]),
+    {{NFree, NPending, NDict}, NPrevSent, NPrevSpawned, NPrevEvalRec} = Res,
+    build_eval_tree_snap(NFree, NDict, Pid, Snapshots, Result, NPending, NPrevSent, NPrevSpawned, NPrevEvalRec);
+build_eval_tree_snap(Free, Dict, Pid, [], _, Pending, _ , _, _) ->
+    [edd_graph!{add_edge, 0, Node} || {Node, _} <- Pending],
+    {Free, Dict}.
 
 
-build_stack_nodes(Free, Pid, Stack = [H | T], Previous, Pending) ->
-	edd_graph!{add_vertex, Free, {Pid, H}},
-	case Previous of 
-		none -> 
-			ok;
-		_ -> 
-			edd_graph!{add_edge, Free, Previous}
-	end,
-	% io:format("Pending: ~p -> ~p\n", [Pending, length(Stack)]),
-	PendingSameSize = 
-		[NodeInfo || NodeInfo = {_, SizeStack} <- Pending, length(Stack) == SizeStack],
-	NPending = Pending -- PendingSameSize,
-	[edd_graph!{add_edge, Free, Node} || {Node, _} <- PendingSameSize],
-	build_stack_nodes(Free + 1, Pid, T, Free, NPending);
-build_stack_nodes(Free, _, [], Previous, Pending) ->
-	edd_graph!{add_edge, 0, Previous},
-	{Free, Pending}.
+build_stack_nodes(
+        Free, Dict, Pid,  
+        Stack = 
+            [H = 
+                #callrec_stack_item{
+                    origin_callrec = 
+                        #receive_info{
+                            pos_pp = {{pos_info,{M, F, L, ReceiveStr0}}}
+                        }
+                }
+            | T], 
+        Previous, Pending, none, PrevSent, PrevSpawnwed) ->
+    % io:format("H: ~p. - ~p\n", [none, H]),
+    ReceiveStr = 
+        lists:flatten(io_lib:format("~s\n ~s:~p", [ReceiveStr0, F, L])),
+    build_stack_nodes(Free, Dict, Pid, T, none, Pending, ReceiveStr, PrevSent, PrevSpawnwed);
+build_stack_nodes(
+        Free, Dict, Pid,  
+        Stack = 
+            [H = #callrec_stack_item{sent = Sent, spawned = Spawned, trace = TraceId} | T], 
+        Previous, Pending, ReachedRec, PrevSent, PrevSpawnwed) ->
+    io:format("H: ~p. - ~p\n", [Free, H]),
+    NSent = PrevSent ++ Sent, 
+    NSpawned = PrevSpawnwed ++ Spawned,
+    edd_graph!
+        {
+            add_vertex, 
+            Free, 
+            {
+                Pid, 
+                H#callrec_stack_item{
+                    reached_rec_val = ReachedRec,
+                    sent = NSent,
+                    spawned = NSpawned
+                }
+            }
+        },
+    case Previous of 
+        none -> 
+            ok;
+        _ -> 
+            edd_graph!{add_edge, Free, Previous}
+    end,
+    NDict0 = 
+        lists:foldl(
+            fun(M, CurrDict) -> dict:append(M, Free, CurrDict) end,
+            Dict, Sent ++ Spawned),
+    NDict = 
+        dict:append(TraceId, Free, NDict0),
+    % io:format("Pending: ~p -> ~p\n", [Pending, length(Stack)]),
+    PendingSameSize = 
+        [NodeInfo || NodeInfo = {_, SizeStack} <- Pending, length(Stack) == SizeStack],
+    NPending = Pending -- PendingSameSize,
+    [edd_graph!{add_edge, Free, Node} || {Node, _} <- PendingSameSize],
+    build_stack_nodes(Free + 1, NDict, Pid, T, Free, NPending, ReachedRec, NSent, NSpawned);
+build_stack_nodes(Free, Dict, _, [], Previous, Pending, _, _, _) ->
+    edd_graph!{add_edge, 0, Previous},
+    {Free, Pending, Dict}.
 
 
-dot_vertex_eval_tree({V,L}) ->
-	integer_to_list(V) ++ " " ++ "[shape=ellipse, label=\""
-	++ change_new_lines(lists:flatten(io_lib:format("~p. -\n ~p", [V, L]) ))
-	++ "\"];\n".  
+dot_vertex_eval_tree({V,NodeInfo}, DictQuestion) ->
+    {ok, [#question{text = Question, answers = Answers}]} = 
+        dict:find(V, DictQuestion),
+    {_, StrAnswers} = 
+        lists:foldl(fun list_answers/2, {1,""}, Answers),
+    StrQuestion = 
+        case Question of 
+            none ->
+                lists:flatten(io_lib:format("~p", [NodeInfo])) ;
+            _ ->
+                Question ++ "\n" ++ StrAnswers
+        end,
+    integer_to_list(V) ++ " " ++ "[shape=ellipse, label=\""
+    ++ change_new_lines(lists:flatten(io_lib:format("~p. -\n ~s", [V, StrQuestion]) ))
+    % ++ change_new_lines(lists:flatten(io_lib:format("~p. -\n ~p", [V, NodeInfo]) ))
+    ++ "\"];\n".  
 
 change_new_lines([10|Chars]) ->
-	[$\\,$l|change_new_lines(Chars)];
+    [$\\,$l|change_new_lines(Chars)];
 change_new_lines([$"|Chars]) ->
-	[$\\,$"|change_new_lines(Chars)];
+    [$\\,$"|change_new_lines(Chars)];
 change_new_lines([Other|Chars]) ->
-	[Other|change_new_lines(Chars)];
+    [Other|change_new_lines(Chars)];
 change_new_lines([]) ->
-	[].
+    [].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TODOS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% - Vore qui sería el culpable en cas de ser un nodo incorecte

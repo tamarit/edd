@@ -160,7 +160,6 @@ get_file_path(ModName, Dir) ->
     end.
 
 instrument_and_reload(ModName, Dir) ->
-    % io:format("~p\n", [ModName]),
     {ok,ModName,Binary} = 
         compile:file(get_file_path(ModName, Dir), [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}]),
     reload_module(ModName, Binary).
