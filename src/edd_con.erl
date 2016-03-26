@@ -53,13 +53,13 @@ ddc(Expr,Timeout) ->
 ddc_server(Expr, Dir, Timeout) ->
     code:add_patha(Dir), 
     % io:format("PATHS: ~p\n",[code:get_path()]),
-    {_, PidComm} = 
+    {_, {Pid, Comm, G}} = 
         ddc_internal_core(
             Expr, 
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
             Dir),
-    PidComm.
+    {Pid, Comm, tupled_graph(G)}.
 
 
 
@@ -134,8 +134,8 @@ ddc_internal_core(Expr, Timeout, FunCore, Dir) ->
         _:_ -> ok 
     end,
     register(edd_graph, PidG),
-    PidInfoAndComms = build_graph(Trace, DictFun, PidCall),
-    {{Trace, DictFun, PidCall}, PidInfoAndComms}.
+    PidInfo_Comms_GQA = build_graph(Trace, DictFun, PidCall),
+    {{Trace, DictFun, PidCall}, PidInfo_Comms_GQA}.
 
 digraph_server() ->
 	digraph_server(digraph:new([acyclic])).
@@ -941,7 +941,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
     % edd_graph!del_disconected_vertices,
-    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication}.
+    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication, {G, DictQuestions}}.
 
 
 build_graph_trace(
@@ -1977,10 +1977,42 @@ change_new_lines([Other|Chars]) ->
     [Other|change_new_lines(Chars)];
 change_new_lines([]) ->
     [].
+     
+tupled_graph({G, DictQA})->
+    Vertices = [digraph:vertex(G,V) || V <- digraph:vertices(G)],
+    Edges = [{V1,V2} || V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+    Tupled_Erlang = 
+        {
+            {vertices, 
+                lists:map(
+                    fun(V) -> 
+                        tupled_vertex(G, V, DictQA) 
+                    end,
+                    Vertices)},
+            {edges,
+                lists:map(fun tupled_edge/1,Edges)}
+        },
+    % io:format("Tupled_Erlang: ~p\n", [Tupled_Erlang]),
+    Tupled_Erlang.
+    
+
+
+tupled_vertex(G, {V,Info}, DictQA) ->
+    {ok, [Question = #question{}]} = 
+        dict:find(V, DictQA),
+    {
+        {id, V},
+        {question, Question},
+        {info, Info}
+    }.     
+        
+tupled_edge({V1,V2}) -> 
+    {V1, V2}.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % TODOS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% - Vore qui sería el culpable en cas de ser un nodo incorecte
+% - Veure qui sería el culpable quan es detecti el un node incorrecte

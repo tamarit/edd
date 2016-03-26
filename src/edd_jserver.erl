@@ -121,10 +121,11 @@ edd_loop() ->
 		{buggy_con_call, Call, Dir, Timeout, State} ->
 			try 
 				io:format("Received a concurrent debugging request\n"),
-				{PidsInfo, Communications} = 
+				{PidsInfo, Communications, G} = 
 					edd_con:ddc_server(Call, Dir, Timeout),
 				?JAVA_NODE_NAME ! {pids_info, PidsInfo},
-				?JAVA_NODE_NAME ! {communcations, lists:reverse(Communications)}
+				?JAVA_NODE_NAME ! {communcations, lists:reverse(Communications)},
+				?JAVA_NODE_NAME ! {tree, G}
 			catch 
 				_:_ = Error -> 
 					io:format("An error ocurred: ~p\n", [Error]),
