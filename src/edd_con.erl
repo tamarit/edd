@@ -936,7 +936,10 @@ build_graph(Trace, DictFuns, PidInit) ->
 	receive 
 		G -> ok
 	end,
-    DictQuestions = build_questions(G, DictNodes),
+    {DictQuestions, DictTrace} = build_questions(G, DictNodes),
+    io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
+
+
     % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
@@ -1634,13 +1637,17 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
         {ok, NodeDests} ->
             NodeDest = lists:last(NodeDests),
             {NodeDest, NodeInfo} = digraph:vertex(G, NodeDest),
-            #question{
+            {#question{
                 str_callrec = StrPrevReceive,
                 answers = AnsPrevReceive
-            } = 
-                build_question(NodeInfo, DictNodes, G, NodeDest),
+            }, _} = 
+                build_question(NodeInfo, DictNodes, G, NodeDest, dict:new()),
             PreRecInfoStr = 
-                StrPrevReceive ++ "\n" ++ lists:flatten(lists:map(fun list_ans/1,lists:droplast(AnsPrevReceive))),
+                StrPrevReceive ++ "\n" 
+                ++ lists:flatten(
+                        lists:map(
+                            fun list_ans/1,
+                            lists:droplast(AnsPrevReceive))),
             [build_answer(
                 "previous evaluated receive:\n" 
                 ++ tab_lines(PreRecInfoStr), 
@@ -1692,17 +1699,17 @@ reached_value_answer(Val, _) ->
     [build_answer("evaluated to value: " ++ any2str(Val), incorrect)].
 
 build_questions(G, DictNodes) ->
-    DictQuestions = 
+    DictsQuestionsTrace = 
         lists:foldl(
-            fun(V, CurrDictQuestions) ->
+            fun(V, {CurrDictQuestions, CurrDictTrace}) ->
                 NodeInfo = element(2,digraph:vertex(G, V)), 
-                Question = build_question(NodeInfo, DictNodes, G, V),
-                dict:append(V, Question, CurrDictQuestions) 
+                {Question, NDictTrace} = build_question(NodeInfo, DictNodes, G, V, CurrDictTrace),
+                {dict:append(V, Question, CurrDictQuestions), NDictTrace}
             end, 
-            dict:new(), 
+            {dict:new(), dict:new()}, 
             digraph:vertices(G)),
     % io:format("Questions: ~p\n~p\n", [dict:size(DictQuestions), lists:sort(dict:to_list(DictQuestions)) ]),
-    DictQuestions. 
+    DictsQuestionsTrace. 
 
 
 % * Pregunta:
@@ -1724,7 +1731,7 @@ build_question(
             result = Result,
             trace = TraceId}
         },
-        DictNodes, G, Node) -> 
+        DictNodes, G, Node, DictTraces) -> 
     % StrList0 = 
     %     lists:foldl(fun(A_, Acc) -> Acc ++ any2str(A_) ++ ", " end, "", A), 
     % StrList = 
@@ -1757,11 +1764,15 @@ build_question(
          build_answer("nothing", correct)
         ],
     % Question ++ "\n" ++ any2str(Answers);
-    #question{
+    % NDictTraces0 = 
+    %     [Spawned]
+    NDictTraces  = 
+        add_to_trace_dict(DictTraces, Spawned ++ Sent ++ Consumed, Node),
+    {#question{
         text = Question,
         answers = Answers,
         str_callrec = CallStr
-    };
+    }, NDictTraces};
 % Al receive ___ le han llegado estos mensajes, con lo que ha procesado el mensaje ___ usando
 % la rama i y ha alcanzado la expresión ___ enviando por el camino estos mensajes y creado
 % estos procesos, dado el contexto ___. ¿Qué está mal?
@@ -1790,7 +1801,7 @@ build_question(
             result = Result,
             trace = TraceId}
         },
-        DictNodes, G, Node) ->    
+        DictNodes, G, Node, DictTraces) ->    
     ReceiveStr = 
         lists:flatten(io_lib:format("~s\nin ~s:~p", [ReceiveStr0, F, L])),
     Question = 
@@ -1812,13 +1823,15 @@ build_question(
          build_answer(question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
          build_answer("nothing", correct)
         ],
-    #question{
+    NDictTraces  = 
+        add_to_trace_dict(DictTraces, Spawned ++ Sent ++ Consumed, Node),
+    {#question{
         text = Question,
         answers = Answers,
         str_callrec = ReceiveStr
-    };
-build_question(NodeInfo, _, _, _) -> 
-    #question{}.
+    }, NDictTraces};
+build_question(NodeInfo, _, _, _, DictTraces) -> 
+    {#question{}, DictTraces}.
 
 list_answers( 
         #answer{
@@ -1828,6 +1841,22 @@ list_answers(
     StrAnswer = 
         io_lib:format("~p. - ~s (Behaviour: ~p)\n", [Opt, Text, Beh]),
     {Opt + 1, lists:flatten(Acc ++ StrAnswer)}.
+
+add_to_trace_dict(DictTraces, SpawnedMsgs, V) ->
+    lists:foldl(
+        fun(E, CurrDict) -> 
+            TraceId = 
+                case E of 
+                    #spawn_info{trace = Trace0} ->
+                        Trace0;
+                    #message_info{trace = Trace0} ->
+                        Trace0
+                end,
+            dict:append(TraceId, V,CurrDict)
+        end,
+        DictTraces,
+        SpawnedMsgs
+    ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1844,8 +1873,8 @@ build_eval_tree(#pid_info{
 
 build_eval_tree_snap(Free, Dict, Pid, [#snapshot_info{top = Top, rest = Rest} | Snapshots], Result, Pending, PrevSent, PrevSpawned, PrevEvalRec) ->
     % {NFree, NPending, NDict} = 
-    io:format("Top: ~p. - ~p\n", [Free, Top]),
-    io:format("PrevEvalRec: ~p\n", [PrevEvalRec]),
+    % io:format("Top: ~p. - ~p\n", [Free, Top]),
+    % io:format("PrevEvalRec: ~p\n", [PrevEvalRec]),
     Res = 
         case Top of 
             none -> 
@@ -1913,7 +1942,7 @@ build_stack_nodes(
         Stack = 
             [H = #callrec_stack_item{sent = Sent, spawned = Spawned, trace = TraceId} | T], 
         Previous, Pending, ReachedRec, PrevSent, PrevSpawnwed) ->
-    io:format("H: ~p. - ~p\n", [Free, H]),
+    % io:format("H: ~p. - ~p\n", [Free, H]),
     NSent = PrevSent ++ Sent, 
     NSpawned = PrevSpawnwed ++ Spawned,
     edd_graph!
@@ -2008,11 +2037,3 @@ tupled_vertex(G, {V,Info}, DictQA) ->
         
 tupled_edge({V1,V2}) -> 
     {V1, V2}.
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TODOS
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% - Veure qui sería el culpable quan es detecti el un node incorrecte
