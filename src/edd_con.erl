@@ -53,13 +53,13 @@ ddc(Expr,Timeout) ->
 ddc_server(Expr, Dir, Timeout) ->
     code:add_patha(Dir), 
     % io:format("PATHS: ~p\n",[code:get_path()]),
-    {_, {Pid, Comm, G}} = 
+    {_, {Pid, Comm, G, DictTrace}} = 
         ddc_internal_core(
             Expr, 
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
             Dir),
-    {Pid, Comm, tupled_graph(G)}.
+    {Pid, Comm, tupled_graph(G), dict:to_list(DictTrace)}.
 
 
 
@@ -134,8 +134,8 @@ ddc_internal_core(Expr, Timeout, FunCore, Dir) ->
         _:_ -> ok 
     end,
     register(edd_graph, PidG),
-    PidInfo_Comms_GQA = build_graph(Trace, DictFun, PidCall),
-    {{Trace, DictFun, PidCall}, PidInfo_Comms_GQA}.
+    PidInfo_Comms_GQA_DictTrace = build_graph(Trace, DictFun, PidCall),
+    {{Trace, DictFun, PidCall}, PidInfo_Comms_GQA_DictTrace}.
 
 digraph_server() ->
 	digraph_server(digraph:new([acyclic])).
@@ -944,7 +944,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
     % edd_graph!del_disconected_vertices,
-    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication, {G, DictQuestions}}.
+    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
 
 
 build_graph_trace(
