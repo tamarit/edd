@@ -24,7 +24,9 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd_con).
--export([ddc/2, ddc/4, ddc_server/3]).
+-export([ddc/2, ddc/4, ddc_server/3, summarizes_pidinfo/1, pp_item/1]).
+
+-include_lib("edd_con.hrl").
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,32 +66,40 @@ ddc_server(Expr, Dir, Timeout) ->
 
 
 ddc(Expr,Timeout,Strategy,Priority) ->
-    Graph = true,
-    {{Trace, DictFun, PidCall},_} = 
+    {_,Res} = 
         ddc_internal_core(
             Expr, 
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
             none),
+    edd_con_lib_new:ask_new(Res,Strategy,Priority),
+
+    % Graph = true,
+    % {{Trace, DictFun, PidCall},_} = 
+    %     ddc_internal_core(
+    %         Expr, 
+    %         Timeout, 
+    %         fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
+    %         none),
 
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 	%%%% REMOVE COMMENTS TO ENABLE DEBUGGING
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	edd_graph!new,
-	build_graph_old(Trace, DictFun, PidCall), 
-	edd_graph!{get,self()},
-	receive 
-		G -> ok
-	end,
-	%io:format("G: ~p\n",[G]),
-	case Graph of
-	     true ->
-	       edd_con_lib_new:dot_graph_file(G,"dbg");
-	     false -> 
-	       ok
-	end,
- 	edd_con_lib_new:ask(G,Strategy,Priority),
+	% edd_graph!new,
+	% build_graph_old(Trace, DictFun, PidCall), 
+	% edd_graph!{get,self()},
+	% receive 
+	% 	G -> ok
+	% end,
+	% %io:format("G: ~p\n",[G]),
+	% case Graph of
+	%      true ->
+	%        edd_con_lib_new:dot_graph_file(G,"dbg");
+	%      false -> 
+	%        ok
+	% end,
+ % 	edd_con_lib_new:ask(G,Strategy,Priority),
 
  	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 	%%%% REMOVE COMMENTS TO ENABLE DEBUGGING
@@ -230,8 +240,8 @@ build_graph_old(Trace, _, PidInit) ->
     Summary = 
         [
             begin
-                CallStr = build_call_string(FirstCall),
-                    % build_call_string(CallInfo),
+                CallStr = edd_con_lib_new:build_call_string(FirstCall),
+                    % edd_con_lib_new:build_call_string(CallInfo),
                 Spawned = 
                     lists:map(fun get_pid_from_spwan_info/1, Spawns),
                 Sent = 
@@ -240,12 +250,12 @@ build_graph_old(Trace, _, PidInit) ->
             end 
          || {PidSummary, Sends, Spawns, FirstCall, _} <- GraphInfo ],
     {InitialCallStr, InitialCallResult} = 
-        hd([{build_call_string(FirstCall), FinalValue} 
+        hd([{edd_con_lib_new:build_call_string(FirstCall), FinalValue} 
              || {PidSummary, _, _, FirstCall, FinalValue} <- GraphInfo,
                  PidSummary == PidInit]),
     %     hd([
     %         {
-    %             build_call_string(CallInfo),
+    %             edd_con_lib_new:build_call_string(CallInfo),
     %             get_result(
     %                 lists:last(Nodes), 
     %                 lists:last(lists:sort(dict:fetch(PidInit, DictTraces))), 
@@ -317,7 +327,7 @@ build_pid_node_call_to_receive(Blocked, {InfoCall, Sends, Spawns, FinishedCalls}
                 {
                    {
                         to_value, 
-                        {call, {build_call_string(InfoCall), stuck_receive},
+                        {call, {edd_con_lib_new:build_call_string(InfoCall), stuck_receive},
                          none, none, Transition},
                         0, Sent, Spawned
                     },
@@ -327,7 +337,7 @@ build_pid_node_call_to_receive(Blocked, {InfoCall, Sends, Spawns, FinishedCalls}
                 {
                     {
                         to_receive, StrReceive, 
-                        {'call', build_call_string(InfoCall), none, none}, 
+                        {'call', edd_con_lib_new:build_call_string(InfoCall), none, none}, 
                          File, Line, Sent, Spawned, Transition
                      }, 
                      lists:flatten(io_lib:format("~p",[Pid]))
@@ -359,31 +369,6 @@ get_pid_msg_from_send_info({Pid, Msg, _}) ->
     {Pid, lists:flatten(io_lib:format("~p", [Msg]))};
 get_pid_msg_from_send_info({Pid, Msg}) ->
     {Pid, lists:flatten(io_lib:format("~p", [Msg]))}.
-
-build_call_string({ModFun,IdFun,ArgsFun}) ->
-    case IdFun of 
-        {pos_info,{_,File,Line,StrFun}} ->
-            StrFun ++ 
-            lists:flatten(
-                io_lib:format(
-                    "(~s)\nfun location: (~s, line ~p)",
-                    [build_args_list_string(ArgsFun),File, Line]));
-        _ ->
-            lists:flatten(
-                io_lib:format(
-                    "~p:~p(~s)", 
-                    [ModFun,IdFun,build_args_list_string(ArgsFun)]))
-    end;
-% TODO: This clause is temporal. Should be removed
-build_call_string(_) ->
-    "".
-
-build_args_list_string([]) ->
-    "";
-build_args_list_string([E]) ->
-    lists:flatten(io_lib:format("~p", [E]));
-build_args_list_string([E | Rest]) ->
-    lists:flatten(io_lib:format("~p, ~s", [E, build_args_list_string(Rest)])).
 
 % get_result({blocked, _, _}, _, _) ->
 %     stuck_receive;
@@ -537,7 +522,7 @@ build_graph_pid([{_, {edd_trace,Tag,_,Info}} | Rest],
                                 Free, 
                                 {
                                     {to_value,
-                                        {call, {build_call_string(InfoCall), lists:flatten(io_lib:format("~p", [Result]))},
+                                        {call, {edd_con_lib_new:build_call_string(InfoCall), lists:flatten(io_lib:format("~p", [Result]))},
                                          none, none, get_transition(CurrentReceive)}, 0,
                                         lists:map(fun get_pid_msg_from_send_info/1, SentCall), 
                                         lists:map(fun get_pid_from_spwan_info/1, SpawnedCall)},
@@ -840,34 +825,6 @@ get_new_dict(Pid,Dict,Trace) ->
         trace = none
 	}).
 
--record(call_info,
-	{
-		call = none,
-		pos_pp = none
-	}).
-
--record(receive_info,
-	{
-		pos_pp = none,
-		context = [],
-		bindings = [],
-		clause = none
-	}).
-
--record(callrec_stack_item,
-	{
-		origin_callrec = none,
-		reached_rec_val = none,
-		context = [],
-		spawned = [],
-    	sent =[],
-    	received = [],
-    	consumed = [],
-    	% children_nodes = [],
-    	result = none,
-        trace = none
-	}).	
-
 -record(snapshot_info,
 	{
 		top = none,
@@ -921,30 +878,25 @@ build_graph(Trace, DictFuns, PidInit) ->
 		FinalState#evaltree_state.communication),
 
 	PidsSummary = 
-		[ {Pid, Call, Sent, Spawned, Result}
-		|| #pid_info{
-				pid = Pid,
-				first_call = Call,
-				sent = Sent,
-				spawned = Spawned,
-				result = Result
-		   } <- lists:reverse(FinalState#evaltree_state.pids_info)],
+        summarizes_pidinfo(
+            lists:reverse(FinalState#evaltree_state.pids_info)),
+
     edd_graph!{add_vertex, 0, {PidsSummary, lists:reverse(FinalState#evaltree_state.communication)}},
     {_,DictNodes} = lists:foldl(fun build_eval_tree/2, {1, dict:new()} , lists:reverse(FinalState#evaltree_state.pids_info)),
-    io:format("~p\n", [dict:to_list(DictNodes)]), 
+    % io:format("~p\n", [dict:to_list(DictNodes)]), 
     edd_graph!{get,self()},
 	receive 
 		G -> ok
 	end,
     {DictQuestions, DictTrace} = build_questions(G, DictNodes),
-    io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
+    % io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
 
 
     % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
     % edd_graph!del_disconected_vertices,
-    {FinalState#evaltree_state.pids_info, FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
+    {lists:reverse(FinalState#evaltree_state.pids_info), FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
 
 
 build_graph_trace(
@@ -1092,6 +1044,16 @@ build_graph_trace(
 	}.
 % build_graph_trace(_, State) ->	
 % 	State.
+
+summarizes_pidinfo(PidsInfo) -> 
+    [ {Pid, Call, Sent, Spawned, Result}
+        || #pid_info{
+                pid = Pid,
+                first_call = Call,
+                sent = Sent,
+                spawned = Spawned,
+                result = Result
+           } <- PidsInfo].
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1371,10 +1333,10 @@ build_pids_tree(#pid_info{pid = Pid, spawned = Spawned, first_call = #call_info{
 	StrFun = 
 		case FunCall of 
 			{M,F,As} ->
-				build_call_string(FunCall);
+				edd_con_lib_new:build_call_string(FunCall);
 			{AnoFun} -> 
 				PosInfo = {pos_info,{Mod,_,_,_}} = hd(dict:fetch(AnoFun, DictFuns)),
-				build_call_string({Mod, PosInfo, []})
+				edd_con_lib_new:build_call_string({Mod, PosInfo, []})
 		end,
 	Label = 
 		lists:flatten(io_lib:format("~p\n~s", [Pid, StrFun])),
@@ -1434,7 +1396,7 @@ build_pid_line(Pid, Call, NumPoints) ->
 	lines(
 		["{" 
 		,"  rank=\"same\";" 
-		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ build_call_string(Call) ) ++ "] "
+		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ edd_con_lib_new:build_call_string(Call) ) ++ "] "
 		,"  "++ quote_enclosing(Pid) ++ Steps ++ ";"
 		,"} "]).
 
@@ -1583,21 +1545,7 @@ communication_sequence_diagram(_, _) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--record(question,
-    {
-        text = none,
-        answers = [],
-        str_callrec = none
-    }).
 
--record(answer,
-    {
-        text = none,
-        when_chosen = none
-    }).
-
-any2str(Any) ->
-    format("~p", [Any]).
 
 build_answer(Str, Beh) ->
     #answer{
@@ -1605,31 +1553,17 @@ build_answer(Str, Beh) ->
         when_chosen = Beh
     }.
 
-question_list(Text, []) ->
-    "no " ++ Text;
-question_list(Text, List) ->
-    PPList = 
-        lists:foldl(fun(E, Acc) -> Acc ++ [$\t|pp_item(E)] ++ "\n" end, "", List), 
-    Text ++ ":\n" ++ lists:droplast(PPList).
-
-tab_lines(String) ->
-    Lines = string:tokens(String, "\n"),
-    NLines = [[$\t|L] || L <- Lines],
-    string:join(NLines, "\n").
-
 list_ans(#answer{text = Text}) ->
     Text ++ "\n".
 
 pp_item(#message_info{from = From, to = To, msg = Msg}) ->
-    format("~p (from ~p to ~p)", [Msg, From, To]);
+    edd_con_lib_new:format("~p (from ~p to ~p)", [Msg, From, To]);
 pp_item(#spawn_info{spawner = Spawner, spawned = Spawned}) ->
-    format("~p", [Spawned]);
+    edd_con_lib_new:format("~p", [Spawned]);
 pp_item({Var, Value}) ->
-    format("~p = ~p", [Var, Value]).
-
-format(Format, Data) ->
-    lists:flatten(io_lib:format(Format, Data)).
-
+    edd_con_lib_new:format("~p = ~p", [Var, Value]);
+pp_item(Other) ->
+    edd_con_lib_new:format("~p", [Other]).
 
 prev_recieve_answer(PrevRec, DictNodes, G) ->
     % io:format("\nPREV: ~p\n", [PrevRec]),
@@ -1650,7 +1584,7 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
                             lists:droplast(AnsPrevReceive))),
             [build_answer(
                 "previous evaluated receive:\n" 
-                ++ tab_lines(PreRecInfoStr), 
+                ++ edd_con_lib_new:tab_lines(PreRecInfoStr), 
                 {correct, {goto, NodeDest}})];       
         _ ->
             []   
@@ -1696,7 +1630,7 @@ reached_value_answer(none, PrevRec) ->
 reached_value_answer(stuck_receive, _) ->
     [build_answer("blocked because it is waiting for a message", incorrect)];
 reached_value_answer(Val, _) ->
-    [build_answer("evaluated to value: " ++ any2str(Val), incorrect)].
+    [build_answer("evaluated to value: " ++ edd_con_lib_new:any2str(Val), incorrect)].
 
 build_questions(G, DictNodes) ->
     DictsQuestionsTrace = 
@@ -1733,7 +1667,7 @@ build_question(
         },
         DictNodes, G, Node, DictTraces) -> 
     % StrList0 = 
-    %     lists:foldl(fun(A_, Acc) -> Acc ++ any2str(A_) ++ ", " end, "", A), 
+    %     lists:foldl(fun(A_, Acc) -> Acc ++ edd_con_lib_new:any2str(A_) ++ ", " end, "", A), 
     % StrList = 
     %     case StrList0 of 
     %         "" ->
@@ -1743,14 +1677,12 @@ build_question(
     %     end,
     % io:format("~s\n", [StrList]),         
     CallStr = 
-        lists:flatten(
-            io_lib:format(
+        edd_con_lib_new:format(
                 "~p:~p(~s)", 
-                [M,F,string:join(lists:map(fun any2str/1, A), ", ") ]
-            )
-        ),
+                [M,F,string:join(lists:map(fun edd_con_lib_new:any2str/1, A), ", ") ]
+            ),
     Question = 
-        "Process " ++ any2str(Pid) ++ " called " 
+        "Process " ++ edd_con_lib_new:any2str(Pid) ++ " called " 
         ++ CallStr ++ ".\nWhat is wrong?",
     % io:format(Question),
     PrevReceive = 
@@ -1759,11 +1691,11 @@ build_question(
         reached_value_answer(Result, PrevRec) ++ 
         PrevReceive ++ 
         [
-         build_answer(question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib_new:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib_new:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
          build_answer("nothing", correct)
         ],
-    % Question ++ "\n" ++ any2str(Answers);
+    % Question ++ "\n" ++ edd_con_lib_new:any2str(Answers);
     % NDictTraces0 = 
     %     [Spawned]
     NDictTraces  = 
@@ -1803,24 +1735,24 @@ build_question(
         },
         DictNodes, G, Node, DictTraces) ->    
     ReceiveStr = 
-        lists:flatten(io_lib:format("~s\nin ~s:~p", [ReceiveStr0, F, L])),
+        edd_con_lib_new:format("~s\nin ~s:~p", [ReceiveStr0, F, L]),
     Question = 
-        "Process " ++ any2str(Pid) ++ " evaluated\n" 
+        "Process " ++ edd_con_lib_new:any2str(Pid) ++ " evaluated\n" 
         ++ ReceiveStr ++ "\nWhat is wrong?",
     PrevReceive = 
         prev_recieve_answer(PrevRec, DictNodes, G),
     Answers = 
         PrevReceive ++
         [
-         build_answer(question_list("context",Context), correct),
-         % build_answer("ContextRec: " ++ any2str(ContextRec), correct),
-         build_answer(question_list("received messages",Received),behaviour_question(Received, DictNodes, Node, correct, correct)),
-         build_answer(question_list("consumed messages",Consumed), incorrect)
+         build_answer(edd_con_lib_new:question_list("context",Context), correct),
+         % build_answer("ContextRec: " ++ edd_con_lib_new:any2str(ContextRec), correct),
+         build_answer(edd_con_lib_new:question_list("received messages",Received),behaviour_question(Received, DictNodes, Node, correct, correct)),
+         build_answer(edd_con_lib_new:question_list("consumed messages",Consumed), incorrect)
         ]
         ++ reached_value_answer(Result, PrevRec) ++
         [
-         build_answer(question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib_new:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib_new:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
          build_answer("nothing", correct)
         ],
     NDictTraces  = 
