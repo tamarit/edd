@@ -275,7 +275,8 @@ find_unknown_children(_,_,[]) ->
 	 previous_state = none,
 	 pids = [],
 	 preselected = none,
-	 fun_print_root_info}).
+	 fun_print_root_info,
+	 summary_pids = []}).
 
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
@@ -308,7 +309,8 @@ ask_new({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priority) ->
 			not_correct = [0],
 			correct = IniCorrect,
 			pids = FirstPid,
-			fun_print_root_info = FunPrintRootInfo
+			fun_print_root_info = FunPrintRootInfo,
+			summary_pids = SummaryPidsInfo
 		},
 	ask_about(FirstState).
 
@@ -373,14 +375,18 @@ asking_loop(State0 = #edd_con_state{
 		correct = Correct,
 		not_correct = NotCorrect,
 		unknown = Unknown,
-		previous_state = PreviousState
+		previous_state = PreviousState,
+		summary_pids = SummaryPids
 	}) ->
 	State = State0#edd_con_state{preselected = none},
-	NState = 
-		case [V || 
-				V <- Vertices, 
+	GetNodesPids = 
+		fun(CVertices) ->
+			[V || 
+				V <- CVertices, 
 			   	lists:member(get_pid_vertex(V,G),Pids)] 
-		of 
+		end, 
+	NState = 
+		case GetNodesPids(Vertices) of 
 			[] ->
 				State#edd_con_state{
 	             	vertices = []
@@ -423,6 +429,20 @@ asking_loop(State0 = #edd_con_state{
 						_ ->
 							{Preselected,Vertices -- [Preselected]}
 					end,
+				FunGetNewPids = 
+		       		fun(CVertices) -> 
+		    			case GetNodesPids(CVertices) of 
+		    				[] -> 
+		    					case NotCorrect of 
+		    						[0] -> 
+		    							[Pid || {Pid, _, _, _, _} <- SummaryPids];
+		    						_ ->
+		    							Pids
+		    					end;
+		    				_ -> 
+		    					Pids
+		    			end
+	    			end,
 				IsCorrect = 
 					begin
 						EqualToSeleceted = 
@@ -430,18 +450,26 @@ asking_loop(State0 = #edd_con_state{
 							                           {Selected,L2} = digraph:vertex(G,Selected),
 							                           (L1 =:= L2) 
 							                     end],
-							State#edd_con_state{
-								vertices = NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
-								correct = EqualToSeleceted ++ Correct,
-								previous_state = State
+						NVerticesCorr = 
+							NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
+						State#edd_con_state{
+							vertices = NVerticesCorr,
+							correct = EqualToSeleceted ++ Correct,
+							previous_state = State,
+							pids = FunGetNewPids(NVerticesCorr)
 						}
 			        end, 
 			    IsNotCorrect = 
-			    	State#edd_con_state{
-			             	vertices = digraph_utils:reachable([Selected],G) -- ([Selected|NotCorrect]++Correct++Unknown),
-			             	not_correct = [Selected|NotCorrect],
-			             	previous_state = State
-			            },
+			    	begin 
+			    		NVerticesNotCorr = 
+			    			digraph_utils:reachable([Selected],G) -- ([Selected|NotCorrect]++Correct++Unknown),
+				    	State#edd_con_state{
+				             	vertices = NVerticesNotCorr,
+				             	not_correct = [Selected|NotCorrect],
+				             	previous_state = State,
+				             	pids = FunGetNewPids(NVerticesNotCorr)
+				            }
+			        end,
 			   	Answer = ask_question(hd(dict:fetch(Selected, DictQuestions))),
 			   	case Answer of
 			        correct -> 
