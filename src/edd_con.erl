@@ -1688,8 +1688,8 @@ build_question(
     PrevReceive = 
         prev_recieve_answer(PrevRec, DictNodes, G),
     Answers = 
-        reached_value_answer(Result, PrevRec) ++ 
         PrevReceive ++ 
+        reached_value_answer(Result, PrevRec) ++ 
         [
          build_answer(edd_con_lib_new:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
          build_answer(edd_con_lib_new:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
