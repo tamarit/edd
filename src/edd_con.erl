@@ -889,9 +889,9 @@ build_graph(Trace, DictFuns, PidInit) ->
 		G -> ok
 	end,
     {DictQuestions, DictTrace} = build_questions(G, DictNodes),
-    % io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
+    io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
 
-
+    io:format("~p\n", [FinalState#evaltree_state.communication]),
     % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
@@ -1378,9 +1378,10 @@ dot_edge({V1,V2}) ->
 
 
 lines(Lines) ->
-	lists:foldl(
-		fun(Line,Acc) -> Acc ++ Line ++ "\n" end 
-		, "", Lines).
+	% lists:foldl(
+	% 	fun(Line,Acc) -> Acc ++ Line ++ "\n" end 
+	% 	, "", Lines).
+    string:join(Lines, "\n").
 
 quote_enclosing(Str) ->
 	"\"" ++ Str ++ "\"".
@@ -1396,9 +1397,43 @@ build_pid_line(Pid, Call, NumPoints) ->
 	lines(
 		["{" 
 		,"  rank=\"same\";" 
-		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ edd_con_lib_new:build_call_string(Call) ) ++ "] "
+		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ edd_con_lib_new:build_call_string(Call) ) ++ "]; "
 		,"  "++ quote_enclosing(Pid) ++ Steps ++ ";"
 		,"} "]).
+
+dot_spaces() ->
+    "           ".
+
+build_code_line(NumPoints, JoinPid) ->
+    Steps = 
+        lists:foldl(
+            fun(Num, Acc) -> Acc ++ " -> " ++ quote_enclosing("code" ++ integer_to_list(Num)) end
+            , "", lists:seq(1, NumPoints)), 
+    Nodes = 
+        lists:foldl(
+            fun(Num, Acc) -> [quote_enclosing("code" ++ integer_to_list(Num)) ++ "[style=invis]; "| Acc] end
+            , [], lists:reverse(lists:seq(1, NumPoints))),
+    Link = 
+        lists:foldl(
+            fun(Num, Acc) -> 
+                ["  " 
+                ++ quote_enclosing("code" ++ integer_to_list(Num))
+                ++ " -> " 
+                ++ quote_enclosing(JoinPid ++ integer_to_list(Num))
+                ++ " [taillabel="
+                ++ quote_enclosing(dot_spaces() ++ integer_to_list(Num))
+                ++ ", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];"
+                | Acc] end
+            , [], lists:reverse(lists:seq(1, NumPoints))),
+    lines(
+        ["{" 
+        ,"  rank=\"same\";"
+        , "  " ++ quote_enclosing("code") ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(dot_spaces() ++ "Code") ++ ", fontcolor = grey, fontsize = 20]; "]
+        ++ Nodes 
+        ++ ["  "++ quote_enclosing("code") ++ Steps ++ "[style=invis];"
+        ,"} "]
+        ++ Link
+        ).
 
 
 divide_list(Pred, [H|T], Prev) ->
@@ -1423,7 +1458,7 @@ acc_search_in_list(Pred, []) ->
 	{[],false}.
 
 distribute_edge([Pid]) ->
-	quote_enclosing(Pid) ++ "[style=invis];\n";
+	quote_enclosing(Pid) ++ "-> code [style=invis];\n";
 distribute_edge([Pid| Tail]) ->
 	quote_enclosing(Pid) ++ " -> " ++ distribute_edge(Tail).
 
@@ -1511,7 +1546,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		,"  node[shape=\"point\"];"
 		,"  edge[arrowhead=\"none\"]"],
 	LengthReceives = 
-		length([0||{received,_} <- Communications]),
+		length([0 || {received,_} <- Communications]),
 	NumPoints = 
 		(length(Communications) - LengthReceives)
 		+ (2 * LengthReceives),
@@ -1521,6 +1556,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		lists:map(
 			fun({Pid, Call}) -> build_pid_line(Pid, Call, NumPoints) end 
 			, lists:zip(PidsStr, PidsCall) ),
+    CodeLines = [build_code_line(NumPoints, lists:last(PidsStr))],
 	Distribution = distribute_edge(PidsStr), 
 	{CommLines0,_} = 
 		lists:mapfoldl(
@@ -1531,7 +1567,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 
 	Closer = "}",
 	DotContent = 
-		lines(Header ++ PidLines ++ [Distribution] ++ CommLines ++ [Closer]),
+		lines(Header ++ PidLines ++ CodeLines ++ [Distribution] ++ CommLines ++ [Closer]),
 
 	Name = "comm_seq_diag",
 	file:write_file(Name ++ ".dot", list_to_binary(DotContent)),
