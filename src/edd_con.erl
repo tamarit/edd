@@ -889,9 +889,9 @@ build_graph(Trace, DictFuns, PidInit) ->
 		G -> ok
 	end,
     {DictQuestions, DictTrace} = build_questions(G, DictNodes),
-    io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
+    % io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
 
-    io:format("~p\n", [FinalState#evaltree_state.communication]),
+    % io:format("~p\n", [FinalState#evaltree_state.communication]),
     % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),

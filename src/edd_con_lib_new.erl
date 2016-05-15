@@ -533,10 +533,10 @@ asking_loop(State0 = #edd_con_state{
 					    };
 					{from_seq_diag, Code} ->
 						{E, Ns} = lists:nth(Code, DictsTrace),
-						io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
+						% io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
 						EventBoolList = 
 							lists:map(fun(C) -> is_the_event(C, E) end, Comm),
-						io:format("~p\n", [EventBoolList]),
+						% io:format("~p\n", [EventBoolList]),
 						{_,[Pos]} = 
 							lists:foldl(
 								fun
