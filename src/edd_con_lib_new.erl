@@ -63,45 +63,6 @@ dot_graph_file(G,Name)->
 	
 dot_graph(G)->
 	ok.
-% 	Vertices = [digraph:vertex(G,V)||V <- digraph:vertices(G)],
-% 	Edges = [{V1,V2}||V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
-% 	lists:flatten(lists:map(fun dot_vertex/1,Vertices))++
-% 	lists:flatten(lists:map(fun dot_edge/1,Edges)).
-	
-% dot_vertex({V,L}) ->
-% 	{Question,_} = build_question(L),
-% 	%io:format("\nVertex: ~p\nDict: ~p\n",[V,Dict]),
-% 	%io:format("Vertex: ~p\n",[Esto]),
-% 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
-% 	++ integer_to_list(V)++" .- " 
-% 	% ++ change_new_lines(lists:flatten(
-% 	% transform_label(lists:flatten(Question),[])))  ++ 
-% 	% "\"];\n". 
-% 	++ pids_wo_quotes(change_new_lines(lists:flatten(
-% 		transform_label(lists:flatten(pids_wo_quotes(Question)),[]))))  ++ 
-% 	"\"];\n".     
-	    
-% dot_edge({V1,V2}) -> 
-% 	integer_to_list(V1)++" -> "++integer_to_list(V2)
-% 	++" [color=black, penwidth=3];\n".	
-	
-% change_new_lines([10|Chars]) ->
-% 	[$\\,$l|change_new_lines(Chars)];
-% change_new_lines([$"|Chars]) ->
-% 	[$\\,$"|change_new_lines(Chars)];
-% change_new_lines([Other|Chars]) ->
-% 	[Other|change_new_lines(Chars)];
-% change_new_lines([]) ->
-% 	[].
-
-% pids_wo_quotes([$",$<|Chars]) ->
-% 	[$<|pids_wo_quotes(Chars)];
-% pids_wo_quotes([$>,$"|Chars]) ->
-% 	[$>|pids_wo_quotes(Chars)];
-% pids_wo_quotes([Other|Chars]) ->
-% 	[Other|pids_wo_quotes(Chars)];
-% pids_wo_quotes([]) ->
-% 	[].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -261,6 +222,32 @@ find_unknown_children(G,Unknown,[V|Vs]) ->
 find_unknown_children(_,_,[]) ->
 	[].
 
+replicate_receives([{E, Ns} | Tail], Comm, Acc) ->
+	NAcc = 
+		case lists:any(fun(V) -> V end, lists:map(fun(T) -> is_receive(T, E) end, Comm)) of 
+			true -> 
+				[{E, Ns}, {E, Ns} | Acc];
+			false -> 
+				[{E, Ns} | Acc]
+		end,
+	replicate_receives(Tail, Comm, NAcc);
+replicate_receives([], Comm, Acc) ->
+	lists:reverse(Acc).
+
+is_receive({received,{message_info,_,_,_,N}}, N) ->
+	true;
+is_receive(E, N) ->
+	% io:format("~p ~p\n", [E, N]),
+	false.
+
+is_the_event({_,{message_info,_,_,_,N}}, N) ->
+	true;
+is_the_event({spawned,{spawn_info,_,_,N}}, N) ->
+	true;
+is_the_event(_, _) ->
+	false.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -276,7 +263,9 @@ find_unknown_children(_,_,[]) ->
 	 pids = [],
 	 preselected = none,
 	 fun_print_root_info,
-	 summary_pids = []}).
+	 summary_pids = [],
+	 dicts_trace = [],
+	 comms = []}).
 
 %%------------------------------------------------------------------------------
 %% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
@@ -310,7 +299,9 @@ ask_new({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priority) ->
 			correct = IniCorrect,
 			pids = FirstPid,
 			fun_print_root_info = FunPrintRootInfo,
-			summary_pids = SummaryPidsInfo
+			summary_pids = SummaryPidsInfo,
+			dicts_trace = replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []),
+			comms = Comm
 		},
 	ask_about(FirstState).
 
@@ -376,7 +367,9 @@ asking_loop(State0 = #edd_con_state{
 		not_correct = NotCorrect,
 		unknown = Unknown,
 		previous_state = PreviousState,
-		summary_pids = SummaryPids
+		summary_pids = SummaryPids,
+		dicts_trace = DictsTrace,
+		comms = Comm
 	}) ->
 	State = State0#edd_con_state{preselected = none},
 	GetNodesPids = 
@@ -470,7 +463,7 @@ asking_loop(State0 = #edd_con_state{
 				             	pids = FunGetNewPids(NVerticesNotCorr)
 				            }
 			        end,
-			   	Answer = ask_question(hd(dict:fetch(Selected, DictQuestions))),
+			   	Answer = ask_question(hd(dict:fetch(Selected, DictQuestions)), length(DictsTrace)),
 			   	case Answer of
 			        correct -> 
 			        	IsCorrect;
@@ -538,6 +531,36 @@ asking_loop(State0 = #edd_con_state{
 					     	preselected = Node,
 					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
 					    };
+					{from_seq_diag, Code} ->
+						{E, Ns} = lists:nth(Code, DictsTrace),
+						io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
+						EventBoolList = 
+							lists:map(fun(C) -> is_the_event(C, E) end, Comm),
+						io:format("~p\n", [EventBoolList]),
+						{_,[Pos]} = 
+							lists:foldl(
+								fun
+									(true, {Curr, Acc}) ->
+										{Curr + 1, [Curr]};
+									(false, {Curr, Acc}) ->
+										{Curr + 1, Acc}
+								end,
+								{1,[]},
+								EventBoolList),
+						io:format("Selected event:\n"),
+						case lists:nth(Pos, Comm) of
+							{spawned,{spawn_info,Spawner,Spawned,_}} -> 
+								io:format("~p spawned ~p", [Spawner, Spawned]);
+							{sent,MessageInfo} ->
+								io:format("Sent message: ~s", [edd_con:pp_item(MessageInfo)]);
+							{received,MessageInfo} ->
+								io:format("Consumed message: ~s", [edd_con:pp_item(MessageInfo)])
+						end,
+						Node = hd(Ns),
+						State#edd_con_state{
+					     	preselected = Node,
+					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
+					    };
 					other -> 
 						State
 			   end
@@ -545,7 +568,7 @@ asking_loop(State0 = #edd_con_state{
 		end,
 	asking_loop(NState).
 
-ask_question(#question{text = QuestionStr, answers = Answers}) ->
+ask_question(#question{text = QuestionStr, answers = Answers}, OptsDiagramSeq) ->
 	{DictAnswers, LastOpt} = 
 		lists:mapfoldl(
 			fun(E, Id) ->
@@ -568,35 +591,43 @@ ask_question(#question{text = QuestionStr, answers = Answers}) ->
 	OptionsStr = 
 		string:join(Options, "/"),
 	Prompt = 
-		QuestionStr 
+		space()
+		++ QuestionStr 
 		++ "\n"
 		++ AnswersStr
 		++ "\n[" 
 		++ OptionsStr
-		++ "/d/s/p/r/u/a]: ",
+		++ "/c/d/s/p/r/u/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Asnwer = lists:reverse(Answer0),
-	get_behaviour(Asnwer, DictAnswers).
+	get_behaviour(Asnwer, DictAnswers, OptsDiagramSeq).
 
-get_behaviour("d", _) ->
+get_behaviour("d", _, _) ->
 	dont_know;
-get_behaviour("s", _) ->
+get_behaviour("s", _, _) ->
 	change_strategy;
-get_behaviour("p", _) ->
+get_behaviour("p", _, _) ->
 	change_priority;
-get_behaviour("r", _) ->
+get_behaviour("r", _, _) ->
 	print_root;
-get_behaviour("u", _) ->
+get_behaviour("u", _, _) ->
 	undo;
-get_behaviour("a", _) ->
+get_behaviour("a", _, _) ->
 	abort;
-get_behaviour(NumberStr, DictAnswers) ->
+get_behaviour("c", _, OptsDiagramSeq) ->
+	{
+		from_seq_diag, 
+		get_answer(
+			"Select an event from the sequence diagram: ",
+			lists:seq(1,OptsDiagramSeq))
+	};
+get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq) ->
 	try 
 		Number = element(1,string:to_integer(NumberStr)),
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
 			#question{} ->
-				ask_question(Behaviour);
+				ask_question(Behaviour, OptsDiagramSeq);
 			_ ->
 				Behaviour
 		end
