@@ -38,3 +38,22 @@
 		bindings = [],
 		clause = none
 	}).
+
+% -record(debugger_state, 
+% 	{graph, strategy, priority,
+% 	 vertices = [], correct = [],
+% 	 not_correct = [], unknown = [], 
+% 	 previous_state = [],
+% 	 preselected = none,
+% 	 pids = []}).
+
+-record(edd_con_state, 
+	{graph, dict_questions, strategy, priority,
+	 vertices = [], correct = [],
+	 not_correct = [], unknown = [], 
+	 previous_state = none,
+	 pids = [],
+	 preselected = none,
+	 summary_pids = [],
+	 dicts_trace = [],
+	 comms = []}).

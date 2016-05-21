@@ -57,3 +57,17 @@ examples/tcp/pids_tree.pdf
 examples/tcp/eval_tree.pdf
 
 examples/tcp/eval_tree.dot
+
+pids_tree.pdf
+
+pids_tree.dot
+
+
+examples/quicksort/quicksort.erl
+
+examples/quicksort/dbg.pdf
+
+eval_tree.pdf
+
+eval_tree.dot
+

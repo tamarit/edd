@@ -25,24 +25,13 @@
 
 -module(edd_con_lib).
 
--export([dot_graph_file/2, ask/3,
-	ask_new/3,
-	any2str/1, tab_lines/1, build_call_string/1,
-	question_list/2, format/2]).
-
--record(debugger_state, 
-	{graph, strategy, priority,
-	 vertices = [], correct = [],
-	 not_correct = [], unknown = [], 
-	 previous_state = [],
-	 preselected = none,
-	 pids = []}).
+-export([
+	dot_graph_file/2, ask/3, any2str/1, 
+	tab_lines/1, build_call_string/1,
+	question_list/2, format/2,
+	initial_state/3, asking_loop/2]).
 
 -include_lib("edd_con.hrl").
-
-
-ask(G,Strategy,Priority)->
-	ok.
 	
 
 %%------------------------------------------------------------------------------
@@ -75,7 +64,7 @@ space() ->
 
 print_summary_pid({Pid, Call, Sent, Spawned, Result}) ->
 	Str =
-		space() ++ "PROCESS " ++ edd_con_lib_new:any2str(Pid)
+		space() ++ "PROCESS " ++ any2str(Pid)
 		++ "\nFirst call " ++ build_call_string(element(2, Call))
 		++ "\nResult " ++ any2str(Result)
 		++ "\n" ++ question_list("sent messages", Sent)
@@ -136,7 +125,7 @@ ask_initial_process(Pids) ->
 	{StrPidsDict,LastId} = 
 		lists:mapfoldl(
 			fun({Pid, StrPid}, Id) -> 
-				{{io_lib:format("~p.- ~s\n",[Id,StrPid]),{Id,Pid}}, Id+1} 
+				{{io_lib:format("~p.- ~s\n", [Id, StrPid]), {Id, Pid}}, Id + 1} 
 			end, 
 		1, 
 		PidsString),
@@ -182,7 +171,7 @@ get_pid_vertex(V,G) ->
 	{V,{Pid,_}} = digraph:vertex(G,V),
 	Pid.
 
-print_buggy_node_new(G, NotCorrectVertex, Message) ->
+print_buggy_node(G, NotCorrectVertex, Message) ->
 	{NotCorrectVertex, {Pid, CallRec}} = digraph:vertex(G,NotCorrectVertex),
 	StrProblem = 
 		case CallRec#callrec_stack_item.origin_callrec of 
@@ -247,62 +236,51 @@ is_the_event({spawned,{spawn_info,_,_,N}}, N) ->
 is_the_event(_, _) ->
 	false.
 
+print_root_info(SummaryPidsInfo) ->
+	lists:foreach(
+		fun print_summary_pid/1, 
+		SummaryPidsInfo).
+
+initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priority) ->
+	SummaryPidsInfo = 
+		edd_con:summarizes_pidinfo(PidsInfo),
+	IniCorrect = 
+		[],
+	Vertices = 
+		digraph:vertices(G) -- [0|IniCorrect],
+	Pids =
+		[Pid || {Pid, _, _, _, _} <- SummaryPidsInfo],
+	#edd_con_state{
+		graph = G,
+		dict_questions = DictQuestions,
+		strategy = Strategy,
+		priority = Priority,
+		vertices = Vertices,
+		not_correct = [0],
+		correct = IniCorrect,
+		summary_pids = SummaryPidsInfo,
+		pids = Pids,
+		dicts_trace = replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []),
+		comms = Comm
+	}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% New question building
+% Question building
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--record(edd_con_state, 
-	{graph, dict_questions, strategy, priority,
-	 vertices = [], correct = [],
-	 not_correct = [], unknown = [], 
-	 previous_state = none,
-	 pids = [],
-	 preselected = none,
-	 fun_print_root_info,
-	 summary_pids = [],
-	 dicts_trace = [],
-	 comms = []}).
 
 %%------------------------------------------------------------------------------
-%% @doc Traverses the tree 'G' asking the programmer until it finds the buggy 
-%%      node. The tree 'G' must be a digraph representing the abbreviated proof 
-%%      tree of the evaluation of an expression that yields an incorrect value.
-%%      When it finds the buggy node, shows the function rule responsible for
-%%      the incorrect value. The strategy followed is indicated by its second
-%%      argument.      
+%% @doc      
 %% @end
 %%------------------------------------------------------------------------------
-ask_new({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priority) ->
-	SummaryPidsInfo = edd_con:summarizes_pidinfo(PidsInfo),
-	FunPrintRootInfo = 
-		fun() ->
-			lists:foreach(
-				fun print_summary_pid/1, 
-				SummaryPidsInfo)
-		end,
-	FunPrintRootInfo(),
-	FirstPid = ask_initial_process(SummaryPidsInfo),
-	IniCorrect = [],
-	Vertices = digraph:vertices(G) -- [0|IniCorrect],
-	FirstState = 
-		#edd_con_state{
-			graph = G,
-			dict_questions = DictQuestions,
-			strategy = Strategy,
-			priority = Priority,
-			vertices = Vertices,
-			not_correct = [0],
-			correct = IniCorrect,
-			pids = FirstPid,
-			fun_print_root_info = FunPrintRootInfo,
-			summary_pids = SummaryPidsInfo,
-			dicts_trace = replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []),
-			comms = Comm
-		},
+ask(Info, Strategy, Priority) ->
+	FirstState = #edd_con_state{summary_pids = SummaryPids} = 
+		initial_state(Info, Strategy, Priority),
+	print_root_info(SummaryPids),
+	ask_initial_process(SummaryPids),
 	ask_about(FirstState).
 
 ask_about(State) -> 
@@ -311,7 +289,7 @@ ask_about(State) ->
 			not_correct = NotCorrect,
 			unknown = Unknown,
 			graph = G} = 
-	   	asking_loop(State),
+	   	asking_loop(State, fun ask_question/3),
 	case NotCorrect of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
@@ -331,25 +309,25 @@ ask_about(State) ->
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
 					case get_answer("Do you want to try to answer"
 					     ++" the needed information? [y/n]: ",[y,n]) of
-					     y -> ask_about(NState#debugger_state{vertices = Maybe});
+					     y -> ask_about(NState#edd_con_state{vertices = Maybe});
 					     n -> 
-			                [print_buggy_node_new(G,V,
+			                [print_buggy_node(G,V,
 			                        "Call to a function that could contain an error") 
 			                        || V <- NotCorrectWithUnwnownVertexs],
-			                [print_buggy_node_new(G,V,
+			                [print_buggy_node(G,V,
 			                         "This call has not been answered and could contain an error") 
 			                        || V <- Maybe]
 					end;
 	             [NotCorrectVertex|_] ->
-	               	print_buggy_node_new(G,NotCorrectVertex,
+	               	print_buggy_node(G, NotCorrectVertex,
 	               		"\nThe error has been detected:\n")
 	        end
 	end,
 	ok.
 
-asking_loop(#edd_con_state{vertices = []} = State) -> 
+asking_loop(#edd_con_state{vertices = []} = State, _) -> 
 	State;
-asking_loop(#edd_con_state{vertices = [-1]} = State) ->
+asking_loop(#edd_con_state{vertices = [-1]} = State, _) ->
 	State#edd_con_state{
 		correct = [-1],
 		not_correct = [-1],
@@ -370,7 +348,7 @@ asking_loop(State0 = #edd_con_state{
 		summary_pids = SummaryPids,
 		dicts_trace = DictsTrace,
 		comms = Comm
-	}) ->
+	}, FunQA) ->
 	State = State0#edd_con_state{preselected = none},
 	GetNodesPids = 
 		fun(CVertices) ->
@@ -463,7 +441,7 @@ asking_loop(State0 = #edd_con_state{
 				             	pids = FunGetNewPids(NVerticesNotCorr)
 				            }
 			        end,
-			   	Answer = ask_question(hd(dict:fetch(Selected, DictQuestions)), length(DictsTrace)),
+			   	Answer = FunQA(Selected, hd(dict:fetch(Selected, DictQuestions)), length(DictsTrace)),
 			   	case Answer of
 			        correct -> 
 			        	IsCorrect;
@@ -516,8 +494,7 @@ asking_loop(State0 = #edd_con_state{
 					        vertices = [-1]
 					    };
 			        print_root -> 
-			        	FR = State#edd_con_state.fun_print_root_info,
-			        	FR(),
+			        	print_root_info(SummaryPids),
 			        	State;
 			        {CorrIncorr, {goto,Node}} ->
 			        	StateCI = 
@@ -566,9 +543,9 @@ asking_loop(State0 = #edd_con_state{
 			   end
 				%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
 		end,
-	asking_loop(NState).
+	asking_loop(NState, FunQA).
 
-ask_question(#question{text = QuestionStr, answers = Answers}, OptsDiagramSeq) ->
+ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq) ->
 	{DictAnswers, LastOpt} = 
 		lists:mapfoldl(
 			fun(E, Id) ->
@@ -599,8 +576,8 @@ ask_question(#question{text = QuestionStr, answers = Answers}, OptsDiagramSeq) -
 		++ OptionsStr
 		++ "/c/d/s/p/r/u/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
-	Asnwer = lists:reverse(Answer0),
-	get_behaviour(Asnwer, DictAnswers, OptsDiagramSeq).
+	Answer = lists:reverse(Answer0),
+	get_behaviour(Answer, DictAnswers, OptsDiagramSeq).
 
 get_behaviour("d", _, _) ->
 	dont_know;
@@ -627,7 +604,7 @@ get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq) ->
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
 			#question{} ->
-				ask_question(Behaviour, OptsDiagramSeq);
+				ask_question(-1, Behaviour, OptsDiagramSeq);
 			_ ->
 				Behaviour
 		end

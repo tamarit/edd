@@ -33,8 +33,6 @@ files() ->
   , "edd_server", "edd_client", "edd_jserver"
   , "edd_test_reader", "edd_test_writer"
   , "edd_con_pt"
-  % TODO: remove when integrated
-  , "edd_con_lib_new"
   , "mochijson", "smerl"
   ].
 

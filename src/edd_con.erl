@@ -61,7 +61,7 @@ ddc_server(Expr, Dir, Timeout) ->
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
             Dir),
-    {Pid, Comm, tupled_graph(G), dict:to_list(DictTrace)}.
+    {Pid, Comm, G, tupled_graph(G), DictTrace}.
 
 
 
@@ -72,7 +72,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
             none),
-    edd_con_lib:ask_new(Res,Strategy,Priority),
+    edd_con_lib:ask(Res,Strategy,Priority),
 
     % Graph = true,
     % {{Trace, DictFun, PidCall},_} = 
