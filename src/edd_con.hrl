@@ -56,4 +56,5 @@
 	 preselected = none,
 	 summary_pids = [],
 	 dicts_trace = [],
+	 fun_ask_question,
 	 comms = []}).

@@ -29,7 +29,7 @@
 	dot_graph_file/2, ask/3, any2str/1, 
 	tab_lines/1, build_call_string/1,
 	question_list/2, format/2,
-	initial_state/3, asking_loop/2]).
+	initial_state/3, asking_loop/1]).
 
 -include_lib("edd_con.hrl").
 	
@@ -280,8 +280,8 @@ ask(Info, Strategy, Priority) ->
 	FirstState = #edd_con_state{summary_pids = SummaryPids} = 
 		initial_state(Info, Strategy, Priority),
 	print_root_info(SummaryPids),
-	ask_initial_process(SummaryPids),
-	ask_about(FirstState).
+	Pids = ask_initial_process(SummaryPids),
+	ask_about(FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4}).
 
 ask_about(State) -> 
 	NState = #edd_con_state{
@@ -289,7 +289,7 @@ ask_about(State) ->
 			not_correct = NotCorrect,
 			unknown = Unknown,
 			graph = G} = 
-	   	asking_loop(State, fun ask_question/3),
+	   	asking_loop(State),
 	case NotCorrect of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
@@ -325,9 +325,9 @@ ask_about(State) ->
 	end,
 	ok.
 
-asking_loop(#edd_con_state{vertices = []} = State, _) -> 
+asking_loop(#edd_con_state{vertices = []} = State) -> 
 	State;
-asking_loop(#edd_con_state{vertices = [-1]} = State, _) ->
+asking_loop(#edd_con_state{vertices = [-1]} = State) ->
 	State#edd_con_state{
 		correct = [-1],
 		not_correct = [-1],
@@ -347,8 +347,9 @@ asking_loop(State0 = #edd_con_state{
 		previous_state = PreviousState,
 		summary_pids = SummaryPids,
 		dicts_trace = DictsTrace,
+		fun_ask_question = FunAsk,
 		comms = Comm
-	}, FunQA) ->
+	}) ->
 	State = State0#edd_con_state{preselected = none},
 	GetNodesPids = 
 		fun(CVertices) ->
@@ -441,7 +442,7 @@ asking_loop(State0 = #edd_con_state{
 				             	pids = FunGetNewPids(NVerticesNotCorr)
 				            }
 			        end,
-			   	Answer = FunQA(Selected, hd(dict:fetch(Selected, DictQuestions)), length(DictsTrace)),
+			   	Answer = FunAsk(Selected, hd(dict:fetch(Selected, DictQuestions)), length(DictsTrace), FunAsk),
 			   	case Answer of
 			        correct -> 
 			        	IsCorrect;
@@ -543,9 +544,9 @@ asking_loop(State0 = #edd_con_state{
 			   end
 				%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
 		end,
-	asking_loop(NState, FunQA).
+	asking_loop(NState).
 
-ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq) ->
+ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq, FunAsk) ->
 	{DictAnswers, LastOpt} = 
 		lists:mapfoldl(
 			fun(E, Id) ->
@@ -577,34 +578,34 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 		++ "/c/d/s/p/r/u/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Answer = lists:reverse(Answer0),
-	get_behaviour(Answer, DictAnswers, OptsDiagramSeq).
+	get_behaviour(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
 
-get_behaviour("d", _, _) ->
+get_behaviour("d", _, _, _) ->
 	dont_know;
-get_behaviour("s", _, _) ->
+get_behaviour("s", _, _, _) ->
 	change_strategy;
-get_behaviour("p", _, _) ->
+get_behaviour("p", _, _, _) ->
 	change_priority;
-get_behaviour("r", _, _) ->
+get_behaviour("r", _, _, _) ->
 	print_root;
-get_behaviour("u", _, _) ->
+get_behaviour("u", _, _, _) ->
 	undo;
-get_behaviour("a", _, _) ->
+get_behaviour("a", _, _, _) ->
 	abort;
-get_behaviour("c", _, OptsDiagramSeq) ->
+get_behaviour("c", _, OptsDiagramSeq, _) ->
 	{
 		from_seq_diag, 
 		get_answer(
 			"Select an event from the sequence diagram: ",
 			lists:seq(1,OptsDiagramSeq))
 	};
-get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq) ->
+get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 	try 
 		Number = element(1,string:to_integer(NumberStr)),
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
 			#question{} ->
-				ask_question(-1, Behaviour, OptsDiagramSeq);
+				FunAsk(-1, Behaviour, OptsDiagramSeq, FunAsk);
 			_ ->
 				Behaviour
 		end

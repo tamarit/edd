@@ -144,7 +144,10 @@ edd_loop() ->
 		  	    		correct = CorrectFinal,
 		  	    		graph = G
 		  	    	} =
-		    			edd_con_lib:asking_loop(InitialState, fun ask_question_con/3),
+		    			edd_con_lib:asking_loop(
+		    				InitialState#edd_con_state{
+		    					fun_ask_question = fun ask_question_con/4
+		    				}),
 		    	io:format("Finished question-answer loop\n"),
 		    	case NotCorrectFinal of
 				     [-1] ->
@@ -194,11 +197,11 @@ ask_question_zoom(Question, Answers, Vertices, Correct, NotCorrect, Unknown) ->
 			ask_question_zoom(Question, Answers, Vertices, Correct, NotCorrect, Unknown)
 	end.
 
-ask_question_con(Number, Question, _) ->
+ask_question_con(Number, Question, _, _) ->
 	?JAVA_NODE_NAME ! {question, Number, Question},
     receive 
 		{answer, Answer} ->
 			Answer;
 		_ ->
-			ask_question_con(Number, Question, 0)
+			ask_question_con(Number, Question, 0, fun ask_question_con/4)
 	end.
