@@ -30,6 +30,7 @@
 
 trace(InitialCall, Timeout, PidAnswer, Dir) -> 
     ModName = get_mod_name(InitialCall),
+    % io:format("~p\n~p\n", [ModName, Dir]),
     instrument_and_reload(ModName, Dir),
     PidMain = self(),
     PidCall = execute_call(InitialCall, self()),
@@ -86,18 +87,19 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
     % io:format("Itera\n"),
     receive 
         TraceItem = {edd_trace, _, _, _} ->
+            % io:format("Trace ~p\n", [TraceItem]),
             receive_loop(
                 Current + 1, 
                 [{Current,TraceItem} | Trace],
                 Loaded, FunDict, PidMain, Timeout, Dir);
         {edd_load_module, Module, PidAnswer} ->
+            % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
             NLoaded = 
                 case lists:member(Module, Loaded) of 
                     true ->
                         PidAnswer!loaded,
                         Loaded;
                     false ->
-                        % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
                        instrument_and_reload(Module, Dir),
                        PidAnswer!loaded,
                        [Module | Loaded] 
@@ -160,9 +162,31 @@ get_file_path(ModName, Dir) ->
     end.
 
 instrument_and_reload(ModName, Dir) ->
+    % try 
+    CompileOpts = 
+         [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}],
     {ok,ModName,Binary} = 
-        compile:file(get_file_path(ModName, Dir), [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}]),
-    reload_module(ModName, Binary).
+        case compile:file(get_file_path(ModName, Dir), CompileOpts) of 
+            {ok,_,_} = Res ->
+                Res
+                % ; 
+            % _ ->
+            %     io:format("~p\n", [element(1, filename:find_src(ModName))]),
+            %     Res = compile:file(element(1, filename:find_src(ModName)) ++ ".erl", CompileOpts),
+            %     io:format("~p\n", [Res]),
+            %     Res 
+        end,
+
+        % io:format("~p\n", [get_file_path(ModName, Dir)]),
+        % io:format("~p\n", [filename:find_src(ModName)]),
+        % io:format("~p\n", [ file:get_cwd()]),
+        %  = 
+        %     compile:file(get_file_path(ModName, Dir),),
+    reload_module(ModName, Binary)
+    % catch 
+    %     _:_ -> ok 
+    % end.
+    ,ok.
 
 undo_instrument_and_reload(ModName, Dir) ->
     {ok,ModName,Binary} = 

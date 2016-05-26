@@ -36,11 +36,10 @@ parse_transform(Forms, _) ->
 			lists:flatten(
 				[
 					erl_syntax_lib:fold(
-						fun get_module_filaname/2,
+						fun get_module_filename/2,
 						[],
 						Form)
-				|| Form <- Forms])),
-	% io:format("~p\n", [ModFileName]), 
+				|| Form <- Forms])), 
 	NForms =
 		[
 			erl_syntax_lib:map(
@@ -49,7 +48,6 @@ parse_transform(Forms, _) ->
 				 end,
 				 Form) 
 		|| Form <- Forms],
-	% io:format("~p\n", [NForms]),
 	% StrRevertedNForms = 
 	% 	[ try 
 	% 		erl_pp:form(Form)
@@ -60,18 +58,22 @@ parse_transform(Forms, _) ->
 	% [io:format("~s\n", [StrForm]) || StrForm <- StrRevertedNForms],
 	erl_syntax:revert_forms(NForms).
 
-get_module_filaname(T, Acc) ->
+get_module_filename(T, Acc) ->
 	case erl_syntax:type(T) of 
 		attribute -> 
 			NameAttr = 
 				erl_syntax:attribute_name(T),
 			case erl_syntax:type(NameAttr) of
 				atom ->  
+					% io:format("~p\n", [erl_syntax:atom_value(NameAttr)]),
 					case erl_syntax:atom_value(NameAttr) of
-						file -> 
-							[{file_name, hd(erl_syntax:attribute_arguments(T))} | Acc];
+						% file -> 
+						% 	[{file_name, hd(erl_syntax:attribute_arguments(T))} | Acc];
 						module -> 
-							[{module_name, hd(erl_syntax:attribute_arguments(T))} | Acc];
+							ModName = 
+								hd(erl_syntax:attribute_arguments(T)),
+							[{file_name, erl_syntax:string(atom_to_list(erl_syntax:atom_value(ModName)) ++ ".erl") },
+							 {module_name, ModName} | Acc];
 						_ ->
 							Acc
 					end;
@@ -268,11 +270,17 @@ inst_expr(T) ->
 			% macro ->
 			% 	io:format("~p\n",[T]);
 			fun_expr -> 
-				inst_fun_expr(T);
+				try
+					inst_fun_expr(T)
+				catch
+					_:_ ->
+						T
+				end;
 			_ ->
 				T
 		end,
-	erl_syntax:set_ann(NT, erl_syntax:get_ann(T)). 
+	Res = erl_syntax:set_ann(NT, erl_syntax:get_ann(T)),
+	Res. 
 
 inst_fun_clauses(Clauses, FunId) ->
 	% T = erl_syntax_lib:mapfold(fun annotate_vars/2,T0),
@@ -346,6 +354,7 @@ inst_fun_clauses(Clauses, FunId) ->
 inst_fun_expr(T) ->
 			% 
 			%  erl_syntax:function(erl_syntax:function_name(T), NClauses),
+	% io:format("B1: ~p\n", [erl_syntax:fun_expr_clauses(T)]),
 	Clauses = erl_syntax:fun_expr_clauses(T),
 	NClauses = inst_fun_clauses(Clauses, hd(pos_and_pp(T))),
 	NFunExpr = erl_syntax:fun_expr(NClauses),

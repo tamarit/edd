@@ -295,6 +295,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 
 
   	PidsTree = digraph:new(),
+    % io:format("~p\n", [FinalState#evaltree_state.pids_info]),
   	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
   	 || PidInfo <- FinalState#evaltree_state.pids_info],
 
