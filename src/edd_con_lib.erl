@@ -89,7 +89,12 @@ question_list(Text, []) ->
 question_list(Text, List) ->
     PPList = 
         lists:foldl(fun(E, Acc) -> Acc ++ [$\t|edd_con:pp_item(E)] ++ "\n" end, "", List), 
-    Text ++ ":\n" ++ lists:droplast(PPList).
+    capfirst(Text) ++ ":\n" ++ lists:droplast(PPList).
+
+capfirst([Head | Tail]) when Head >= $a, Head =< $z ->
+    [Head + ($A - $a) | Tail];
+capfirst(Other) ->
+    Other.
 
 build_call_string({ModFun,IdFun,ArgsFun}) ->
     case IdFun of 

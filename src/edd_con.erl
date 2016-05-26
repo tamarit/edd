@@ -1052,7 +1052,7 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
                             fun list_ans/1,
                             lists:droplast(AnsPrevReceive))),
             [build_answer(
-                "previous evaluated receive:\n" 
+                "Previous evaluated receive:\n" 
                 ++ edd_con_lib:tab_lines(PreRecInfoStr), 
                 {correct, {goto, NodeDest}})];       
         _ ->
@@ -1095,11 +1095,11 @@ reached_value_answer(none, PrevRec) ->
     %         }}} = 
     %     element(2,digraph:vertex(G, NodeReceive)), 
     % [build_answer("Reached receive\n" ++ ReceiveStr, {goto, NodeReceive})];
-    [build_answer("reached receive:\n" ++ PrevRec, incorrect)];
+    [build_answer("Reached receive:\n" ++ PrevRec, incorrect)];
 reached_value_answer(stuck_receive, _) ->
-    [build_answer("blocked because it is waiting for a message", incorrect)];
+    [build_answer("Blocked because it is waiting for a message", incorrect)];
 reached_value_answer(Val, _) ->
-    [build_answer("evaluated to value: " ++ edd_con_lib:any2str(Val), incorrect)].
+    [build_answer("Evaluated to value: " ++ edd_con_lib:any2str(Val), incorrect)].
 
 build_questions(G, DictNodes) ->
     DictsQuestionsTrace = 
@@ -1162,7 +1162,7 @@ build_question(
         [
          build_answer(edd_con_lib:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
          build_answer(edd_con_lib:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
-         build_answer("nothing", correct)
+         build_answer("Nothing", correct)
         ],
     % Question ++ "\n" ++ edd_con_lib:any2str(Answers);
     % NDictTraces0 = 
@@ -1213,7 +1213,7 @@ build_question(
     Answers = 
         PrevReceive ++
         [
-         build_answer(edd_con_lib:question_list("context",Context), correct),
+         build_answer(edd_con_lib:question_list("Context",Context), correct),
          % build_answer("ContextRec: " ++ edd_con_lib:any2str(ContextRec), correct),
          build_answer(edd_con_lib:question_list("received messages",Received),behaviour_question(Received, DictNodes, Node, correct, correct)),
          build_answer(edd_con_lib:question_list("consumed messages",Consumed), incorrect)
@@ -1222,7 +1222,7 @@ build_question(
         [
          build_answer(edd_con_lib:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
          build_answer(edd_con_lib:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
-         build_answer("nothing", correct)
+         build_answer("Nothing", correct)
         ],
     NDictTraces  = 
         add_to_trace_dict(DictTraces, Spawned ++ Sent ++ Consumed, Node),
