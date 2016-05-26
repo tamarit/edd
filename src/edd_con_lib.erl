@@ -246,6 +246,23 @@ print_root_info(SummaryPidsInfo) ->
 		fun print_summary_pid/1, 
 		SummaryPidsInfo).
 
+print_help() ->
+	Msg = 
+		string:join(
+			[
+				  "#. - Indicates that the corresponding option is wrong"
+				, "c. - Chooses the question where a given event from the sequence diagram occurs"
+				, "d. - Means \"don't know\". Select this when you are not sure what is the answer"
+				, "s. - Changes the search strategy"
+				, "p. - Changes the search priority"
+				, "u. - Undoes last answer"
+				, "h. - Prints this help"
+				, "a. - Finishes the debugging session."
+			],
+			 ".\n"),
+	io:format("~s\n", [Msg]),
+	io:get_line("Press intro to continue...").
+
 initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priority) ->
 	SummaryPidsInfo = 
 		edd_con:summarizes_pidinfo(PidsInfo),
@@ -544,6 +561,9 @@ asking_loop(State0 = #edd_con_state{
 					     	preselected = Node,
 					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
 					    };
+					help -> 
+						print_help(),
+						State;
 					other -> 
 						State
 			   end
@@ -580,11 +600,13 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 		++ AnswersStr
 		++ "\n[" 
 		++ OptionsStr
-		++ "/c/d/s/p/r/u/a]: ",
+		++ "/c/d/s/p/r/u/h/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Answer = lists:reverse(Answer0),
 	get_behaviour(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
 
+get_behaviour("h", _, _, _) ->
+	help;
 get_behaviour("d", _, _, _) ->
 	dont_know;
 get_behaviour("s", _, _, _) ->
