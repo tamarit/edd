@@ -27,7 +27,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd).
--export([dd/1,dd/2,dd/3, dd_server/2, ddc/2]).
+-export([dd/1,dd/2,dd/3, dd_server/2, cdd/2]).
 
 
 -record(edd_options, 
@@ -116,9 +116,9 @@ dd(Expr,_) ->
 %%		trace the program.
 %% @end
 %%------------------------------------------------------------------------------
--spec ddc(Expr::string(), TraceTimeout :: integer()) -> ok.	
-ddc(Expr,TraceTimeout) ->
-	edd_con:ddc(Expr,TraceTimeout).
+-spec cdd(Expr::string(), TraceTimeout :: integer()) -> ok.	
+cdd(Expr,TraceTimeout) ->
+	edd_con:cdd(Expr,TraceTimeout).
 
 
 %%------------------------------------------------------------------------------
