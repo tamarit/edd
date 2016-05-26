@@ -119,7 +119,7 @@ edd_loop() ->
 			try 
 				io:format("Received a concurrent debugging request\n"),
 				{PidsInfo, Communications, {G, DictQA}, GTupled, DictTraces} = 
-					edd_con:ddc_server(Call, Dir, Timeout),
+					edd_con:cdd_server(Call, Dir, Timeout),
 				?JAVA_NODE_NAME ! {pids_info, PidsInfo},
 				?JAVA_NODE_NAME ! {communcations, lists:reverse(Communications)},
 				?JAVA_NODE_NAME ! {tree, GTupled},

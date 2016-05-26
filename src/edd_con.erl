@@ -24,7 +24,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd_con).
--export([ddc/2, ddc/4, ddc_server/3, summarizes_pidinfo/1, pp_item/1]).
+-export([cdd/2, cdd/4, cdd_server/3, summarizes_pidinfo/1, pp_item/1]).
 
 -include_lib("edd_con.hrl").
 
@@ -49,14 +49,14 @@
         system_sends
     }).
 
-ddc(Expr,Timeout) ->
-	ddc(Expr,Timeout,divide_query,indet).
+cdd(Expr,Timeout) ->
+	cdd(Expr,Timeout,divide_query,indet).
 
-ddc_server(Expr, Dir, Timeout) ->
+cdd_server(Expr, Dir, Timeout) ->
     code:add_patha(Dir), 
     % io:format("PATHS: ~p\n",[code:get_path()]),
     {_, {Pid, Comm, G, DictTrace}} = 
-        ddc_internal_core(
+        cdd_internal_core(
             Expr, 
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X) ++ ".erl", Dir) end,
@@ -65,9 +65,9 @@ ddc_server(Expr, Dir, Timeout) ->
 
 
 
-ddc(Expr,Timeout,Strategy,Priority) ->
+cdd(Expr,Timeout,Strategy,Priority) ->
     {_,Res} = 
-        ddc_internal_core(
+        cdd_internal_core(
             Expr, 
             Timeout, 
             fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
@@ -76,7 +76,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
 
     % Graph = true,
     % {{Trace, DictFun, PidCall},_} = 
-    %     ddc_internal_core(
+    %     cdd_internal_core(
     %         Expr, 
     %         Timeout, 
     %         fun(X) -> edd_lib:core_module(atom_to_list(X)++".erl") end,
@@ -110,7 +110,7 @@ ddc(Expr,Timeout,Strategy,Priority) ->
     unregister(edd_graph),
     ok.
 
-ddc_internal_core(Expr, Timeout, FunCore, Dir) ->
+cdd_internal_core(Expr, Timeout, FunCore, Dir) ->
     {ok,[AExpr|_]} = edd_lib:parse_expr(Expr++"."),
     M1 = smerl:new(foo),
     {ok, M2} = smerl:add_func(M1,"bar() ->" ++ Expr ++ " ."),
