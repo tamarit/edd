@@ -28,7 +28,7 @@
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
 		ask/4, core_module/1, core_module/2, get_MFA_Label/2,
-		asking_loop/9, initial_state/2, get_call_string/2, select_strategy/1]).
+		asking_loop/10, initial_state/2, get_call_string/2, select_strategy/1]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -251,7 +251,7 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 		fun select_strategy/1,
 	{Valid,NotValid,Unknown,_,NStrategy} = 
 	   asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-	   	Strategy,Vertices,Valid0,NotValid0,[],[]),
+	   	Strategy,Vertices,Valid0,NotValid0,[],[],-1),
 	case NotValid of
 	     [-1] ->
 	     	io:format("Debugging process finished\n");
@@ -309,61 +309,68 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	end,
 	ok.
 
-asking_loop(_,_,_,Strategy,[],Valid,NotValid,Unknown,State) -> 
+asking_loop(_,_,_,Strategy,[],Valid,NotValid,Unknown,State,_) -> 
 	{Valid,NotValid,Unknown,State,Strategy};
-asking_loop(_,_,_,Strategy,[-1],_,_,_,_) -> 
+asking_loop(_,_,_,Strategy,[-1],_,_,_,_,_) -> 
 	{[-1],[-1],[-1],[],Strategy};
 asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-	Strategy,Vertices,Valid,NotValid,Unknown,State) ->
-	VerticesWithValues = 
-	  case Strategy of 
-	       top_down ->
-	        Children = digraph:out_neighbours(G, hd(NotValid)),
-	        SelectableChildren = Children -- (Children -- Vertices), 
-	          [{V, -length(digraph_utils:reachable([V], G))} 
-	           || V <- SelectableChildren];
-	       divide_query ->
-			 [{V,begin
-			         Reach = digraph_utils:reachable([V], G) -- [V],
-			         TotalReach = Reach -- (Reach -- Vertices),
-			         Rest = Vertices -- (TotalReach ++ [V]),
-			         % TotalReach = length(Reach) - (1 + length(Reach -- Vertices)),
-			         % Rest = length(Vertices) - (1 + TotalReach),
-			         abs(length(TotalReach) - length(Rest))
-			     end} || V <- Vertices]
-	  end,
-	OrderingFunction = 
-		fun
-			({_, O1}, {_, O2}) when O1 < O2 -> 
-				true;
-			({V1, O1}, {V2, O2}) when O1 == O2 , V1 > V2 -> 
-				true;
-			(_, _) ->
-				false
-		end,
-	SortedVertices = 
-		lists:sort(OrderingFunction, VerticesWithValues),
-	% io:format("SortedVertices: ~p\n", [SortedVertices]),
-	Selected = element(1,hd(SortedVertices)),
-	NSortedVertices = [V || {V,_} <- tl(SortedVertices)],
+	Strategy,Vertices,Valid,NotValid,Unknown,State, Preselected) ->
+		{Selected, NSortedVertices} = 
+			case Preselected of 
+				-1 ->
+					VerticesWithValues = 
+					  case Strategy of 
+					       top_down ->
+					        Children = digraph:out_neighbours(G, hd(NotValid)),
+					        SelectableChildren = Children -- (Children -- Vertices), 
+					          [{V, -length(digraph_utils:reachable([V], G))} 
+					           || V <- SelectableChildren];
+					       divide_query ->
+							 [{V,begin
+							         Reach = digraph_utils:reachable([V], G) -- [V],
+							         TotalReach = Reach -- (Reach -- Vertices),
+							         Rest = Vertices -- (TotalReach ++ [V]),
+							         % TotalReach = length(Reach) - (1 + length(Reach -- Vertices)),
+							         % Rest = length(Vertices) - (1 + TotalReach),
+							         abs(length(TotalReach) - length(Rest))
+							     end} || V <- Vertices]
+					  end,
+					OrderingFunction = 
+						fun
+							({_, O1}, {_, O2}) when O1 < O2 -> 
+								true;
+							({V1, O1}, {V2, O2}) when O1 == O2 , V1 > V2 -> 
+								true;
+							(_, _) ->
+								false
+						end,
+					SortedVertices = 
+						lists:sort(OrderingFunction, VerticesWithValues),
+					% io:format("SortedVertices: ~p\n", [SortedVertices]),
+					Selected0 = element(1,hd(SortedVertices)),
+					NSortedVertices0 = [V || {V,_} <- tl(SortedVertices)],
+					{Selected0, NSortedVertices0};
+				_ ->
+					{Preselected, Vertices -- [Preselected]}
+			end,
 	YesAnswer = begin
-	             EqualToSeleceted = 
+	             EqualToSelected = 
 	                [V || V <- Vertices, begin {V,{L1,_,F1,Line1}} = digraph:vertex(G,V),
 	                                           {Selected,{L2,_,F2,Line2}} = digraph:vertex(G,Selected),
 	                                           (L1 =:= L2) and (F1 =:= F2) and (Line1 =:= Line2)
 	                                     end],
-	             {NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
-	             EqualToSeleceted ++ Valid,NotValid,Unknown,
-	             [{Vertices,Valid,NotValid,Unknown}|State],Strategy}
+	             {NSortedVertices -- digraph_utils:reachable(EqualToSelected,G),
+	             EqualToSelected ++ Valid,NotValid,Unknown,
+	             [{Vertices,Valid,NotValid,Unknown}|State],Strategy,-1}
 	            end, 
 	NoAnswer =
 		% Shouldn't look for nodes with the same value and mark them as not valid? 
 		{digraph_utils:reachable([Selected],G)
           -- ([Selected|NotValid] ++ digraph_utils:reachable(Valid,G) ++ Unknown),
           Valid,[Selected|NotValid],Unknown,
-          [{Vertices,Valid,NotValid,Unknown}|State],Strategy},
+          [{Vertices,Valid,NotValid,Unknown}|State],Strategy,-1},
 	Answer = FunGetAnswer(Selected, Vertices, Valid, NotValid, Unknown),
-	{NVertices,NValid,NNotValid,NUnknown,NState,NStrategy} = 
+	{NVertices,NValid,NNotValid,NUnknown,NState,NStrategy, NPreselected} = 
 	   case Answer of
 	        y -> YesAnswer;
 	        i -> YesAnswer;
@@ -382,13 +389,13 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	        d -> %Hacer memoization?
 	             {NSortedVertices -- [Selected],
 	              Valid,NotValid,[Selected|Unknown],
-	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
+	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy,-1};
 	        u -> case State of
 	                  [] ->
 	                     io:format("Nothing to undo\n"),
 	                     {Vertices,Valid,NotValid,Unknown,State};
 	                  [{PVertices,PValid,PNotValid,PUnknown}|PState] ->
-	                     {PVertices,PValid,PNotValid,PUnknown,PState,Strategy}
+	                     {PVertices,PValid,PNotValid,PUnknown,PState,Strategy,-1}
 	             end;
 	        t -> NewValid = 
 	                % lists:flatten([digraph_utils:reachable([V], G) 
@@ -398,14 +405,18 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	                     get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)],
 	             {Vertices -- digraph_utils:reachable(NewValid,G),
 	              NewValid ++ Valid,NotValid,Unknown,
-	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy};
+	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy,-1};
 	        s -> 
-	        	{Vertices,Valid,NotValid,Unknown,State,FunGetNewStrategy(Strategy)};
-	        a -> {[-1],Valid,NotValid,Unknown,State,Strategy};
-	        _ -> {Vertices,Valid,NotValid,Unknown,State,Strategy}
+	        	{Vertices,Valid,NotValid,Unknown,State,FunGetNewStrategy(Strategy),-1};
+	        a -> {[-1],Valid,NotValid,Unknown,State,Strategy,-1};
+	        N when is_integer(N) -> 
+	        	{Vertices,Valid,NotValid,Unknown,State,Strategy,N};
+	        _ ->
+	        	io:format("Unsupported answer: ~p\n", [Answer]), 
+	        	{Vertices,Valid,NotValid,Unknown,State,Strategy,Preselected}
 	   end, 
 	asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-		NStrategy,NVertices,NValid,NNotValid,NUnknown,NState).
+		NStrategy,NVertices,NValid,NNotValid,NUnknown,NState,NPreselected).
 	
 ask_question(G,V)->
 	{V,{Label,_,File,Line}} = digraph:vertex(G,V),
@@ -417,7 +428,7 @@ ask_question(G,V)->
 		_ ->
 			io:format("~s\nfun location: (~s, line ~p)",[NLabel,File,Line])
 	end,
-	[_|Answer]=lists:reverse(io:get_line("? [y/n/t/v/d/i/s/u/a]: ")),
+	[_|Answer] = lists:reverse(io:get_line("? [y/n/t/v/d/i/s/u/a]: ")),
 	list_to_atom(lists:reverse(Answer)).
 	
 get_answer(Message,Answers) ->
@@ -724,4 +735,3 @@ tupled_edge({V1,V2}) ->
 	{V1, V2}.
 
 
-	

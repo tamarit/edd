@@ -4,15 +4,12 @@
 
 -define(JAVA_NODE_NAME,{edd, 'eddjava@localhost'}).
 
+-include_lib("edd_con.hrl").
+
 start() ->
 	register(edd_server, self()), 
 	?JAVA_NODE_NAME ! {ready, self()},
 	io:format("Server is ready\n"),
-	% self()!{buggy_call, "stock:test()", "/Users/tama/Documents/git/edd/examples/stock", none},
-	%ZOOM TEST
-	% self()!{zoom_dbg, "stock:check_item({item, rice, 7},\n\t\t [{item, rice, 5}, {item, bajoqueta, 8}])", "/Users/tama/Documents/git/edd/examples/stock", none},
-	% self()!{answer,'1'},
-	% self()!{answer,'1'},
 	edd_loop().
 
 edd_loop() ->
@@ -42,9 +39,9 @@ edd_loop() ->
 			    io:format("Start question - answer loop\n"),
 			    {CorrectFinal,NotCorrectFinal,_UnknownFinal,_,_} =
 		    		edd_lib:asking_loop(G, FunGetNewStrategy, FunGetAnswer, 
-			   			Strategy,Vertices,Correct,NotCorrect,Unknown, []),
+			   			Strategy,Vertices,Correct,NotCorrect,Unknown, [],-1),
 		    	io:format("Finished question - answer loop\n"),
-				case NotCorrect of
+				case NotCorrectFinal of
 				     [-1] ->
 				     	?JAVA_NODE_NAME ! aborted;
 				     _ -> 
@@ -97,7 +94,7 @@ edd_loop() ->
 			   			Strategy,Vertices,Correct,NotCorrect,Unknown,[], -1),
 		    	io:format("Finished question - answer loop\n"),
 		    	% ok
-				case NotCorrect of
+				case NotCorrectFinal of
 				     [-1] ->
 				     	?JAVA_NODE_NAME ! aborted;
 				     _ -> 
@@ -109,6 +106,61 @@ edd_loop() ->
 				             	?JAVA_NODE_NAME ! unknown_nodes;
 				             [NotCorrectVertex|_] ->
 								?JAVA_NODE_NAME ! {buggy_node,NotCorrectVertex, edd_zoom_lib:string_buggy_info(G, NotCorrectVertex)}
+				        end
+				end
+			catch 
+				_:_ = Error -> 
+					io:format("An error ocurred: ~p\n", [Error]),
+					?JAVA_NODE_NAME ! {error, Error},
+					ok
+			end 
+			;
+		{buggy_con_call, Call, Dir, Timeout, State} ->
+			try 
+				io:format("Received a concurrent debugging request\n"),
+				{PidsInfo, Communications, {G, DictQA}, GTupled, DictTraces} = 
+					edd_con:cdd_server(Call, Dir, Timeout),
+				?JAVA_NODE_NAME ! {pids_info, PidsInfo},
+				?JAVA_NODE_NAME ! {communcations, lists:reverse(Communications)},
+				?JAVA_NODE_NAME ! {tree, GTupled},
+				?JAVA_NODE_NAME ! {dict_traces, dict:to_list(DictTraces)},
+				% TODO: Prepare the server for errors as in previous services. 
+				% 		In this case it is really important as the execution would be different if rerun.
+				% InitialState =  
+				% 	case State of 
+				% 		none -> 
+		  %   				{Vertices0, Correct0, NotCorrect0} = 
+		  %   					edd_con_lib:initial_state({PidsInfo, Communications, {G, DictQA}, DictTraces}),
+		  %   				{Vertices0, Correct0, NotCorrect0, []};
+		  %   			_ ->
+		  %   				State
+		  %   		end,
+		  		InitialState = 
+		  			edd_con_lib:initial_state({PidsInfo, Communications, {G, DictQA}, DictTraces}, divide_query,indet),
+		  		io:format("Start question-answer loop\n"),
+		  	    % FinalState = 
+		  	    	#edd_con_state{
+		  	    		not_correct = NotCorrectFinal, 
+		  	    		correct = CorrectFinal,
+		  	    		graph = G
+		  	    	} =
+		    			edd_con_lib:asking_loop(
+		    				InitialState#edd_con_state{
+		    					fun_ask_question = fun ask_question_con/4
+		    				}),
+		    	io:format("Finished question-answer loop\n"),
+		    	case NotCorrectFinal of
+				     [-1] ->
+				     	?JAVA_NODE_NAME ! aborted;
+				     _ -> 
+				        NotCorrectVertexs = [NCV || NCV <- NotCorrectFinal, 
+				                                   (digraph:out_neighbours(G, NCV) -- CorrectFinal) == [] ],
+				        case NotCorrectVertexs of
+				             [] ->
+				             	%% TODO: Send the list of candidates nodes 
+				             	?JAVA_NODE_NAME ! unknown_nodes;
+				             [NotCorrectVertex|_] ->
+								?JAVA_NODE_NAME ! {buggy_node, NotCorrectVertex}
 				        end
 				end
 			catch 
@@ -143,4 +195,13 @@ ask_question_zoom(Question, Answers, Vertices, Correct, NotCorrect, Unknown) ->
 			Answer;
 		_ ->
 			ask_question_zoom(Question, Answers, Vertices, Correct, NotCorrect, Unknown)
+	end.
+
+ask_question_con(Number, Question, _, _) ->
+	?JAVA_NODE_NAME ! {question, Number, Question},
+    receive 
+		{answer, Answer} ->
+			Answer;
+		_ ->
+			ask_question_con(Number, Question, 0, fun ask_question_con/4)
 	end.

@@ -1,0 +1,23 @@
+digraph PDG {
+8 [shape=ellipse, label="8 .- quicksort:qs(fun quicksort:leq/2, [1]) = [1]"];
+1 [shape=ellipse, label="1 .- quicksort:leq(1, 7) = true"];
+7 [shape=ellipse, label="7 .- quicksort:qs(fun quicksort:leq/2, []) = []"];
+3 [shape=ellipse, label="3 .- quicksort:leq(8, 7) = false"];
+10 [shape=ellipse, label="10 .- quicksort:qs(fun quicksort:leq/2, [7, 8, 1]) = [1, 7]"];
+9 [shape=ellipse, label="9 .- quicksort:qs(fun quicksort:leq/2, []) = []"];
+4 [shape=ellipse, label="4 .- quicksort:partition(fun quicksort:leq/2, 7, [8, 1]) = {[1], []}"];
+0 [shape=ellipse, label="0 .- quicksort:partition(fun quicksort:leq/2, 7, []) = {[], []}"];
+6 [shape=ellipse, label="6 .- quicksort:qs(fun quicksort:leq/2, []) = []"];
+2 [shape=ellipse, label="2 .- quicksort:partition(fun quicksort:leq/2, 7, [1]) = {[1], []}"];
+5 [shape=ellipse, label="5 .- quicksort:partition(fun quicksort:leq/2, 1, []) = {[], []}"];
+8 -> 7 [color=black, penwidth=3];
+8 -> 6 [color=black, penwidth=3];
+8 -> 5 [color=black, penwidth=3];
+10 -> 9 [color=black, penwidth=3];
+10 -> 8 [color=black, penwidth=3];
+10 -> 4 [color=black, penwidth=3];
+4 -> 3 [color=black, penwidth=3];
+4 -> 2 [color=black, penwidth=3];
+2 -> 1 [color=black, penwidth=3];
+2 -> 0 [color=black, penwidth=3];
+}
