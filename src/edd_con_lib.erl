@@ -172,9 +172,25 @@ ask_initial_process(Pids) ->
 	io:format(space()),
 	FirstPid.
 
-get_pid_vertex(V,G) ->
-	{V,{Pid,_}} = digraph:vertex(G,V),
+get_pid_vertex(G, V) ->
+	{V,{Pid,_}} = 
+		digraph:vertex(G,V),
 	Pid.
+
+get_MFA_vertex(G, V) ->
+	{V, {Pid, CallRec}} = 
+		digraph:vertex(G, V),
+	case CallRec of 
+		#callrec_stack_item{} ->
+			case CallRec#callrec_stack_item.origin_callrec of 
+				#call_info{call = {M,F,A}} ->
+					{M, F, length(A)};
+				#receive_info{} ->
+					V
+			end;
+		_ ->
+			V
+	end.
 
 print_buggy_node(G, NotCorrectVertex, Message) ->
 	{NotCorrectVertex, {Pid, CallRec}} = digraph:vertex(G,NotCorrectVertex),
@@ -242,6 +258,7 @@ is_the_event({spawned,{spawn_info,_,_,N}}, N) ->
 is_the_event(_, _) ->
 	false.
 
+
 print_root_info(SummaryPidsInfo) ->
 	lists:foreach(
 		fun print_summary_pid/1, 
@@ -252,8 +269,9 @@ print_help() ->
 		string:join(
 			[
 				  "#. - Indicates that the corresponding option is wrong"
-				, "c. - Chooses the question where a given event from the sequence diagram occurs"
+				, "t. - Means \"trust\". Select this when the process or function is reliable."
 				, "d. - Means \"don't know\". Select this when you are not sure what is the answer"
+				, "c. - Chooses the question where a given event from the sequence diagram occurs"
 				, "s. - Changes the search strategy"
 				, "p. - Changes the search priority"
 				, "u. - Undoes last answer"
@@ -385,7 +403,7 @@ asking_loop(State0 = #edd_con_state{
 		fun(CVertices) ->
 			[V || 
 				V <- CVertices, 
-			   	lists:member(get_pid_vertex(V,G),Pids)] 
+			   	lists:member(get_pid_vertex(G,V),Pids)] 
 		end,
 	NewStateFromNode = 
 		fun(CState, Node) ->
@@ -395,7 +413,7 @@ asking_loop(State0 = #edd_con_state{
 						io:format("\n\nThe question about the selected event is already answered.\n"),
 						{none, Pids};
 			    	false -> 
-			    		{Node, lists:usort([get_pid_vertex(Node,G)|Pids])}		
+			    		{Node, lists:usort([get_pid_vertex(G, Node)|Pids])}		
 				end,
 			CState#edd_con_state{
 		     	preselected = NPreselected,
@@ -414,7 +432,7 @@ asking_loop(State0 = #edd_con_state{
 						none ->
 							% io:format("State: ~p\n",[State]),
 							VerticesNoPid = 
-								[V || V <- Vertices, not lists:member(get_pid_vertex(V,G),Pids)],
+								[V || V <- Vertices, not lists:member(get_pid_vertex(G, V),Pids)],
 							% io:format("{VerticesPid, VerticesNoPid}: ~p\n",[{VerticesPid, VerticesNoPid}]),
 							VerticesWithValues = 
 							  case Strategy of 
@@ -462,16 +480,16 @@ asking_loop(State0 = #edd_con_state{
 	    			end,
 				IsCorrect = 
 					begin
-						EqualToSeleceted = 
+						EqualToSelected = 
 							[V || V <- Vertices, begin {V,L1} = digraph:vertex(G,V),
 							                           {Selected,L2} = digraph:vertex(G,Selected),
 							                           (L1 =:= L2) 
 							                     end],
 						NVerticesCorr = 
-							NSortedVertices -- digraph_utils:reachable(EqualToSeleceted,G),
+							NSortedVertices -- digraph_utils:reachable(EqualToSelected,G),
 						State#edd_con_state{
 							vertices = NVerticesCorr,
-							correct = EqualToSeleceted ++ Correct,
+							correct = EqualToSelected ++ Correct,
 							pids = FunGetNewPids(NVerticesCorr)
 						}
 			        end, 
@@ -492,6 +510,58 @@ asking_loop(State0 = #edd_con_state{
 			        %i -> YesAnswer;
 			        incorrect -> 
 			        	IsNotCorrect;
+			        trust -> 
+			        	{Selected, {Pid, CallRec}} = 
+			        		digraph:vertex(G, Selected),
+						TrustedPidFun = 
+							case CallRec#callrec_stack_item.origin_callrec of 
+								#call_info{call = {M,F,A}} ->
+									case get_answer("Do you trust the process, the function, both or none?\n[p/f/b/n]: ", [p, f, b, n]) of 
+										p -> 
+											[process];
+										f -> 
+											[function];
+										b -> 
+											[process, function];
+										n -> 
+											[]
+									end;
+								#receive_info{} ->
+									[process]
+							end,
+						Trusted1 = 
+							case lists:member(function, TrustedPidFun) of 
+								true -> 
+									[V || 
+										V <- digraph:vertices(G), 
+										get_MFA_vertex(G,V) =:= get_MFA_vertex(G,Selected)];
+								false ->
+									[]
+							end,
+						Trusted2 = 
+							case lists:member(process, TrustedPidFun) of 
+								true -> 
+									[V || 
+										V <- digraph:vertices(G), 
+										get_pid_vertex(G, V) =:= get_pid_vertex(G, Selected)];
+								false ->
+									[]
+							end,
+						NVerticesAfterTrust = 
+							NSortedVertices -- digraph_utils:reachable(Trusted1 ++ Trusted2, G),
+						NPreviousState = 
+							case TrustedPidFun of 
+								[] ->
+									PreviousState;
+								_ ->
+									State0
+							end, 
+						State#edd_con_state{
+							vertices = NVerticesAfterTrust,
+							correct = EqualToSelected ++ Trusted1 ++ Trusted2,
+							pids = FunGetNewPids(NVerticesAfterTrust),
+							previous_state = NPreviousState
+						};
 			        dont_know ->
 			        	State#edd_con_state{
 			             	vertices = NSortedVertices -- [Selected],
@@ -583,7 +653,7 @@ asking_loop(State0 = #edd_con_state{
 								[] ->
 									{last_node, PidLN} = E,
 									io:format("The last event occured in ~p", [PidLN]),
-									lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(V,G) == PidLN])) 
+									lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(G, V) == PidLN])) 
 							end,
 						NewStateFromNode(State, Node);
 					help -> 
@@ -629,13 +699,14 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 		++ AnswersStr
 		++ "\n[" 
 		++ OptionsStr
-		++ "/c/d/s/p/r/u/h/a]: ",
+		++ "/t/d/c/s/p/r/u/h/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Answer = lists:reverse(Answer0),
 	get_behaviour(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
 
-get_behaviour("h", _, _, _) ->
-	help;
+
+get_behaviour("t", _, _, _) ->
+	trust;
 get_behaviour("d", _, _, _) ->
 	dont_know;
 get_behaviour("s", _, _, _) ->
@@ -646,6 +717,8 @@ get_behaviour("r", _, _, _) ->
 	print_root;
 get_behaviour("u", _, _, _) ->
 	undo;
+get_behaviour("h", _, _, _) ->
+	help;
 get_behaviour("a", _, _, _) ->
 	abort;
 get_behaviour("c", _, OptsDiagramSeq, _) ->
