@@ -631,6 +631,9 @@ get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 		Number = element(1,string:to_integer(NumberStr)),
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
+			#question{answers = [Answer = #answer{text = TextAns, when_chosen = BehAns}]} ->
+				io:format("Auto-selecting the only option:\n" ++ TextAns),
+				BehAns;
 			#question{} ->
 				FunAsk(-1, Behaviour, OptsDiagramSeq, FunAsk);
 			_ ->
