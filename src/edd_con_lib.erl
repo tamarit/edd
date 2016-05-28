@@ -376,13 +376,32 @@ asking_loop(State0 = #edd_con_state{
 		fun_ask_question = FunAsk,
 		comms = Comm
 	}) ->
-	State = State0#edd_con_state{preselected = none, previous_state = State0},
+	State = 
+		State0#edd_con_state{
+			preselected = none, 
+			previous_state = State0
+		},
 	GetNodesPids = 
 		fun(CVertices) ->
 			[V || 
 				V <- CVertices, 
 			   	lists:member(get_pid_vertex(V,G),Pids)] 
-		end, 
+		end,
+	NewStateFromNode = 
+		fun(CState, Node) ->
+			{NPreselected, NPids} = 
+				case lists:member(Node, Correct ++ NotCorrect) of 
+					true ->
+						io:format("\n\nThe question about the selected event is already answered.\n"),
+						{none, Pids};
+			    	false -> 
+			    		{Node, lists:usort([get_pid_vertex(Node,G)|Pids])}		
+				end,
+			CState#edd_con_state{
+		     	preselected = NPreselected,
+		     	pids = NPids
+		    }
+		end,
 	NState = 
 		case GetNodesPids(Vertices) of 
 			[] ->
@@ -420,7 +439,7 @@ asking_loop(State0 = #edd_con_state{
 							Selected_ = 
 								case Priority of 
 									old -> hd(SameThanFirst);
-									new -> hd(lists:reverse(SameThanFirst));
+									new -> lists:last(SameThanFirst);
 									indet -> element(1,hd(SortedVertices))
 								end,
 							{Selected_, [V || {V,_} <- SortedVertices, V /= Selected_] ++ VerticesNoPid};
@@ -482,7 +501,9 @@ asking_loop(State0 = #edd_con_state{
 			        	case PreviousState of
 			                  none ->
 			                     io:format("Nothing to undo\n"),
-			                     State;
+			                     State#edd_con_state{
+		             				previous_state = PreviousState
+		            			};
 			                  _ ->
 			                  	PreviousState
 			             end;
@@ -528,10 +549,7 @@ asking_loop(State0 = #edd_con_state{
 			        			incorrect ->
 			        				IsNotCorrect
 			        		end,
-			        	StateCI#edd_con_state{
-					     	preselected = Node,
-					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
-					    };
+			        	NewStateFromNode(StateCI, Node);
 					{from_seq_diag, Code} ->
 						{E, Ns} = lists:nth(Code, DictsTrace),
 						% io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
@@ -567,10 +585,7 @@ asking_loop(State0 = #edd_con_state{
 									io:format("The last event occured in ~p", [PidLN]),
 									lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(V,G) == PidLN])) 
 							end,
-						State#edd_con_state{
-					     	preselected = Node,
-					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
-					    };
+						NewStateFromNode(State, Node);
 					help -> 
 						print_help(),
 						State#edd_con_state{
