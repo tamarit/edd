@@ -357,15 +357,19 @@ ask_about(State) ->
 	                               lists:member(U,digraph:out_neighbours(G, NCV))],
 	                Maybe = find_unknown_children(G,Unknown,Maybe0),
 					case get_answer("Do you want to try to answer"
-					     ++" the needed information? [y/n]: ",[y,n]) of
-					     y -> ask_about(NState#edd_con_state{vertices = Maybe});
+					     ++ " the needed information? [y/n]: ",[y,n]) of
+					     y -> 
+					     	ask_about(NState#edd_con_state{vertices = Maybe});
 					     n -> 
-			                [print_buggy_node(G,V,
-			                        "Call to a function that could contain an error") 
+					     	io:format(space()),
+			                [print_buggy_node(G, V ,
+			                        "Potentially this error can exist:\n") 
 			                        || V <- NotCorrectWithUnwnownVertexs],
-			                [print_buggy_node(G,V,
-			                         "This call has not been answered and could contain an error") 
-			                        || V <- Maybe]
+			                io:format(space()),
+			                [print_buggy_node(G, V ,
+			                		 "There is not enough information to say whether this is an error or not:\n") 
+			                        || V <- Maybe],
+			                io:format(space())
 					end;
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G, NotCorrectVertex,
