@@ -376,7 +376,7 @@ asking_loop(State0 = #edd_con_state{
 		fun_ask_question = FunAsk,
 		comms = Comm
 	}) ->
-	State = State0#edd_con_state{preselected = none},
+	State = State0#edd_con_state{preselected = none, previous_state = State0},
 	GetNodesPids = 
 		fun(CVertices) ->
 			[V || 
@@ -453,7 +453,6 @@ asking_loop(State0 = #edd_con_state{
 						State#edd_con_state{
 							vertices = NVerticesCorr,
 							correct = EqualToSeleceted ++ Correct,
-							previous_state = State,
 							pids = FunGetNewPids(NVerticesCorr)
 						}
 			        end, 
@@ -464,7 +463,6 @@ asking_loop(State0 = #edd_con_state{
 				    	State#edd_con_state{
 				             	vertices = NVerticesNotCorr,
 				             	not_correct = [Selected|NotCorrect],
-				             	previous_state = State,
 				             	pids = FunGetNewPids(NVerticesNotCorr)
 				            }
 			        end,
@@ -478,8 +476,7 @@ asking_loop(State0 = #edd_con_state{
 			        dont_know ->
 			        	State#edd_con_state{
 			             	vertices = NSortedVertices -- [Selected],
-			             	unknown = [Selected|Unknown],
-			             	previous_state = State
+			             	unknown = [Selected|Unknown]
 			             };
 			        undo -> 
 			        	case PreviousState of
@@ -490,39 +487,39 @@ asking_loop(State0 = #edd_con_state{
 			                  	PreviousState
 			             end;
 			        change_strategy -> 
-			        	case get_answer("Select a strategy (Didide & Query or "
-			                  ++"Top Down) [d/t]: ",[t,d]) of
-			                  t -> 
-			                  	State#edd_con_state{
-					             	strategy = top_down
-					             };
-			                  d -> 
-			                  	State#edd_con_state{
-					             	strategy = divide_query
-					             }
-			             end;
+			        	Nstategy = 
+				        	case get_answer("Select a strategy (Didide & Query or "
+				                  ++"Top Down) [d/t]: ",[d, t]) of
+								t -> 
+				                  	top_down;
+				                d -> 	
+				                  	divide_query
+				             end,
+				        State#edd_con_state{
+		             		strategy = Nstategy
+		            	};
 			        change_priority -> 
-			        	case get_answer("Select priority (Old, New or Indeterminate) [o/n/i]: ",[o,n,i]) of
-			                  o -> 
-			                  	State#edd_con_state{
-					             	priority = old
-					             };
-					          n -> 
-			                  	State#edd_con_state{
-					             	priority = new
-					             };
-			                  i -> 
-			                  	State#edd_con_state{
-					             	priority = indet
-					             }
-			             end;
+			        	NPriority = 
+				        	case get_answer("Select priority (Old first, New first or Indeterminate) [o/n/i]: ",[o,n,i]) of
+				                o -> 
+				                  	old;
+						        n -> 
+				                  	new ;
+				                i -> 
+				                  	indet
+				            end,
+				        State#edd_con_state{
+		             		priority = NPriority
+		            	};
 			        abort -> 
 			        	State#edd_con_state{
 					        vertices = [-1]
 					    };
 			        print_root -> 
 			        	print_root_info(SummaryPids),
-			        	State;
+			        	State#edd_con_state{
+		             		previous_state = PreviousState
+		            	};
 			        {CorrIncorr, {goto,Node}} ->
 			        	StateCI = 
 			        		case CorrIncorr of 
@@ -576,9 +573,13 @@ asking_loop(State0 = #edd_con_state{
 					    };
 					help -> 
 						print_help(),
-						State;
+						State#edd_con_state{
+		             		previous_state = PreviousState
+		            	};
 					other -> 
-						State
+						State#edd_con_state{
+		             		previous_state = PreviousState
+		            	}
 			   end
 				%io:format("Vertices de NState: ~p\n",[NState#debugger_state.vertices]),
 		end,
