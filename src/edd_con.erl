@@ -823,7 +823,9 @@ quote_enclosing(Str) ->
 str_term(Pid) ->
 	lists:flatten(io_lib:format("~p", [Pid]) ).
 
-build_pid_line(Pid, Call, NumPoints) ->
+% "<0.52.0>code" [shape="plaintext", label="11", fontcolor = "grey", fontsize = 20];
+%   "<0.52.0>10" -> "<0.52.0>code" [penwidth = 1, style = dotted, color = grey];
+build_pid_line(Pid, Call, Code, NumPoints) ->
 	Steps = 
 		lists:foldl(
 			fun(Num, Acc) -> Acc ++ " -> " ++ quote_enclosing(Pid ++ integer_to_list(Num)) end
@@ -832,7 +834,9 @@ build_pid_line(Pid, Call, NumPoints) ->
 		["{" 
 		,"  rank=\"same\";" 
 		,"  " ++ quote_enclosing(Pid) ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(Pid ++"\n" ++ edd_con_lib:build_call_string(Call) ) ++ "]; "
-		,"  "++ quote_enclosing(Pid) ++ Steps ++ ";"
+		,"  " ++ quote_enclosing(Pid) ++ Steps ++ ";"
+        ,"  " ++ quote_enclosing(Pid ++ "code") ++ "[shape=\"plaintext\", label=" ++ quote_enclosing(integer_to_list(Code)) ++ ", fontcolor = \"grey\", fontsize = 20];"
+        ,"  " ++ quote_enclosing(Pid ++ integer_to_list(NumPoints)) ++ " -> " ++  quote_enclosing(Pid ++ "code") ++ " [penwidth = 1, style = dotted, color = grey];"
 		,"} "]).
 
 dot_spaces() ->
@@ -985,11 +989,18 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		(length(Communications) - LengthReceives)
 		+ (2 * LengthReceives),
 	{PidsStr, PidsCall} = 
-		lists:unzip([{str_term(Pid), FirsCall} || #pid_info{pid = Pid, first_call = #call_info{call = FirsCall}} <- PidsInfo]),
+		lists:unzip(
+            [{str_term(Pid), FirsCall} 
+            || #pid_info{
+                    pid = Pid, 
+                    first_call = #call_info{call = FirsCall}
+                } <- PidsInfo
+            ]
+        ),
 	PidLines = 
 		lists:map(
-			fun({Pid, Call}) -> build_pid_line(Pid, Call, NumPoints) end 
-			, lists:zip(PidsStr, PidsCall) ),
+			fun({Code, Pid, Call}) -> build_pid_line(Pid, Call, Code, NumPoints) end,
+			lists:zip3(lists:seq(NumPoints + 1, NumPoints + length(PidsStr)), PidsStr, PidsCall) ),
     CodeLines = [build_code_line(NumPoints, lists:last(PidsStr))],
 	Distribution = distribute_edge(PidsStr), 
 	{CommLines0,_} = 
