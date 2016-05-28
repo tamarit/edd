@@ -194,16 +194,21 @@ get_MFA_vertex(G, V) ->
 
 print_buggy_node(G, NotCorrectVertex, Message) ->
 	{NotCorrectVertex, {Pid, CallRec}} = digraph:vertex(G,NotCorrectVertex),
-	StrProblem = 
-		case CallRec#callrec_stack_item.origin_callrec of 
-			#call_info{call = {M,F,A}} ->
-				format(
-                	"call ~p:~p(~s)", 
-                	[M,F,string:join(lists:map(fun any2str/1, A), ", ")]);
-			#receive_info{pos_pp = {{pos_info,{_, F, L, ReceiveStr0}}}} ->
-				format("receive\n~s\nin ~s:~p", [ReceiveStr0, F, L])
-		end,	
-	io:format("~sThe problem is in pid ~p\nwhile running ~s\n",[Message, Pid, StrProblem]).
+		case CallRec of 
+			#callrec_stack_item{} ->		
+				StrProblem = 
+					case CallRec#callrec_stack_item.origin_callrec of 
+						#call_info{call = {M,F,A}} ->
+							format(
+			                	"call ~p:~p(~s)", 
+			                	[M,F,string:join(lists:map(fun any2str/1, A), ", ")]);
+						#receive_info{pos_pp = {{pos_info,{_, F, L, ReceiveStr0}}}} ->
+							format("receive\n~s\nin ~s:~p", [ReceiveStr0, F, L])
+					end,
+				io:format("~sThe problem is in pid ~p\nwhile running ~s\n",[Message, Pid, StrProblem]);
+			_ ->
+				io:format("~sThe problem is in the parameters of the initial call.\n", [Message])
+		end.
 
 get_answer(Message,Answers) ->
    [_|Answer] = 
