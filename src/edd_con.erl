@@ -283,12 +283,15 @@ build_graph(Trace, DictFuns, PidInit) ->
     	},
     FinalState0 = 
   		lists:foldl(fun build_graph_trace/2, InitialState, Trace),
-
   	FinalState1 = 
   		add_spawn_sent_info(FinalState0),
-
-  	FinalState = 
+  	FinalState2 = 
   		add_result_info(FinalState1),
+    FinalState = 
+        FinalState2#evaltree_state{
+            pids_info = lists:sort(FinalState2#evaltree_state.pids_info)
+        },
+
 
   	{_, DictPids} = 
   		lists:foldl(fun assign_node_num/2, {0, dict:new()}, FinalState#evaltree_state.pids_info),
@@ -823,8 +826,6 @@ quote_enclosing(Str) ->
 str_term(Pid) ->
 	lists:flatten(io_lib:format("~p", [Pid]) ).
 
-% "<0.52.0>code" [shape="plaintext", label="11", fontcolor = "grey", fontsize = 20];
-%   "<0.52.0>10" -> "<0.52.0>code" [penwidth = 1, style = dotted, color = grey];
 build_pid_line(Pid, Call, Code, NumPoints) ->
 	Steps = 
 		lists:foldl(
@@ -990,12 +991,14 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		+ (2 * LengthReceives),
 	{PidsStr, PidsCall} = 
 		lists:unzip(
-            [{str_term(Pid), FirsCall} 
-            || #pid_info{
-                    pid = Pid, 
-                    first_call = #call_info{call = FirsCall}
-                } <- PidsInfo
-            ]
+            % lists:sort(
+                [{str_term(Pid), FirsCall} 
+                || #pid_info{
+                        pid = Pid, 
+                        first_call = #call_info{call = FirsCall}
+                    } <- PidsInfo
+                ]
+            % )
         ),
 	PidLines = 
 		lists:map(

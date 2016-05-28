@@ -216,6 +216,7 @@ find_unknown_children(G,Unknown,[V|Vs]) ->
 find_unknown_children(_,_,[]) ->
 	[].
 
+
 replicate_receives([{E, Ns} | Tail], Comm, Acc) ->
 	NAcc = 
 		case lists:any(fun(V) -> V end, lists:map(fun(T) -> is_receive(T, E) end, Comm)) of 
@@ -272,6 +273,9 @@ initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priorit
 		digraph:vertices(G) -- [0|IniCorrect],
 	Pids =
 		[Pid || {Pid, _, _, _, _} <- SummaryPidsInfo],
+	NDictTrace = 
+			replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []) 
+		++ 	[ {{last_node, Pid}, []} || Pid <- lists:sort(Pids)],
 	#edd_con_state{
 		graph = G,
 		dict_questions = DictQuestions,
@@ -282,7 +286,7 @@ initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priorit
 		correct = IniCorrect,
 		summary_pids = SummaryPidsInfo,
 		pids = Pids,
-		dicts_trace = replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []),
+		dicts_trace = NDictTrace,
 		comms = Comm
 	}.
 
@@ -537,26 +541,35 @@ asking_loop(State0 = #edd_con_state{
 						EventBoolList = 
 							lists:map(fun(C) -> is_the_event(C, E) end, Comm),
 						% io:format("~p\n", [EventBoolList]),
-						{_,[Pos]} = 
+						{_, PosList} = 
 							lists:foldl(
-								fun
-									(true, {Curr, Acc}) ->
-										{Curr + 1, [Curr]};
-									(false, {Curr, Acc}) ->
-										{Curr + 1, Acc}
-								end,
-								{1,[]},
-								EventBoolList),
+									fun
+										(true, {Curr, Acc}) ->
+											{Curr + 1, [Curr]};
+										(false, {Curr, Acc}) ->
+											{Curr + 1, Acc}
+									end,
+									{1,[]},
+									EventBoolList),
 						io:format("Selected event:\n"),
-						case lists:nth(Pos, Comm) of
-							{spawned,{spawn_info,Spawner,Spawned,_}} -> 
-								io:format("~p spawned ~p", [Spawner, Spawned]);
-							{sent,MessageInfo} ->
-								io:format("Sent message: ~s", [edd_con:pp_item(MessageInfo)]);
-							{received,MessageInfo} ->
-								io:format("Consumed message: ~s", [edd_con:pp_item(MessageInfo)])
-						end,
-						Node = hd(Ns),
+						Node = 
+							case PosList of 
+								[Pos] -> 
+									case lists:nth(Pos, Comm) of
+										{spawned,{spawn_info,Spawner,Spawned,_}} -> 
+											io:format("~p spawned ~p", [Spawner, Spawned]);
+										{sent,MessageInfo} ->
+											io:format("Sent message: ~s", [edd_con:pp_item(MessageInfo)]);
+										{received,MessageInfo} ->
+											io:format("Consumed message: ~s", [edd_con:pp_item(MessageInfo)])
+									end,
+									% TODO. Maybe it should be choosen whether it should go to the inner- or outer-most.
+									hd(Ns);
+								[] ->
+									{last_node, PidLN} = E,
+									io:format("The last event occured in ~p", [PidLN]),
+									lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(V,G) == PidLN])) 
+							end,
 						State#edd_con_state{
 					     	preselected = Node,
 					     	pids = lists:usort([get_pid_vertex(Node,G)|Pids])
@@ -579,14 +592,14 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 			end,
 			1,
 			Answers
-			),
+		),
 	AnswersList = 
 		lists:map(
 			fun({Id, #answer{text = AnswerStr}}) ->
 				format("~p. - ~s", [Id, AnswerStr])
 			end,
 			DictAnswers
-			),
+		),
 	AnswersStr = 
 		string:join(AnswersList, "\n"),
 	Options = 
