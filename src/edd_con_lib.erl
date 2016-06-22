@@ -72,6 +72,8 @@ print_summary_pid({Pid, Call, Sent, Spawned, Result}) ->
 		++ space(),
 	io:format("~s", [Str]).
 
+any2str(stuck_receive) ->
+    "Blocked because it is waiting for a message";
 any2str(Any) ->
     format("~p", [Any]).
 
@@ -107,10 +109,10 @@ build_call_string({ModFun,IdFun,ArgsFun}) ->
             format(
             	"~p:~p(~s)", 
                 [ModFun,IdFun,build_args_list_string(ArgsFun)])
-    end.
+    end;
 % TODO: This clause is temporal. Should be removed
-% build_call_string(_) ->
-%     "".
+build_call_string(_) ->
+    "".
 
 build_args_list_string([]) ->
     "";
@@ -138,28 +140,31 @@ ask_initial_process(Pids) ->
 		lists:unzip(StrPidsDict),
 	Options = 
 		lists:concat(StrPids) 
-			++ io_lib:format("~p.- None\n",[LastId]),
+			++ io_lib:format("~p.- Choose an event\n",[LastId])
+			++ io_lib:format("~p.- None\n",[LastId + 1]),
 	NDict = 
-		[{LastId,none} | Dict],
+		[{LastId,choose_event}, {LastId + 1,none} | Dict],
 	Question = 
 		io_lib:format(
 				space() 
 				++ "Pid selection" 
 				++ space() 
 				++ Options 
-				++ "\nPlease, insert a PID where you have observed a wrong behaviour: [1..~p]: ",
-			[LastId]),
+				++ "\nPlease, insert a PID where you have observed a wrong behavior: [1..~p]: ",
+			[LastId + 1]),
 	Answer = 
 		% get_answer(pids_wo_quotes(Question),lists:seq(0,LastId)),
 		get_answer(Question,lists:seq(1,LastId)),
 	Result = 
 		[Data || {Option,Data} <- NDict, Answer =:= Option],
-	FirstPid = 
+	{FirstPid, SelectEvent} = 
 		case Result of 
 			[none] ->
-				[Pid || {_,Pid} <- Dict];
+				{[Pid || {_,Pid} <- Dict], false};
+			[choose_event] ->
+				{[Pid || {_,Pid} <- Dict], true};
 			_ -> 
-				Result 
+				{Result, false}
 		end,
 	case FirstPid of 
 		[PidSelected] ->
@@ -170,7 +175,7 @@ ask_initial_process(Pids) ->
 			io:format("\nInitial PID not defined.\n")
 	end,
 	io:format(space()),
-	FirstPid.
+	{FirstPid, SelectEvent}.
 
 get_pid_vertex(G, V) ->
 	{V,{Pid,_}} = 
@@ -273,7 +278,8 @@ print_help() ->
 	Msg = 
 		string:join(
 			[
-				  "#. - Indicates that the corresponding option is wrong"
+				  space()
+				, "#. - Indicates that the corresponding option is wrong"
 				, "t. - Means \"trust\". Select this when the process or function is reliable."
 				, "d. - Means \"don't know\". Select this when you are not sure what is the answer"
 				, "c. - Chooses the question where a given event from the sequence diagram occurs"
@@ -313,6 +319,43 @@ initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priorit
 		comms = Comm
 	}.
 
+obtain_node_seq_diagram(Code, DictsTrace, Comm, G) -> 
+		{E, Ns} = lists:nth(Code, DictsTrace),
+		% io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
+		EventBoolList = 
+			lists:map(fun(C) -> is_the_event(C, E) end, Comm),
+		% io:format("~p\n", [EventBoolList]),
+		{_, PosList} = 
+			lists:foldl(
+					fun
+						(true, {Curr, Acc}) ->
+							{Curr + 1, [Curr]};
+						(false, {Curr, Acc}) ->
+							{Curr + 1, Acc}
+					end,
+					{1,[]},
+					EventBoolList),
+		io:format("Selected event:\n"),
+		Node = 
+			case PosList of 
+				[Pos] -> 
+					case lists:nth(Pos, Comm) of
+						{spawned,{spawn_info,Spawner,Spawned,_}} -> 
+							io:format("~p spawned ~p", [Spawner, Spawned]);
+						{sent,MessageInfo} ->
+							io:format("Sent message: ~s", [edd_con:pp_item(MessageInfo)]);
+						{received,MessageInfo} ->
+							io:format("Consumed message: ~s", [edd_con:pp_item(MessageInfo)])
+					end,
+					% TODO. Maybe it should be choosen whether it should go to the inner- or outer-most.
+					hd(Ns);
+				[] ->
+					{last_node, PidLN} = E,
+					io:format("The last event occured in ~p", [PidLN]),
+					lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(G, V) == PidLN])) 
+			end,
+		Node.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -329,8 +372,23 @@ ask(Info, Strategy, Priority) ->
 	FirstState = #edd_con_state{summary_pids = SummaryPids} = 
 		initial_state(Info, Strategy, Priority),
 	print_root_info(SummaryPids),
-	Pids = ask_initial_process(SummaryPids),
-	ask_about(FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4}).
+	{Pids, ChooseEvent} = ask_initial_process(SummaryPids),
+	State0 = FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4},
+	State1 =
+		case ChooseEvent of 
+			true ->
+				DictTraces = State0#edd_con_state.dicts_trace,
+				Comm =  State0#edd_con_state.comms,
+				G =  State0#edd_con_state.graph,
+				Code = get_answer(
+					"Select an event from the sequence diagram: ",
+					lists:seq(1,length(DictTraces))),
+				Node = obtain_node_seq_diagram(Code, DictTraces, Comm, G),
+				State0#edd_con_state{preselected = Node};
+			false -> 
+				State0
+		end,
+	ask_about(State1).
 
 ask_about(State) -> 
 	NState = #edd_con_state{
@@ -630,40 +688,7 @@ asking_loop(State0 = #edd_con_state{
 			        		end,
 			        	NewStateFromNode(StateCI, Node);
 					{from_seq_diag, Code} ->
-						{E, Ns} = lists:nth(Code, DictsTrace),
-						% io:format("~p\n~p\n~p\n", [E, DictsTrace, Comm]),
-						EventBoolList = 
-							lists:map(fun(C) -> is_the_event(C, E) end, Comm),
-						% io:format("~p\n", [EventBoolList]),
-						{_, PosList} = 
-							lists:foldl(
-									fun
-										(true, {Curr, Acc}) ->
-											{Curr + 1, [Curr]};
-										(false, {Curr, Acc}) ->
-											{Curr + 1, Acc}
-									end,
-									{1,[]},
-									EventBoolList),
-						io:format("Selected event:\n"),
-						Node = 
-							case PosList of 
-								[Pos] -> 
-									case lists:nth(Pos, Comm) of
-										{spawned,{spawn_info,Spawner,Spawned,_}} -> 
-											io:format("~p spawned ~p", [Spawner, Spawned]);
-										{sent,MessageInfo} ->
-											io:format("Sent message: ~s", [edd_con:pp_item(MessageInfo)]);
-										{received,MessageInfo} ->
-											io:format("Consumed message: ~s", [edd_con:pp_item(MessageInfo)])
-									end,
-									% TODO. Maybe it should be choosen whether it should go to the inner- or outer-most.
-									hd(Ns);
-								[] ->
-									{last_node, PidLN} = E,
-									io:format("The last event occured in ~p", [PidLN]),
-									lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(G, V) == PidLN])) 
-							end,
+						Node = obtain_node_seq_diagram(Code, DictsTrace, Comm, G),
 						NewStateFromNode(State, Node);
 					help -> 
 						print_help(),
@@ -711,39 +736,39 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 		++ "/t/d/c/s/p/r/u/h/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Answer = lists:reverse(Answer0),
-	get_behaviour(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
+	get_behavior(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
 
 
-get_behaviour("t", _, _, _) ->
+get_behavior("t", _, _, _) ->
 	trust;
-get_behaviour("d", _, _, _) ->
+get_behavior("d", _, _, _) ->
 	dont_know;
-get_behaviour("s", _, _, _) ->
+get_behavior("s", _, _, _) ->
 	change_strategy;
-get_behaviour("p", _, _, _) ->
+get_behavior("p", _, _, _) ->
 	change_priority;
-get_behaviour("r", _, _, _) ->
+get_behavior("r", _, _, _) ->
 	print_root;
-get_behaviour("u", _, _, _) ->
+get_behavior("u", _, _, _) ->
 	undo;
-get_behaviour("h", _, _, _) ->
+get_behavior("h", _, _, _) ->
 	help;
-get_behaviour("a", _, _, _) ->
+get_behavior("a", _, _, _) ->
 	abort;
-get_behaviour("c", _, OptsDiagramSeq, _) ->
+get_behavior("c", _, OptsDiagramSeq, _) ->
 	{
 		from_seq_diag, 
 		get_answer(
 			"Select an event from the sequence diagram: ",
 			lists:seq(1,OptsDiagramSeq))
 	};
-get_behaviour(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
+get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 	try 
 		Number = element(1,string:to_integer(NumberStr)),
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
 			#question{answers = [Answer = #answer{text = TextAns, when_chosen = BehAns}]} ->
-				io:format("Auto-selecting the only option:\n" ++ TextAns),
+				io:format("Auto-selecting, only one option:\n" ++ TextAns),
 				BehAns;
 			#question{} ->
 				FunAsk(-1, Behaviour, OptsDiagramSeq, FunAsk);

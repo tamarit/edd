@@ -135,6 +135,7 @@ cdd_internal_core(Expr, Timeout, FunCore, Dir) ->
         {Trace, DictFun, PidCall} ->
             ok
     end,
+    % io:format("TRACE: ~p\n", [Trace]),
     % Traces = dict_keys_to_str(Traces0),
 
     PidG = spawn(fun() -> digraph_server() end),
@@ -300,7 +301,7 @@ build_graph(Trace, DictFuns, PidInit) ->
   	PidsTree = digraph:new(),
     % io:format("~p\n", [FinalState#evaltree_state.pids_info]),
   	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
-  	 || PidInfo <- FinalState#evaltree_state.pids_info],
+  	 || PidInfo <- lists:reverse(lists:sort(FinalState#evaltree_state.pids_info))],
 
 
    %  io:format("~p\n", [dict:to_list(DictPids)]),
@@ -446,7 +447,7 @@ build_graph_trace(
 			{sent, #message_info{from = PidSenderCom, to = PidReceiverCom, msg = MsgCom}} <- Communication,
 			MsgCom == Msg, PidReceiverCom == Pid],
 	{NCommunication, NPidsInfo} = 
-		case MsgSender of 
+		case lists:usort(MsgSender) of 
 			% Only if a sender for the consumed message is found
 			[MsgSender_] ->
 				MsgRecord = 
@@ -778,7 +779,8 @@ build_pids_tree(#pid_info{pid = Pid, spawned = Spawned, first_call = #call_info{
 	Label = 
 		lists:flatten(io_lib:format("~p\n~s", [Pid, StrFun])),
 	digraph:add_vertex(PidsTree, V, Label),
-	[digraph:add_edge(PidsTree, V, hd(dict:fetch(PidSpawned, DictPids))) 
+    % io:format("Edges: ~p\n", [digraph:no_edges(PidsTree)]),
+	[digraph:add_edge(PidsTree, V, hd(dict:fetch(PidSpawned, DictPids)))
 		|| PidSpawned <- Spawned],
 	ok.
 
@@ -1065,7 +1067,12 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
                 ++ lists:flatten(
                         lists:map(
                             fun list_ans/1,
-                            lists:droplast(AnsPrevReceive))),
+                            lists:foldl(
+                                fun(_, Acc) -> lists:droplast(Acc) end,
+                                AnsPrevReceive,
+                                lists:seq(1,4)
+                                ))),
+                            % lists:droplast(AnsPrevReceive))),
             [build_answer(
                 "Previous evaluated receive:\n" 
                 ++ edd_con_lib:tab_lines(PreRecInfoStr), 
@@ -1074,7 +1081,7 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
             []   
     end.
 
-behaviour_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
+behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
     case SentSpawned of 
         [] ->
             BehEmptySame;
@@ -1084,12 +1091,15 @@ behaviour_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
                 answers = 
                 [ 
                     begin
-                        {ok, [NodeDest]} = dict:find(MS, DictNodes),
-                        case NodeDest of 
-                            Node -> 
+                        % io:format("Res: ~p\n", [dict:find(MS, DictNodes)]),
+                        case dict:find(MS, DictNodes) of 
+                            {ok, [Node]} -> 
                                 build_answer(pp_item(MS), BehEmptySame);
-                            _ ->
-                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}) 
+                            {ok, [NodeDest]} ->
+                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}});
+                            error ->
+                                % TODO: Not sure whether this is the expected behavior
+                                build_answer(pp_item(MS), BehEmptySame)
                         end
                     end
                 || MS <- SentSpawned
@@ -1175,8 +1185,8 @@ build_question(
         PrevReceive ++ 
         reached_value_answer(Result, PrevRec) ++ 
         [
-         build_answer(edd_con_lib:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(edd_con_lib:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib:question_list("sent messages",Sent), behavior_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib:question_list("created processes",Spawned), behavior_question(Spawned, DictNodes, Node, incorrect, correct)),
          build_answer("Nothing", correct)
         ],
     % Question ++ "\n" ++ edd_con_lib:any2str(Answers);
@@ -1230,13 +1240,13 @@ build_question(
         [
          build_answer(edd_con_lib:question_list("Context",Context), correct),
          % build_answer("ContextRec: " ++ edd_con_lib:any2str(ContextRec), correct),
-         build_answer(edd_con_lib:question_list("received messages",Received),behaviour_question(Received, DictNodes, Node, correct, correct)),
-         build_answer(edd_con_lib:question_list("consumed messages",Consumed), incorrect)
+         build_answer(edd_con_lib:question_list("received messages",Received),behavior_question(Received, DictNodes, Node, correct, correct)),
+         build_answer(edd_con_lib:question_list("consumed message",Consumed), incorrect)
         ]
         ++ reached_value_answer(Result, PrevRec) ++
         [
-         build_answer(edd_con_lib:question_list("sent messages",Sent), behaviour_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(edd_con_lib:question_list("created processes",Spawned), behaviour_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib:question_list("sent messages",Sent), behavior_question(Sent, DictNodes, Node, incorrect, correct)),
+         build_answer(edd_con_lib:question_list("created processes",Spawned), behavior_question(Spawned, DictNodes, Node, incorrect, correct)),
          build_answer("Nothing", correct)
         ],
     NDictTraces  = 
@@ -1255,7 +1265,7 @@ list_answers(
             when_chosen = Beh
         }, {Opt, Acc}) ->
     StrAnswer = 
-        io_lib:format("~p. - ~s (Behaviour: ~p)\n", [Opt, Text, Beh]),
+        io_lib:format("~p. - ~s (behavior: ~p)\n", [Opt, Text, Beh]),
     {Opt + 1, lists:flatten(Acc ++ StrAnswer)}.
 
 add_to_trace_dict(DictTraces, SpawnedMsgs, V) ->
