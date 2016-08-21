@@ -160,7 +160,7 @@ edd_loop() ->
 				             	%% TODO: Send the list of candidates nodes 
 				             	?JAVA_NODE_NAME ! unknown_nodes;
 				             [NotCorrectVertex|_] ->
-								?JAVA_NODE_NAME ! {buggy_node, NotCorrectVertex}
+								?JAVA_NODE_NAME ! {buggy_node, NotCorrectVertex, edd_con_lib:buggy_node_str(G, NotCorrectVertex, "")}
 				        end
 				end
 			catch 

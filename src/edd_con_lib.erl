@@ -29,7 +29,8 @@
 	dot_graph_file/2, ask/3, any2str/1, 
 	tab_lines/1, build_call_string/1,
 	question_list/2, format/2,
-	initial_state/3, asking_loop/1]).
+	initial_state/3, asking_loop/1,
+	buggy_node_str/3]).
 
 -include_lib("edd_con.hrl").
 	
@@ -197,7 +198,7 @@ get_MFA_vertex(G, V) ->
 			V
 	end.
 
-print_buggy_node(G, NotCorrectVertex, Message) ->
+buggy_node_str(G, NotCorrectVertex, Message) ->
 	{NotCorrectVertex, {Pid, CallRec}} = digraph:vertex(G,NotCorrectVertex),
 		case CallRec of 
 			#callrec_stack_item{} ->		
@@ -210,10 +211,13 @@ print_buggy_node(G, NotCorrectVertex, Message) ->
 						#receive_info{pos_pp = {{pos_info,{_, F, L, ReceiveStr0}}}} ->
 							format("receive\n~s\nin ~s:~p", [ReceiveStr0, F, L])
 					end,
-				io:format("~sThe problem is in pid ~p\nwhile running ~s\n",[Message, Pid, StrProblem]);
+				format("~sThe problem is in pid ~p\nwhile running ~s\n",[Message, Pid, StrProblem]);
 			_ ->
-				io:format("~sThe problem is in the parameters of the initial call.\n", [Message])
+				format("~sThe problem is in the parameters of the initial call.\n", [Message])
 		end.
+
+print_buggy_node(G, NotCorrectVertex, Message) ->
+	io:format("~s", [buggy_node_str(G, NotCorrectVertex, Message)]).
 
 get_answer(Message,Answers) ->
    [_|Answer] = 
