@@ -1,4 +1,4 @@
-%%%    Copyright (C) 2013 Enrique Martin-Martin <stamarit@dsic.upv.es>
+%%%    Copyright (C) 2013 Salvador Tamarit <stamarit@dsic.upv.es>
 %%%    This file is part of Erlang Declarative Debugger.
 %%%
 %%%    Erlang Declarative Debugger is free software: you can redistribute it and/or modify
