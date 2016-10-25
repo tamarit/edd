@@ -17,12 +17,12 @@
 		reached_rec_val = none,
 		context = [],
 		spawned = [],
-    	sent =[],
-    	received = [],
-    	consumed = [],
-    	% children_nodes = [],
-    	result = none,
-        trace = none
+		sent =[],
+		received = [],
+		consumed = [],
+		% children_nodes = [],
+		result = none,
+		trace = none
 	}).	
 
 -record(call_info,
