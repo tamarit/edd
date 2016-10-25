@@ -319,7 +319,7 @@ inst_fun_clauses(Clauses, FunId) ->
 					 % ), 
 					 ++ [ erl_syntax:list(ParValues)], 
 			SendCallStart = 
-				build_send_trace(start_call, [erl_syntax:tuple(CallRep), ContextStart] ), 
+				build_send_trace(start_call, [erl_syntax:tuple(CallRep), ContextStart] ++ pos_and_pp(Clause)), 
 			LastExpr = 
 				lists:last(NBody0),
 			BodyWOLast =

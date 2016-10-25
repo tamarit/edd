@@ -338,20 +338,23 @@ build_graph(Trace, DictFuns, PidInit) ->
 
 
 build_graph_trace(
-		{TraceId, {edd_trace, start_call, Pid, {Call, Context}}}, 
+		{TraceId, {edd_trace, start_call, Pid, {Call, Context, PosAndPP}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
 	% Store the first call. Only for first process, rest of process will use spawn to fill thi info
+    % io:format("~p\n", [{Call, Context, PosAndPP}]),
+    % {pos_info,{merge_con,"merge_con.erl",65,
+    %                   "(N, [H | T]) -> [H | take(N - 1, T)]"}}
 	NPidsInfo0 = 
 		case PidsInfo of 
 			[PidInfo = #pid_info{pid = Pid, first_call = none}] ->
-				[PidInfo#pid_info{first_call = #call_info{call = Call}}]; 
+				[PidInfo#pid_info{first_call = #call_info{call = Call, pos_pp = PosAndPP}}]; 
 			_ -> 
 				PidsInfo
 		end,
 	% Add call to the process stack
 	NPidsInfo = 
 		lists:map(
-			fun(PI) -> add_new_callrec_stack(PI, {Pid, #call_info{call = Call}, Context}, TraceId) end,
+			fun(PI) -> add_new_callrec_stack(PI, {Pid, #call_info{call = Call, pos_pp = PosAndPP}, Context}, TraceId) end,
 			NPidsInfo0),
 	% New state
 	State#evaltree_state{

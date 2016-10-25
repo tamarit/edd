@@ -126,6 +126,7 @@ edd_loop() ->
 				?JAVA_NODE_NAME ! {dict_traces, dict:to_list(DictTraces)},
 				% TODO: Prepare the server for errors as in previous services. 
 				% 		In this case it is really important as the execution would be different if rerun.
+				% TODO: Fun dictionary needed to imrpove the way annonymous function are shown.
 				% InitialState =  
 				% 	case State of 
 				% 		none -> 
