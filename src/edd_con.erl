@@ -967,12 +967,14 @@ communication_lines(
 		Pids, CurrentStep) -> 
 	Label = 
 		lists:flatten(io_lib:format("~p (from ~p)", [Msg, From]) ), 
+	%  TODO: Should be  the same CurrentStep for both. 
 	ReceiveEdge = 
 		[	
 			quote_enclosing(str_term(To) ++ integer_to_list(CurrentStep)) 
 		++ 	" -> " 
 		++ 	quote_enclosing(str_term(To) ++ integer_to_list(CurrentStep + 1)) 
 		++  " [label=" ++ quote_enclosing(Label) ++ "];"],
+	%  TODO: Related to previous TODO. Should only be incremented by one.
 	{ReceiveEdge, CurrentStep + 2};
 communication_lines(
 		{spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
@@ -1281,7 +1283,7 @@ add_to_trace_dict(DictTraces, SpawnedMsgs, V) ->
                     #message_info{trace = Trace0} ->
                         Trace0
                 end,
-            dict:append(TraceId, V,CurrDict)
+            dict:append(TraceId, V, CurrDict)
         end,
         DictTraces,
         SpawnedMsgs

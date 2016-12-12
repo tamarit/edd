@@ -691,6 +691,8 @@ asking_loop(State0 = #edd_con_state{
 			        				IsNotCorrect
 			        		end,
 			        	NewStateFromNode(StateCI, Node);
+			        {goto, Node} ->
+						NewStateFromNode(State, Node);
 					{from_seq_diag, Code} ->
 						Node = obtain_node_seq_diagram(Code, DictsTrace, Comm, G),
 						NewStateFromNode(State, Node);
