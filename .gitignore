@@ -73,3 +73,7 @@ eval_tree.dot
 
 
 examples/tcp/comm_seq_diag2.dot
+
+comm_seq_diag.pdf
+
+comm_seq_diag.dot

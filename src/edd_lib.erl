@@ -141,6 +141,14 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 				Modules = 
 					lists:usort(
 						[element(1, get_MFA_Label(G,V)) 
+					 	 || V <- digraph:vertices(G)]) -- 
+					lists:usort(
+						[case element(1, get_MFA_Label(G,V)) of 
+							Elem = {'fun',_,_} -> 
+								Elem; 
+							_ ->
+								ok 
+						 end
 					 	 || V <- digraph:vertices(G)]),
 				% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
 				Tests = 
