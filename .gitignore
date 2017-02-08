@@ -79,3 +79,7 @@ comm_seq_diag.pdf
 comm_seq_diag.dot
 
 run_examples.txt
+
+examples/quicksort_proper/dbg.pdf
+
+examples/quicksort_proper/dbg.dot

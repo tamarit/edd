@@ -1,6 +1,9 @@
 -module(edd_proper_reader).
 
--export([read/1, read_file/1, read_from_clause/1, put_attributes/1]).
+-export([
+		read/1, read_file/1, 
+		read_from_clause/1, put_attributes/1, 
+		get_initial_set_of_nodes/4]).
 
 % Test check: proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
 % Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
@@ -18,15 +21,16 @@ read_file(File) ->
 		end,
 	AllTestsCandidates = 
 		lists:reverse(lists:foldl(F, [], Forms)),
-	Res = 
+	ProperTest = 
 		lists:foldl(
 			fun separeteUsefulDiscarded/2,
 			{[], []},
 			AllTestsCandidates),
-	{ok, IODeviceW} = 
-		file:open("result.txt",[write]),
-	file:write(IODeviceW, list_to_binary(lists:flatten(io_lib:format("~p\n", [Res])))),
-	file:close(IODeviceW).
+	% {ok, IODeviceW} = 
+	% 	file:open("result.txt",[write]),
+	% file:write(IODeviceW, list_to_binary(lists:flatten(io_lib:format("~p\n", [ProperTest])))),
+	% file:close(IODeviceW),
+	ProperTest.
 
 separeteUsefulDiscarded({Fun, _, []}, {U, NU}) ->
 	{U, [Fun | NU]};
@@ -221,7 +225,6 @@ get_vars(N, Acc) ->
 	end.
 
 is_trusted_fun({FunName, Arity}) -> 
-	% false.
 	case erl_syntax:type(FunName) of 
 		atom -> 
 			FunNameAtom = 
@@ -266,4 +269,317 @@ is_trusted_fun({FunName, Arity}) ->
 			     		FileAdress
 			   end,
 			lists:prefix(code:lib_dir(), NFileAdress)
+	end.
+
+get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles) -> 
+	Modules = 
+		lists:usort(
+			[element(1, edd_lib:get_MFA_Label(G,V)) 
+		 	 || V <- digraph:vertices(G)]) -- 
+		lists:usort(
+			[case element(1, edd_lib:get_MFA_Label(G,V)) of 
+				Elem = {'fun',_,_} -> 
+					Elem; 
+				_ ->
+					ok 
+			 end
+		 	 || V <- digraph:vertices(G)]),
+	% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
+	Tests = 
+		lists:flatten(
+			[element(1, edd_proper_reader:read(Module) )
+			 || Module <- Modules]
+			++ [ element(1, edd_proper_reader:read_file(File))
+			 || File <- TestFiles]),
+	io:format("Tests : ~p\n", [Tests]),
+	VerticesInTests = 
+		lists:flatten(
+			[
+				begin 
+					case get_call_vertex(G, V) of 
+						none -> 
+							[];
+						FunAndArgs -> 
+							io:format("V:~p\n", [V]),
+							find_usable_tests(FunAndArgs, Tests)
+					end
+				end 
+			|| V <- digraph:vertices(G)]),
+	% % io:format("VerticesInTests : ~p\n", [VerticesInTests]),
+	% VerticesNotValidFromPositiveTests = 
+	% 	lists:flatten([begin 
+	% 		{CallV,ValueV} = edd_lib:get_call_value_string(G,V),
+	% 		[V 
+	% 			|| 	{CallT, ValueT, equal} <- Tests,
+	% 			 	CallV == CallT, ValueV /= ValueT] 
+	% 	 end || V <- digraph:vertices(G)]),
+	% % io:format("VerticesNotValidFromPositiveTests : ~p\n", [VerticesNotValidFromPositiveTests]),
+	% ValidFromTest = 
+	% 	[V || {V, equal} <- VerticesInTests],
+	% NotValidFromTest = 
+	% 	[V || {V, not_equal} <- VerticesInTests] 
+	% 	++ VerticesNotValidFromPositiveTests,
+	% % io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
+	% IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
+	% IniNotValid_ = lists:usort([Root | NotValidFromTest]),
+	% NewValidTests = 
+	% 	case lists:usort(ValidFromTest) of 
+	% 		IniValid_ ->
+	% 			% Trusted nodes were already as test cases
+	% 			[];
+	% 		_ ->
+	% 			lists:usort(ValidTrusted) -- lists:usort(ValidFromTest)
+	% 	end,
+	% NewNotValidTests = 
+	% 	case lists:usort(NotValidFromTest) of 
+	% 		IniNotValid_ ->
+	% 			% Root was already as a test case
+	% 			[];
+	% 		_ ->
+	% 			[Root]
+	% 	end,
+	% put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
+	% {IniValid_, IniNotValid_}.
+	ok.
+
+find_usable_tests(FunAndArgs, Tests) -> 
+	lists:foldl(
+		fun(T, Acc) -> 
+			get_compatible_calls(FunAndArgs, T, Acc)
+		end,
+		[],
+		Tests).
+
+get_compatible_calls(
+		FunAndArgs, 
+		{{ModuleTest,FunTest,0}, IsComplete, [{Pars, UsableCalls}]}, 
+		Acc) -> 
+	lists:foldl(
+		fun(UsableCall, CAcc) -> 
+			get_compatible_usable_calls(ModuleTest, UsableCall, FunAndArgs, CAcc)
+		end,
+		[],
+		UsableCalls),
+	Acc.
+
+
+get_compatible_usable_calls(ModuleTest, {FunUsable, ArgsUsable, _}, {FunVertex, ArgsVertex}, Acc) -> 
+	% 	io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
+	case same_fun(ModuleTest, FunVertex, FunUsable) of 
+		true ->
+			io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
+			Acc;
+		false ->
+			Acc 
+	end.
+
+same_fun(ModuleTest, FunVertex, FunUsable) -> 
+	ModuleVertex = 
+		erl_syntax:atom_value(
+			erl_syntax:module_qualifier_argument(FunVertex)),
+	FunNameVertex = 
+		erl_syntax:atom_value(
+			erl_syntax:module_qualifier_body(FunVertex)),		
+	case {erl_syntax:type(FunUsable), ModuleVertex == ModuleTest} of 
+		{atom, true} -> 
+			FunNameUsable = 
+				erl_syntax:atom_value(FunUsable),
+			FunNameVertex == FunNameUsable;
+		{module_qualifier, _} -> 
+			ModuleUsable = 
+				erl_syntax:atom_value(
+					erl_syntax:module_qualifier_argument(FunUsable)),
+			FunNameUsable = 
+				erl_syntax:atom_value(
+					erl_syntax:module_qualifier_body(FunUsable)),
+			(ModuleVertex  == ModuleUsable) and (FunNameVertex == FunNameUsable)
+	end. 
+
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,3},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {nil,1}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {nil,1}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {nil,1}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {nil,1}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {nil,1}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,quicksort}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {nil,1}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,quicksort}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {nil,1}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,quicksort}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {nil,1}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,quicksort}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {nil,1}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,quicksort}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {nil,1}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,
+%            {integer,1,4},
+%            {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,{integer,1,2},{nil,1}}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,{integer,1,2},{nil,1}}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,{integer,1,2},{nil,1}}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,{integer,1,2},{nil,1}}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,1},
+%      {cons,1,{integer,1,2},{nil,1}}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,4},{integer,1,1}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,4},{integer,1,1}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,4},{integer,1,1}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,4},{integer,1,1}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,4},{integer,1,1}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,4},
+%      {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,4},
+%      {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,4},
+%      {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,4},
+%      {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,partition}},
+%     [{'fun',1,{function,{atom,1,quicksort},{atom,1,leq},{integer,1,2}}},
+%      {integer,1,4},
+%      {cons,1,{integer,1,1},{cons,1,{integer,1,2},{nil,1}}}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,1},{integer,1,4}]}
+% B: {{atom,60,partition},
+%     [{'fun',60,{function,leq,2}},{var,60,'Pivot'},{var,60,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,1},{integer,1,4}]}
+% B: {{atom,53,partition},
+%     [{'fun',53,{function,leq,2}},{var,53,'Pivot'},{var,53,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,1},{integer,1,4}]}
+% B: {{atom,48,quicksort},[{'fun',48,{function,leq,2}},{var,48,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,1},{integer,1,4}]}
+% B: {{atom,45,quicksort},[{'fun',45,{function,leq,2}},{var,45,'L'}]}
+% A: {{remote,1,{atom,1,quicksort},{atom,1,leq}},[{integer,1,1},{integer,1,4}]}
+% B: {{atom,34,quicksort},[{'fun',34,{function,leq,2}},{var,34,'L'}]}
+
+
+get_call_vertex(G, V) -> 
+	{Vertex,{Label,_,File,Line}} = 
+		digraph:vertex(G, V),
+	{ok,Toks,_} = 
+		erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = 
+		erl_parse:parse_exprs(Toks),
+	{match,_,Call = {call, _, Called, Args},_} = 
+		Aexpr,
+	case Called of 
+		{remote,_,_,_} ->
+			{Called, Args};
+		_ ->
+			none
 	end.

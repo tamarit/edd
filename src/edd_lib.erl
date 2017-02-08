@@ -139,6 +139,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	{IniValid, IniNotValid} = 
 		case LoadTest of 
 			true -> 
+				edd_proper_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles),
 				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles);
 			false -> 
 				{ValidTrusted, [Root]}
@@ -445,10 +446,14 @@ print_clause(G,NotValidVertex,Clause) ->
 %% @end
 %%------------------------------------------------------------------------------	
 get_MFA_Label(G,Vertex) ->
-	{Vertex,{Label,_,File,Line}} = digraph:vertex(G,Vertex),
-	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
-	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	{match,_,{call,_,Called,APars},_} = Aexpr,
+	{Vertex,{Label,_,File,Line}} = 
+		digraph:vertex(G,Vertex),
+	{ok,Toks,_} = 
+		erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = 
+		erl_parse:parse_exprs(Toks),
+	{match,_,{call,_,Called,APars},_} = 
+		Aexpr,
 	case Called of 
 		{remote,_,{atom,_,ModName},{atom,_,FunName}} ->
 			Arity = length(APars),
@@ -459,10 +464,14 @@ get_MFA_Label(G,Vertex) ->
 	end.
 
 get_call_string(G,Vertex) ->
-	{Vertex,{Label,_,File,Line}} = digraph:vertex(G,Vertex),
-	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
-	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	{match,_,Call = {call,_,Called,_},_} = Aexpr,
+	{Vertex,{Label,_,File,Line}} = 
+		digraph:vertex(G,Vertex),
+	{ok,Toks,_} = 
+		erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = 
+		erl_parse:parse_exprs(Toks),
+	{match,_,Call = {call,_,Called,_},_} = 
+		Aexpr,
 	case Called of 
 		{remote,_,_,_} ->
 			erl_prettypr:format(Call);
@@ -470,12 +479,16 @@ get_call_string(G,Vertex) ->
 			{erl_prettypr:format(Call),File,Line}
 	end.
 
-get_call_value_string(G,Vertex) ->
-	{Vertex,{Label,_,_,_}} = digraph:vertex(G,Vertex),
-	{ok,Toks,_} = erl_scan:string(lists:flatten(Label)++"."),
-	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	{match,_,_,Value} = Aexpr,
-	{get_call_string(G,Vertex), erl_prettypr:format(Value)}.
+get_call_value_string(G, Vertex) ->
+	{Vertex,{Label,_,_,_}} = 
+		digraph:vertex(G,Vertex),
+	{ok,Toks,_} = 
+		erl_scan:string(lists:flatten(Label)++"."),
+	{ok,[Aexpr|_]} = 
+		erl_parse:parse_exprs(Toks),
+	{match,_,_,Value} = 
+		Aexpr,
+	{get_call_string(G, Vertex), erl_prettypr:format(Value)}.
 	
 get_ordinal(1) -> "first";
 get_ordinal(2) -> "second";
