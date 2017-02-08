@@ -34,10 +34,15 @@ separeteUsefulDiscarded(Fun, {U, NU}) ->
 	{[Fun | U], NU}.
 
 put_attributes(Forms) ->
-	Module = hd([Mod || {attribute,_,module,Mod} <- Forms]),
+	Module = 
+		hd([Mod || {attribute,_,module,Mod} <- Forms]),
 	put(module, Module),
-	Exports = lists:concat([Exports || {attribute,_,export,Exports} <- Forms]),
-	put(exports, Exports).
+	Exports = 
+		lists:concat([Exports || {attribute,_,export,Exports} <- Forms]),
+	put(exports, Exports),
+	AllFuns = 
+		[{Name, Arity} || {function, _, Name, Arity, _} <-  Forms],
+	put(all_funs, AllFuns).
 
 form({function, _, Name, 0, Clauses}, Acc) ->
 	Mod = get(module),
@@ -106,23 +111,25 @@ extract_forAll(Application, Acc) ->
 			erl_syntax:clause_body(ClauseFunTest),
 		Calls = 
 			extract_calls(BodyTest),
+		AllFunsCalled = 
+			[{erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))} 
+			|| C <- Calls, not(is_trusted_fun({erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))}))],
 		UsableCalls = 
 			lists:foldl(
 				fun(Call, CurrentUsableCalls) -> 
-					usable_calls(Call, CurrentUsableCalls, VarsPattern) 
+					usable_calls(Call, CurrentUsableCalls, VarsPattern, AllFunsCalled) 
 				end, 
 				[], 
 				Calls),
-		AllFunsCalles = 
-			[erl_syntax:application_operator(C) || C <- Calls],
 		case UsableCalls of 
 			[] -> 
 				Acc;
 			_ ->
-				[{TypesArgs, UsableCalls, AllFunsCalles}| Acc]
+				[{TypesArgs, UsableCalls}| Acc]
 		end
 	catch 
 		_:_ -> 
+			% io:format("Failing: ~p\n", [Application]),
 			Acc
 	end.
 
@@ -160,7 +167,7 @@ add_if_call(Node, Acc) ->
 			Acc
 	end.
 
-usable_calls(Call, Acc, VarsPattern) ->
+usable_calls(Call, Acc, VarsPattern, AllFunsCalled) ->
 	Args = 
 		erl_syntax:application_arguments(Call),
 	OnlyVarsArgs = 
@@ -174,7 +181,17 @@ usable_calls(Call, Acc, VarsPattern) ->
 		true ->
 			case lists:usort(VarsPattern) == lists:usort(OnlyVarsArgs) of 
 				true -> 
-					[{erl_syntax:application_operator(Call), OnlyVarsArgs} | Acc];
+					Op = 
+						erl_syntax:application_operator(Call),
+					% io:format("~p\n~p\n",[Op, is_trusted_fun({Op, length(Args)})]),
+					case is_trusted_fun({Op, length(Args)}) of 
+						true -> 
+							Acc;
+						false ->
+							RestOfFuns =  
+								lists:usort(AllFunsCalled -- [{Op, length(Args)}]),
+							[{Op, Args, RestOfFuns} | Acc]
+					end;
 				false -> 
 					Acc 
 			end;
@@ -201,4 +218,52 @@ get_vars(N, Acc) ->
 			[N | Acc];
 		_ ->
 			Acc
+	end.
+
+is_trusted_fun({FunName, Arity}) -> 
+	% false.
+	case erl_syntax:type(FunName) of 
+		atom -> 
+			FunNameAtom = 
+				erl_syntax:atom_value(FunName),
+			AllFuns = 
+				get(all_funs),
+			case lists:member({FunNameAtom, Arity}, AllFuns) of 
+				true -> 
+					false;
+				false -> 
+					true 
+			end;
+		module_qualifier ->
+			ModNameAtom = 
+				erl_syntax:atom_value(
+					erl_syntax:module_qualifier_argument(FunName)),
+			ModName = 
+				atom_to_list(ModNameAtom),
+			FileAdress = 
+				code:where_is_file(ModName ++ ".erl"),
+			NFileAdress = 
+			   	case FileAdress of
+			        non_existing -> 
+			     		NFileAdress_ = 
+			     			code:where_is_file(ModName ++ ".beam"),
+			     		case NFileAdress_ of
+			     		     non_existing -> 
+			     		     	% io:format("PATHS: ~p\n",[code:get_path()]),
+			     		     	throw({error,"Non existing module", ModName});
+			     		     _ -> 
+			     		     	RelPath = 
+			     		     		"ebin/" ++ ModName ++ ".beam",
+			     		     	NRelPath = 
+			     		     		"src/" ++ ModName ++ ".erl",
+			     		     	PrevPath = 
+			     		     	   lists:sublist(
+			     		     	   		NFileAdress_,1,
+										length(NFileAdress_) - length(RelPath)),
+			     		     	PrevPath ++ NRelPath
+			     		end;
+			     	_ -> 
+			     		FileAdress
+			   end,
+			lists:prefix(code:lib_dir(), NFileAdress)
 	end.
