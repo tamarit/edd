@@ -382,15 +382,18 @@ get_compatible_usable_calls(
 				 || {NeededFun, Arity} <- RestOfFuns],
 			case (TupledRestOfFuns -- TrustedFunctions) of 
 				[] -> 
-					io:format("Valid test\n"),
-					case compatible_args(ArgsVertex, ArgsUsable) of 
+					io:format("Needed functions are trusted\n"),
+					io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
+					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
 						false -> 
+							io:format("The arguments are NOT compatible\n", []), 
 							Acc;
-						{true, Dict} -> 
+						{true, Dict} ->
+							io:format("The arguments are compatible:\n~p\n", [Dict]), 
 							Acc
 					end;
 				_ ->
-					io:format("Not valid test\n"),
+					io:format("Needed functions are NOT trusted\n"),
 					Acc 
 			end;
 		false ->
@@ -418,6 +421,70 @@ same_fun(ModuleTest, FunVertex, FunUsable) ->
 					erl_syntax:module_qualifier_body(FunUsable)),
 			(ModuleVertex  == ModuleUsable) and (FunNameVertex == FunNameUsable)
 	end. 
+
+compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) -> 
+	case erl_syntax:type(ArgT) of
+		variable -> 
+			Var = 
+				erl_syntax:variable_name(ArgT),
+			case [Item || Item = {Var_, _} <- Dict, Var_ == Var] of 
+				[] ->
+					compatible_args(Args, ModuleTest, [{Var, ArgV} | Dict]);
+				[{Var, PreviousValue}]  -> 
+					StrArgV = 
+						erl_prettypr:format(ArgV),
+					StrArgPV = 
+						erl_prettypr:format(PreviousValue),
+					io:format("~s == ~s\n", [StrArgV, StrArgPV]),
+					case (StrArgV == StrArgPV) of 
+						true -> 
+							compatible_args(Args, ModuleTest, Dict);	
+						false -> 
+							false
+					end
+			end;
+		_ ->
+			StrArgV = 
+				erl_prettypr:format(ArgV),
+			StrArgT = 
+				erl_prettypr:format(
+					remotize_implicit_fun(ArgT, ModuleTest)),
+			io:format("~s == ~s\n", [StrArgV, StrArgT]),
+			case (StrArgV == StrArgT) of 
+				true -> 
+					compatible_args(Args, ModuleTest, Dict);
+				false -> 
+					false
+			end
+	end;
+compatible_args([], ModuleTest, Dict) ->
+	{true, Dict}.
+
+remotize_implicit_fun(Node, ModuleTest) ->
+	case erl_syntax:type(Node) of 
+		implicit_fun -> 
+			FunNameArity = 
+				erl_syntax:implicit_fun_name(Node),
+			FunName = 
+				erl_syntax:arity_qualifier_body(FunNameArity),
+			Arity = 
+				erl_syntax:arity_qualifier_argument(FunNameArity),
+			case erl_syntax:type(FunName) of 
+				atom -> 
+					erl_syntax:implicit_fun(
+						erl_syntax:arity_qualifier(
+							erl_syntax:module_qualifier(
+								erl_syntax:atom(ModuleTest),
+								FunName),
+							Arity
+						)
+					);
+				module_qualifier -> 
+					Node
+			end;
+		_ ->
+			Node
+	end.
 
 tuple_function(ModuleTest, NeededFun, Arity) -> 
 	case erl_syntax:type(NeededFun) of 
