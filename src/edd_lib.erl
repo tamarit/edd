@@ -28,7 +28,8 @@
 
 -export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
 		ask/4, core_module/1, core_module/2, get_MFA_Label/2,
-		asking_loop/10, initial_state/2, get_call_string/2, select_strategy/1]).
+		asking_loop/10, initial_state/2, get_call_string/2, select_strategy/1,
+		get_call_value_string/2]).
 
 %%------------------------------------------------------------------------------
 %% @doc Parses a string as if it were an expression. Returns a unitary list 
@@ -138,69 +139,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	{IniValid, IniNotValid} = 
 		case LoadTest of 
 			true -> 
-				Modules = 
-					lists:usort(
-						[element(1, get_MFA_Label(G,V)) 
-					 	 || V <- digraph:vertices(G)]) -- 
-					lists:usort(
-						[case element(1, get_MFA_Label(G,V)) of 
-							Elem = {'fun',_,_} -> 
-								Elem; 
-							_ ->
-								ok 
-						 end
-					 	 || V <- digraph:vertices(G)]),
-				% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
-				Tests = 
-					lists:flatten(
-						[edd_test_reader:read(Module) 
-						 || Module <- Modules]
-						++ [ edd_test_reader:read_file(File)
-						 || File <- TestFiles]),
-				% io:format("Tests : ~p\n", [Tests]),
-				VerticesInTests = 
-					lists:flatten([begin 
-						{CallV,ValueV} = get_call_value_string(G,V),
-						% io:format("{CallV,ValueV} : ~p\n", [{CallV,ValueV} ]),
-						[{V, Type} 
-							|| 	{CallT, ValueT, Type} <- Tests,
-							 	CallV == CallT, ValueV == ValueT] 
-					 end || V <- digraph:vertices(G)]),
-				% io:format("VerticesInTests : ~p\n", [VerticesInTests]),
-				VerticesNotValidFromPositiveTests = 
-					lists:flatten([begin 
-						{CallV,ValueV} = get_call_value_string(G,V),
-						[V 
-							|| 	{CallT, ValueT, equal} <- Tests,
-							 	CallV == CallT, ValueV /= ValueT] 
-					 end || V <- digraph:vertices(G)]),
-				% io:format("VerticesNotValidFromPositiveTests : ~p\n", [VerticesNotValidFromPositiveTests]),
-				ValidFromTest = 
-					[V || {V, equal} <- VerticesInTests],
-				NotValidFromTest = 
-					[V || {V, not_equal} <- VerticesInTests] 
-					++ VerticesNotValidFromPositiveTests,
-				% io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
-				IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
-				IniNotValid_ = lists:usort([Root | NotValidFromTest]),
-				NewValidTests = 
-					case lists:usort(ValidFromTest) of 
-						IniValid_ ->
-							% Trusted nodes were already as test cases
-							[];
-						_ ->
-							lists:usort(ValidTrusted) -- lists:usort(ValidFromTest)
-					end,
-				NewNotValidTests = 
-					case lists:usort(NotValidFromTest) of 
-						IniNotValid_ ->
-							% Root was already as a test case
-							[];
-						_ ->
-							[Root]
-					end,
-				put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
-				{IniValid_, IniNotValid_};
+				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles);
 			false -> 
 				{ValidTrusted, [Root]}
 		end,

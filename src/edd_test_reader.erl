@@ -1,6 +1,8 @@
 -module(edd_test_reader).
 
--export([read/1, read_file/1, read_from_clause/1, put_attributes/1]).
+-export([
+		read/1, read_file/1, read_from_clause/1, 
+		put_attributes/1, get_initial_set_of_nodes/4]).
 
 read(Module) -> 
 	read_file(atom_to_list(Module) ++ ".erl").
@@ -200,3 +202,69 @@ remotize_implicit_fun(Node) ->
 		_:_ ->
 			Node
 	end.
+
+
+get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles) -> 
+	Modules = 
+		lists:usort(
+			[element(1, edd_lib:get_MFA_Label(G,V)) 
+		 	 || V <- digraph:vertices(G)]) -- 
+		lists:usort(
+			[case element(1, edd_lib:get_MFA_Label(G,V)) of 
+				Elem = {'fun',_,_} -> 
+					Elem; 
+				_ ->
+					ok 
+			 end
+		 	 || V <- digraph:vertices(G)]),
+	% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
+	Tests = 
+		lists:flatten(
+			[edd_test_reader:read(Module) 
+			 || Module <- Modules]
+			++ [ edd_test_reader:read_file(File)
+			 || File <- TestFiles]),
+	% io:format("Tests : ~p\n", [Tests]),
+	VerticesInTests = 
+		lists:flatten([begin 
+			{CallV,ValueV} = edd_lib:get_call_value_string(G,V),
+			% io:format("{CallV,ValueV} : ~p\n", [{CallV,ValueV} ]),
+			[{V, Type} 
+				|| 	{CallT, ValueT, Type} <- Tests,
+				 	CallV == CallT, ValueV == ValueT] 
+		 end || V <- digraph:vertices(G)]),
+	% io:format("VerticesInTests : ~p\n", [VerticesInTests]),
+	VerticesNotValidFromPositiveTests = 
+		lists:flatten([begin 
+			{CallV,ValueV} = edd_lib:get_call_value_string(G,V),
+			[V 
+				|| 	{CallT, ValueT, equal} <- Tests,
+				 	CallV == CallT, ValueV /= ValueT] 
+		 end || V <- digraph:vertices(G)]),
+	% io:format("VerticesNotValidFromPositiveTests : ~p\n", [VerticesNotValidFromPositiveTests]),
+	ValidFromTest = 
+		[V || {V, equal} <- VerticesInTests],
+	NotValidFromTest = 
+		[V || {V, not_equal} <- VerticesInTests] 
+		++ VerticesNotValidFromPositiveTests,
+	% io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
+	IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
+	IniNotValid_ = lists:usort([Root | NotValidFromTest]),
+	NewValidTests = 
+		case lists:usort(ValidFromTest) of 
+			IniValid_ ->
+				% Trusted nodes were already as test cases
+				[];
+			_ ->
+				lists:usort(ValidTrusted) -- lists:usort(ValidFromTest)
+		end,
+	NewNotValidTests = 
+		case lists:usort(NotValidFromTest) of 
+			IniNotValid_ ->
+				% Root was already as a test case
+				[];
+			_ ->
+				[Root]
+		end,
+	put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
+	{IniValid_, IniNotValid_}.
