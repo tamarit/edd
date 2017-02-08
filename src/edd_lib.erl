@@ -139,7 +139,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	{IniValid, IniNotValid} = 
 		case LoadTest of 
 			true -> 
-				edd_proper_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles),
+				edd_proper_reader:get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles),
 				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles);
 			false -> 
 				{ValidTrusted, [Root]}

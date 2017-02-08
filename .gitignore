@@ -83,3 +83,7 @@ run_examples.txt
 examples/quicksort_proper/dbg.pdf
 
 examples/quicksort_proper/dbg.dot
+
+examples/rat/dbg.pdf
+
+examples/rat/dbg.dot
