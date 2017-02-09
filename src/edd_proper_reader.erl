@@ -344,30 +344,88 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 	% {IniValid_, IniNotValid_}.
 	ok.
 
+check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests], Acc) -> 
+	% proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
+	ArgsValue = 
+		case Pars of 
+			[] -> 
+				erl_syntax:list();
+			[Var] ->
+				erl_syntax:list(
+					[element(2,hd(Dict))]);
+			_ ->
+				erl_syntax:list([
+					erl_syntax:tuple(
+						lists:map(
+							fun({Var,_}) -> 
+								{Var, Expr} = 
+									lists:keyfind(Var, 1, Dict),
+								Expr
+							end,
+							Pars)
+					)]
+				)
+		end,
+	CheckCall = 
+		erl_syntax:application(
+			erl_syntax:atom(proper),
+			erl_syntax:atom(check),
+			[
+				erl_syntax:application(
+					erl_syntax:atom(ModuleTest), 
+					erl_syntax:atom(FunTest), 
+					[]),
+				ArgsValue,
+				erl_syntax:list(
+					[erl_syntax:atom(quiet)])
+			]
+		),
+	io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
+	{value, Result, _}	=
+		erl_eval:expr(erl_syntax:revert(CheckCall), []),
+	io:format("~p\n", [Result]),
+	% Check the property value and decide what to do depending on whether is complete or not
+	check_call_with_property(Tests, Acc);
+check_call_with_property([], Acc) ->
+	Acc.
+	
+
 find_usable_tests(FunAndArgs, TrustedFunctions, Tests) -> 
 	lists:foldl(
 		fun(T, Acc) -> 
-			get_compatible_calls(FunAndArgs, T, TrustedFunctions, Acc)
+			TestBindings = 
+				get_test_bindings(
+					FunAndArgs, T, TrustedFunctions, Acc),
+			check_call_with_property(TestBindings, []),
+			Acc
 		end,
 		[],
 		Tests).
 
-get_compatible_calls(
+get_test_bindings(
 		FunAndArgs, 
 		{{ModuleTest,FunTest,0}, IsComplete, [{Pars, UsableCalls}]}, 
 		TrustedFunctions,
 		Acc) -> 
-	lists:foldl(
-		fun(UsableCall, CAcc) -> 
-			get_compatible_usable_calls(ModuleTest, UsableCall, FunAndArgs, TrustedFunctions, CAcc)
-		end,
-		[],
-		UsableCalls),
-	Acc.
+	compile:file(atom_to_list(ModuleTest) ++ ".erl", [debug_info]),
+	Dicts = 
+		lists:foldl(
+			fun(UsableCall, CAcc) -> 
+				get_compatible_usable_tests(
+					ModuleTest, FunTest, Pars, UsableCall, 
+					FunAndArgs, TrustedFunctions, CAcc)
+			end,
+			[],
+			UsableCalls),
+		[{ModuleTest, FunTest, IsComplete, Pars, Dict} 
+		 || Dict <- Dicts] 
+	++ 	Acc.
 
 
-get_compatible_usable_calls(
-		ModuleTest, 
+get_compatible_usable_tests(
+		ModuleTest,
+		FunTest, 
+		ParsTest,
 		{FunUsable, ArgsUsable, RestOfFuns}, 
 		{FunVertex, ArgsVertex}, 
 		TrustedFunctions, 
@@ -375,25 +433,72 @@ get_compatible_usable_calls(
 	% 	io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
 	case same_fun(ModuleTest, FunVertex, FunUsable) of 
 		true ->
-			io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
-			io:format("RestOfFuns; ~p\n", [RestOfFuns]),
+			% io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
+			% io:format("RestOfFuns; ~p\n", [RestOfFuns]),
 			TupledRestOfFuns = 
 				[tuple_function(ModuleTest, NeededFun, Arity) 
 				 || {NeededFun, Arity} <- RestOfFuns],
 			case (TupledRestOfFuns -- TrustedFunctions) of 
 				[] -> 
-					io:format("Needed functions are trusted\n"),
-					io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
+					% io:format("Needed functions are trusted\n"),
+					% io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
 					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
 						false -> 
-							io:format("The arguments are NOT compatible\n", []), 
+							% io:format("The arguments are NOT compatible\n", []), 
 							Acc;
 						{true, Dict} ->
-							io:format("The arguments are compatible:\n~p\n", [Dict]), 
-							Acc
+							% io:format("The arguments are compatible:\n~p\n", [Dict]), 
+       						DictWithTypes = 
+       							[begin 
+       								{Var, Type} = 
+       									lists:keyfind(Var, 1, ParsTest),
+       								{Var, Type, Value}
+       							end
+       							|| {Var, Value} <- Dict],
+       						TypeCheckCalls = 
+       							[
+       								% Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
+		       						erl_syntax:application(
+										erl_syntax:atom(proper_typeserver),
+										erl_syntax:atom(demo_is_instance),
+										[
+											Value,
+										 	erl_syntax:atom(ModuleTest),
+										 	erl_syntax:string(erl_prettypr:format(Type))
+										])
+		       					|| {_, Type, Value} <- DictWithTypes],
+		       				% [
+		       				% 	io:format(erl_prettypr:format(Call) ++ "\n") 
+		       				% || Call <- TypeCheckCalls],
+		       				AllTypesCorrect = 
+		       					lists:all(
+		       						fun
+		       							(true) -> 
+		       								true;
+		       							(_) ->
+		       								false 
+		       						end,
+				       				[
+				       					begin 
+				       						% TODO: Proper does not find the user-defined types
+					       					{value, TypeCorrect, _}	= 
+					       						erl_eval:expr(erl_syntax:revert(Call), []),
+					       					% io:format("~p\n", [TypeCorrect]),
+					       					TypeCorrect
+				       					end 
+				       				|| Call <- TypeCheckCalls]),
+		       				% io:format("All: ~p\n", [AllTypesCorrect]),
+		       				case AllTypesCorrect of 
+		       					true -> 
+		       						% io:format("Type constraints are hold."),
+		       						[Dict | Acc];
+		       					false ->
+		       						% io:format("Type constraints are NOT hold."),
+		       						Acc
+		       				end
 					end;
 				_ ->
-					io:format("Needed functions are NOT trusted\n"),
+					% io:format("Needed functions are NOT trusted\n"),
 					Acc 
 			end;
 		false ->
@@ -435,7 +540,7 @@ compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) ->
 						erl_prettypr:format(ArgV),
 					StrArgPV = 
 						erl_prettypr:format(PreviousValue),
-					io:format("~s == ~s\n", [StrArgV, StrArgPV]),
+					% io:format("~s == ~s\n", [StrArgV, StrArgPV]),
 					case (StrArgV == StrArgPV) of 
 						true -> 
 							compatible_args(Args, ModuleTest, Dict);	
@@ -449,7 +554,7 @@ compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) ->
 			StrArgT = 
 				erl_prettypr:format(
 					remotize_implicit_fun(ArgT, ModuleTest)),
-			io:format("~s == ~s\n", [StrArgV, StrArgT]),
+			% io:format("~s == ~s\n", [StrArgV, StrArgT]),
 			case (StrArgV == StrArgT) of 
 				true -> 
 					compatible_args(Args, ModuleTest, Dict);

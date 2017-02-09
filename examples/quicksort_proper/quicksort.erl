@@ -1,7 +1,9 @@
 -module(quicksort).
 -export([quicksort/2, partition/3, quicksort_proper_complete/0, quicksort_sorted_proper/0, quicksort_length_proper/0, partition_split_proper/0, partition_length_proper/0, leq/2]).
 
- -include_lib("proper/include/proper.hrl").
+% -compile(export_all).
+
+-include_lib("proper/include/proper.hrl").
 %% El orden de inclusiones es importante porque proper redefine el ?LET de EUnit
 -include_lib("eunit/include/eunit.hrl"). 
 
@@ -20,6 +22,7 @@ partition(Order, Pivot, [H|T]) ->
   case Order(H, Pivot) of
     true  -> {[H|Less], Greater}; 
     false -> {[H|Less], Greater} %bug2 
+    % false -> {Less, [H|Greater]} %OK
   end.
 		
 quicksort_unit_test() ->
