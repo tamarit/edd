@@ -300,10 +300,13 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 				begin 
 					case get_call_vertex(G, V) of 
 						none -> 
-							[];
+							[{V, unknown}];
 						FunAndArgs -> 
-							io:format("V:~p\n", [V]),
-							find_usable_tests(FunAndArgs, TrustedFunctions, Tests)
+							Validity = 
+								get_validity_from_proper(
+									FunAndArgs, TrustedFunctions, Tests),
+							io:format("{V, Validity}: ~p\n", [{V, Validity}]),
+							{V, Validity}
 					end
 				end 
 			|| V <- digraph:vertices(G)]),
@@ -344,7 +347,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 	% {IniValid_, IniNotValid_}.
 	ok.
 
-check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests], Acc) -> 
+check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]) -> 
 	% proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
 	ArgsValue = 
 		case Pars of 
@@ -380,33 +383,43 @@ check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]
 					[erl_syntax:atom(quiet)])
 			]
 		),
-	io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
+		% Check the property value and decide what to do depending on whether is complete or not
+	% io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
 	{value, Result, _}	=
 		erl_eval:expr(erl_syntax:revert(CheckCall), []),
-	io:format("~p\n", [Result]),
-	% Check the property value and decide what to do depending on whether is complete or not
-	check_call_with_property(Tests, Acc);
-check_call_with_property([], Acc) ->
-	Acc.
+	% io:format("~p\n", [{Result, IsComplete}]),
+	case {Result, IsComplete} of 
+		{true, true} ->
+			valid;
+		{false, _} ->
+			no_valid;
+		{true, _} ->
+			check_call_with_property(Tests)
+	end;
+check_call_with_property([]) ->
+	unknown.
 	
 
-find_usable_tests(FunAndArgs, TrustedFunctions, Tests) -> 
+get_validity_from_proper(FunAndArgs, TrustedFunctions, Tests) -> 
 	lists:foldl(
-		fun(T, Acc) -> 
-			TestBindings = 
-				get_test_bindings(
-					FunAndArgs, T, TrustedFunctions, Acc),
-			check_call_with_property(TestBindings, []),
-			Acc
+		fun
+			(_, valid) ->
+				valid;
+			(_, no_valid) ->
+				no_valid;
+			(T, unknown) -> 
+				TestBindings = 
+					get_test_bindings(
+						FunAndArgs, T, TrustedFunctions),
+				check_call_with_property(TestBindings)
 		end,
-		[],
+		unknown,
 		Tests).
 
 get_test_bindings(
 		FunAndArgs, 
 		{{ModuleTest,FunTest,0}, IsComplete, [{Pars, UsableCalls}]}, 
-		TrustedFunctions,
-		Acc) -> 
+		TrustedFunctions) -> 
 	compile:file(atom_to_list(ModuleTest) ++ ".erl", [debug_info]),
 	Dicts = 
 		lists:foldl(
@@ -417,9 +430,8 @@ get_test_bindings(
 			end,
 			[],
 			UsableCalls),
-		[{ModuleTest, FunTest, IsComplete, Pars, Dict} 
-		 || Dict <- Dicts] 
-	++ 	Acc.
+	[{ModuleTest, FunTest, IsComplete, Pars, Dict} 
+	 || Dict <- Dicts].
 
 
 get_compatible_usable_tests(
