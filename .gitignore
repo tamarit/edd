@@ -89,3 +89,7 @@ examples/rat/dbg.pdf
 examples/rat/dbg.dot
 
 examples/quicksort_proper/edd_temp.erl
+
+examples/quicksort_proper/colors.pdf
+
+examples/quicksort_proper/colors.dot

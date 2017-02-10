@@ -294,7 +294,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 			 || File <- TestFiles]),
 	io:format("Tests : ~p\n", [Tests]),
 	io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
-	VerticesInTests = 
+	VerticesValidity = 
 		lists:flatten(
 			[
 				begin 
@@ -310,6 +310,11 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 					end
 				end 
 			|| V <- digraph:vertices(G)]),
+	edd_lib:dot_graph_file_colors(
+		G, 
+		"colors", 
+		[V || {V, valid} <- VerticesValidity], 
+		[V || {V, no_valid} <- VerticesValidity]),
 	% % io:format("VerticesInTests : ~p\n", [VerticesInTests]),
 	% VerticesNotValidFromPositiveTests = 
 	% 	lists:flatten([begin 

@@ -26,7 +26,8 @@
 
 -module(edd_lib).
 
--export([parse_expr/1, dot_graph_file/2, json_graph/1, tupled_graph/1,
+-export([parse_expr/1, dot_graph_file/2, dot_graph_file_colors/4,
+		json_graph/1, tupled_graph/1,
 		ask/4, core_module/1, core_module/2, get_MFA_Label/2,
 		asking_loop/10, initial_state/2, get_call_string/2, select_strategy/1,
 		get_call_value_string/2]).
@@ -583,16 +584,28 @@ analyze_tokens([H|T]) ->
 %%------------------------------------------------------------------------------
 -spec dot_graph_file( G :: digraph:graph(), Name :: string() ) -> string().	   
 dot_graph_file(G,Name)->
-	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G)++"}")),
+	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G, [], [])++"}")),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
 	
-dot_graph(G)->
-	Vertices = [digraph:vertex(G,V)||V <- digraph:vertices(G)],
-	Edges = [{V1,V2}||V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
-	lists:flatten(lists:map(fun dot_vertex/1,Vertices))++
-	lists:flatten(lists:map(fun dot_edge/1,Edges)).
+dot_graph_file_colors(G, Name, Valid, NoValid) ->
+	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G, Valid, NoValid)++"}")),
+	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").
+
+dot_graph(G, Valid, NoValid)->
+	Vertices = 
+		[digraph:vertex(G,V) || V <- digraph:vertices(G)],
+	Edges = 
+		[{V1,V2}||V1 <- digraph:vertices(G),V2 <- digraph:out_neighbours(G, V1)],
+		lists:flatten(
+			lists:map(
+				fun(V) -> dot_vertex(V, Valid, NoValid) end,
+				Vertices))
+	++	lists:flatten(
+			lists:map(
+				fun dot_edge/1,
+				Edges)).
 	
-dot_vertex({V,{L,_,File,Line}}) ->
+dot_vertex({V,{L,_,File,Line}}, Valid, NoValid) ->
 	integer_to_list(V)++" "++"[shape=ellipse, label=\""
 	++integer_to_list(V)++" .- " 
 	++ changeNewLines(lists:flatten(
@@ -604,7 +617,17 @@ dot_vertex({V,{L,_,File,Line}}) ->
 		_ -> 
 			[$\\,$l] ++ changeNewLines(io_lib:format("fun location: (~s, line ~p)",[File, Line]))
 	end
-	++ "\"];\n".     
+	++ "\"" 
+	++
+	case {lists:member(V, Valid), lists:member(V, NoValid)} of 
+		{true, _} ->
+			" style=filled color=\"green\" fontcolor=\"white\" fillcolor=\"green\"";
+		{_, true} ->
+			" style=filled color=\"red\" fontcolor=\"white\" fillcolor=\"red\""; 
+		_ ->
+			""
+	end 
+	++ "];\n".     
 	    
 dot_edge({V1,V2}) -> 
 	integer_to_list(V1)++" -> "++integer_to_list(V2)
