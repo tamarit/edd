@@ -3,7 +3,7 @@
 -export([
 		read/1, read_file/1, 
 		read_from_clause/1, put_attributes/1, 
-		get_initial_set_of_nodes/4]).
+		get_initial_set_of_nodes/3]).
 
 % Test check: proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
 % Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
@@ -269,10 +269,16 @@ is_trusted_fun({FunName, Arity}) ->
 			     	_ -> 
 			     		FileAdress
 			   end,
-			lists:prefix(code:lib_dir(), NFileAdress)
+			% io:format("LD: ~s\nFA: ~s\n" , [code:lib_dir(), NFileAdress]),
+			case ModNameAtom of 
+				proper -> 
+					true;
+				_ -> 
+					lists:prefix(code:lib_dir(), NFileAdress)
+			end
 	end.
 
-get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) -> 
+get_initial_set_of_nodes(G, TrustedFunctions, TestFiles) -> 
 	Modules = 
 		lists:usort(
 			[element(1, edd_lib:get_MFA_Label(G,V)) 
@@ -310,47 +316,16 @@ get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles) ->
 					end
 				end 
 			|| V <- digraph:vertices(G)]),
+	Valid = 
+		[V || {V, valid} <- VerticesValidity],
+	NotValid = 
+		[V || {V, no_valid} <- VerticesValidity],
 	edd_lib:dot_graph_file_colors(
 		G, 
 		"colors", 
-		[V || {V, valid} <- VerticesValidity], 
-		[V || {V, no_valid} <- VerticesValidity]),
-	% % io:format("VerticesInTests : ~p\n", [VerticesInTests]),
-	% VerticesNotValidFromPositiveTests = 
-	% 	lists:flatten([begin 
-	% 		{CallV,ValueV} = edd_lib:get_call_value_string(G,V),
-	% 		[V 
-	% 			|| 	{CallT, ValueT, equal} <- Tests,
-	% 			 	CallV == CallT, ValueV /= ValueT] 
-	% 	 end || V <- digraph:vertices(G)]),
-	% % io:format("VerticesNotValidFromPositiveTests : ~p\n", [VerticesNotValidFromPositiveTests]),
-	% ValidFromTest = 
-	% 	[V || {V, equal} <- VerticesInTests],
-	% NotValidFromTest = 
-	% 	[V || {V, not_equal} <- VerticesInTests] 
-	% 	++ VerticesNotValidFromPositiveTests,
-	% % io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
-	% IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
-	% IniNotValid_ = lists:usort([Root | NotValidFromTest]),
-	% NewValidTests = 
-	% 	case lists:usort(ValidFromTest) of 
-	% 		IniValid_ ->
-	% 			% Trusted nodes were already as test cases
-	% 			[];
-	% 		_ ->
-	% 			lists:usort(ValidTrusted) -- lists:usort(ValidFromTest)
-	% 	end,
-	% NewNotValidTests = 
-	% 	case lists:usort(NotValidFromTest) of 
-	% 		IniNotValid_ ->
-	% 			% Root was already as a test case
-	% 			[];
-	% 		_ ->
-	% 			[Root]
-	% 	end,
-	% put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
-	% {IniValid_, IniNotValid_}.
-	ok.
+		Valid, 
+		NotValid),
+	{Valid, NotValid}.
 
 check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]) -> 
 	% proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
@@ -389,7 +364,7 @@ check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]
 			]
 		),
 		% Check the property value and decide what to do depending on whether is complete or not
-	% io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
+	io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
 	{value, Result, _}	=
 		erl_eval:expr(erl_syntax:revert(CheckCall), []),
 	% io:format("~p\n", [{Result, IsComplete}]),
@@ -398,7 +373,7 @@ check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]
 			valid;
 		{false, _} ->
 			no_valid;
-		{true, _} ->
+		{_, _} ->
 			check_call_with_property(Tests)
 	end;
 check_call_with_property([]) ->

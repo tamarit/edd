@@ -1,7 +1,7 @@
 -module(quicksort).
--export([quicksort/2, partition/3, quicksort_proper_complete/0, quicksort_sorted_proper/0, quicksort_length_proper/0, partition_split_proper/0, partition_length_proper/0, leq/2]).
+% -export([quicksort/2, partition/3, quicksort_proper_complete/0, quicksort_sorted_proper/0, quicksort_length_proper/0, partition_split_proper/0, partition_length_proper/0, leq/2]).
 
-% -compile(export_all).
+-compile(export_all).
 
 -include_lib("proper/include/proper.hrl").
 %% El orden de inclusiones es importante porque proper redefine el ?LET de EUnit
@@ -32,9 +32,15 @@ quicksort_unit_test() ->
   ?assertNotEqual(quicksort(fun leq/2, [7,8,1]), []).
   %?assertEqual(quicksort(fun leq/2, [7,8,1]), [1,7,8] ).
   
-quicksort_proper_complete() ->
-  ?FORALL(L, list(integer()), 
-    lists:sort( fun leq/2, L) =:= quicksort(fun leq/2, L) ).
+% quicksort_proper_complete() ->
+%   ?FORALL(L, list(integer()), 
+%     lists:sort( fun leq/2, L) =:= quicksort(fun leq/2, L) ).
+
+
+quicksort_unitary_proper_complete() ->
+    ?FORALL(X, list(integer()), 
+      ?IMPLIES( length(X) =:= 1,
+          quicksort(fun leq/2, X) =:= X)).
     
 % isSorted/2 is a trusted function
 isSorted(_, []) ->

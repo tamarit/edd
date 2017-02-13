@@ -204,7 +204,7 @@ remotize_implicit_fun(Node) ->
 	end.
 
 
-get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles) -> 
+get_initial_set_of_nodes(G, ValidTrusted, NotValidInitial, TestFiles) -> 
 	Modules = 
 		lists:usort(
 			[element(1, edd_lib:get_MFA_Label(G,V)) 
@@ -248,8 +248,10 @@ get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles) ->
 		[V || {V, not_equal} <- VerticesInTests] 
 		++ VerticesNotValidFromPositiveTests,
 	% io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
-	IniValid_ = lists:usort(ValidFromTest ++ ValidTrusted),
-	IniNotValid_ = lists:usort([Root | NotValidFromTest]),
+	IniValid_ = 
+		lists:usort(ValidFromTest ++ ValidTrusted),
+	IniNotValid_ = 
+		lists:usort(NotValidInitial ++ NotValidFromTest),
 	NewValidTests = 
 		case lists:usort(ValidFromTest) of 
 			IniValid_ ->
@@ -264,7 +266,7 @@ get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles) ->
 				% Root was already as a test case
 				[];
 			_ ->
-				[Root]
+				lists:usort(NotValidInitial) -- lists:usort(ValidFromTest)
 		end,
 	put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
 	{IniValid_, IniNotValid_}.

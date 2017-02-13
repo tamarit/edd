@@ -141,8 +141,8 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 		case LoadTest of 
 			true -> 
 				%  TODO: store/read the knowledge about trusted functions 
-				edd_proper_reader:get_initial_set_of_nodes(G, TrustedFunctions, Root, TestFiles),
-				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, Root, TestFiles);
+				edd_proper_reader:get_initial_set_of_nodes(G, TrustedFunctions, TestFiles),
+				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, [Root], TestFiles);
 			false -> 
 				{ValidTrusted, [Root]}
 		end,
@@ -185,7 +185,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 ask(G, Strategy, Graph, {Load, Save, Files}) ->
 	% io:get_line(""),
 	STrustedFunctions = 
-	  io:get_line("Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]: "),
+	  io:get_line("Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):\n"),
 	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
 	{Vertices0, Valid0, NoValid0} = 
 		initial_state(G, TrustedFunctions, Load, Files),
