@@ -3,7 +3,7 @@
 -export([
 		read/1, read_file/1, 
 		read_from_clause/1, put_attributes/1, 
-		get_initial_set_of_nodes/3]).
+		get_initial_set_of_nodes/4]).
 
 % Test check: proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
 % Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
@@ -12,7 +12,7 @@ read(Module) ->
 	read_file(atom_to_list(Module) ++ ".erl").
 
 read_file(File) -> 
-	io:format("File: ~p\n", [File]),
+	% io:format("File: ~p\n", [File]),
 	{ok,Forms} = 
 		epp:parse_file(File, [], []), 
 	put_attributes(Forms),
@@ -278,7 +278,7 @@ is_trusted_fun({FunName, Arity}) ->
 			end
 	end.
 
-get_initial_set_of_nodes(G, TrustedFunctions, TestFiles) -> 
+get_initial_set_of_nodes(G, TrustedFunctions, TestFiles, {Valid0, NoValid0}) -> 
 	Modules = 
 		lists:usort(
 			[element(1, edd_lib:get_MFA_Label(G,V)) 
@@ -298,23 +298,31 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles) ->
 			 || Module <- Modules]
 			++ [ element(1, edd_proper_reader:read_file(File))
 			 || File <- TestFiles]),
-	io:format("Tests : ~p\n", [Tests]),
-	io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
+	% io:format("Tests : ~p\n", [Tests]),
+	% io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
 	VerticesValidity = 
 		lists:flatten(
 			[
-				begin 
-					case get_call_vertex(G, V) of 
-						none -> 
-							[{V, unknown}];
-						FunAndArgs -> 
-							Validity = 
-								get_validity_from_proper(
-									FunAndArgs, TrustedFunctions, Tests),
-							io:format("{V, Validity}: ~p\n", [{V, Validity}]),
-							{V, Validity}
-					end
-				end 
+				case lists:member(V, Valid0) of 
+					true -> 
+						{V, valid};
+					false -> 
+						case lists:member(V, NoValid0) of 
+							true -> 
+								{V, no_valid};
+							false -> 
+								case get_call_vertex(G, V) of 
+									none -> 
+										[{V, unknown}];
+									FunAndArgs -> 
+										Validity = 
+											get_validity_from_proper(
+												FunAndArgs, TrustedFunctions, Tests),
+										% io:format("{V, Validity}: ~p\n", [{V, Validity}]),
+										{V, Validity}
+								end
+						end
+				end
 			|| V <- digraph:vertices(G)]),
 	Valid = 
 		[V || {V, valid} <- VerticesValidity],
@@ -323,8 +331,8 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles) ->
 	edd_lib:dot_graph_file_colors(
 		G, 
 		"colors", 
-		Valid, 
-		NotValid),
+		Valid -- Valid0, 
+		NotValid -- NoValid0),
 	{Valid, NotValid}.
 
 check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]) -> 
@@ -364,7 +372,7 @@ check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]
 			]
 		),
 		% Check the property value and decide what to do depending on whether is complete or not
-	io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
+	% io:format("~s\n", [erl_prettypr:format(CheckCall) ]),
 	{value, Result, _}	=
 		erl_eval:expr(erl_syntax:revert(CheckCall), []),
 	% io:format("~p\n", [{Result, IsComplete}]),

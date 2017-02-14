@@ -137,14 +137,20 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 		[V || 	V <- digraph:vertices(G),
 	        	lists:member(get_MFA_Label(G,V),TrustedFunctions)],
 	Root = look_for_root(G),
+	IniValTuple =
+		{ValidTrusted, [Root]},
 	{IniValid, IniNotValid} = 
 		case LoadTest of 
 			true -> 
-				%  TODO: store/read the knowledge about trusted functions 
-				edd_proper_reader:get_initial_set_of_nodes(G, TrustedFunctions, TestFiles),
-				edd_test_reader:get_initial_set_of_nodes(G, ValidTrusted, [Root], TestFiles);
+				%  TODO: store/read the knowledge about trusted functions
+
+				{IniValidProper, IniNotValidProper} = 
+					edd_proper_reader:get_initial_set_of_nodes(
+						G, TrustedFunctions, TestFiles, IniValTuple),
+				edd_test_reader:get_initial_set_of_nodes(
+					G, IniValidProper, IniNotValidProper, TestFiles);
 			false -> 
-				{ValidTrusted, [Root]}
+				IniValTuple
 		end,
 	AlreadyKnown = 
 		   IniValid 

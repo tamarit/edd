@@ -54,7 +54,7 @@ read_from_clause(Clause0, Acc) ->
 	Clause = 
 		erl_syntax_lib:map(fun remotize/1, Clause0),
 	lists:foldl(
-		fun extract_assertEqual/2, 
+		fun extract_assert/2, 
 		Acc, 
 		erl_syntax:clause_body(Clause)).
 	% Res.
@@ -63,21 +63,51 @@ read_from_clause(Clause0, Acc) ->
 
 extract_assertEqual(Block, Acc) ->
 	try
-		[Application] = erl_syntax:block_expr_body(Block),
-		[Argument] = erl_syntax:application_arguments(Application),
-		Fun = erl_syntax:application_operator(Application),
-		[ClauseFun] = erl_syntax:fun_expr_clauses(Fun),
-		[ClauseFunBody] = erl_syntax:clause_body(ClauseFun),
-		CaseClauses = erl_syntax:case_expr_clauses(ClauseFunBody),
-		CaseExpr = erl_syntax:case_expr_argument(ClauseFunBody),
-		Type = assert_type_assertEqual(CaseClauses),
-		{App, Res} = decide_app_res(Argument, CaseExpr),
+		% io:format(
+		% 	"Extracting assert equal:\n ~s\n", 
+		% 	[erl_prettypr:format(Block)]),
+		[Application] = 
+			erl_syntax:block_expr_body(Block),
+		% [Argument] = 
+		% 	erl_syntax:application_arguments(Application),
+		Fun = 
+			erl_syntax:application_operator(Application),
+		[ClauseFun] = 
+			erl_syntax:fun_expr_clauses(Fun),
+		[AssignCall, Case] = 
+			erl_syntax:clause_body(ClauseFun),
+		RHSAssing = 
+			erl_syntax:match_expr_body(AssignCall),
+		CaseClauses = 
+			erl_syntax:case_expr_clauses(Case),
+		CaseExpr = 
+			erl_syntax:case_expr_argument(Case),
+		Type = 
+			assert_type_assertEqual(CaseClauses),
+		{App, Res} = 
+			decide_app_res(RHSAssing, CaseExpr),
 		% App = remotize_app(App0),
 		[{erl_prettypr:format(App), erl_prettypr:format(Res), Type} | Acc]
 	catch 
 		_:_ -> 
-			extract_assert(Block, Acc)
+			% io:format("Failed assert equal\n"),
+			Acc
 	end.
+
+ % begin
+ %  fun () ->
+ %          __X = quicksort:quicksort(fun quicksort:leq/2,
+ %                                    [-3, -4, 2, 4]),
+ %          case [4, 2, -4, -3] of
+ %            __X ->
+ %                erlang:error({assertNotEqual,
+ %                              [{module, quicksort}, {line, 79},
+ %                               {expression, "[ 4 , 2 , - 4 , - 3 ]"},
+ %                               {value, __X}]});
+ %            _ -> ok
+ %          end
+ %  end()
+ % end
 
 decide_app_res(Cand1, Cand2) ->
 	case erl_syntax:type(Cand1) of 
@@ -89,18 +119,28 @@ decide_app_res(Cand1, Cand2) ->
 
 extract_assert(Block, Acc) ->
 	try
-		[Application] = erl_syntax:block_expr_body(Block),
-		Fun = erl_syntax:application_operator(Application),
-		[ClauseFun] = erl_syntax:fun_expr_clauses(Fun),
-		[ClauseFunBody] = erl_syntax:clause_body(ClauseFun),
-		CaseClauses = erl_syntax:case_expr_clauses(ClauseFunBody),
-		CaseExpr0 = erl_syntax:case_expr_argument(ClauseFunBody),
-		{Type, CaseExpr} = assert_type_assert(CaseExpr0),
+		% io:format(
+		% 	"Extracting assert:\n ~s\n", 
+		% 	[erl_prettypr:format(Block)]),
+		[Application] = 
+			erl_syntax:block_expr_body(Block),
+		Fun = 
+			erl_syntax:application_operator(Application),
+		[ClauseFun] = 
+			erl_syntax:fun_expr_clauses(Fun),
+		[_, Case] = 
+			erl_syntax:clause_body(ClauseFun),
+		% CaseClauses = 
+		% 	erl_syntax:case_expr_clauses(Case),
+		CaseExpr0 = 
+			erl_syntax:case_expr_argument(Case),
+		{Type, CaseExpr} = 
+			assert_type_assert(CaseExpr0),
+		OpL = erl_syntax:infix_expr_left(CaseExpr),
+		OpR = erl_syntax:infix_expr_right(CaseExpr),
+		{App_, Res_} = decide_app_res(OpL, OpR),
 		{App, Res, NType} = 
-			try 
-				OpL = erl_syntax:infix_expr_left(CaseExpr),
-				OpR = erl_syntax:infix_expr_right(CaseExpr),
-				{App_, Res_} = decide_app_res(OpL, OpR),
+			% try 
 				% App_ = remotize_app(App_0),
 				case 
 					erl_syntax:operator_name(
@@ -113,15 +153,16 @@ extract_assert(Block, Acc) ->
 						{App_, Res_, not(Type)};
 					'=/=' ->
 						{App_, Res_, not(Type)}
-				end
-			catch 
-				_:_ ->
-					{CaseExpr, erl_syntax:atom(true), Type}
-			end,
+				end,
+			% catch 
+				% _:_ ->
+					% {CaseExpr, erl_syntax:atom(true), Type}
+			% end,
 		[{erl_prettypr:format(App), erl_prettypr:format(Res), NType} | Acc]
 	catch 
 		_:_ -> 
-			Acc
+			% io:format("Failed assert\n"),
+			extract_assertEqual(Block, Acc)
 	end.
 
 
@@ -142,7 +183,8 @@ assert_type_assertEqual(CaseClauses) ->
 			erl_syntax:clause_body(lists:nth(1, CaseClauses)),
 		case erl_syntax:type(FirstClauseBody) of
 			atom -> 
-				ok = erl_syntax:atom_value(FirstClauseBody),
+				ok = 
+					erl_syntax:atom_value(FirstClauseBody),
 				equal;
 			_ ->
 				not_equal
@@ -217,7 +259,9 @@ get_initial_set_of_nodes(G, ValidTrusted, NotValidInitial, TestFiles) ->
 					ok 
 			 end
 		 	 || V <- digraph:vertices(G)]),
-	% io:format("Loading from files ~p and modules ~p\n", [TestFiles, Modules]),
+	% io:format(
+	% 	"Loading from files ~p and modules ~p\n", 
+	% 	[TestFiles, Modules]),
 	Tests = 
 		lists:flatten(
 			[edd_test_reader:read(Module) 
@@ -247,7 +291,9 @@ get_initial_set_of_nodes(G, ValidTrusted, NotValidInitial, TestFiles) ->
 	NotValidFromTest = 
 		[V || {V, not_equal} <- VerticesInTests] 
 		++ VerticesNotValidFromPositiveTests,
-	% io:format("{ValidFromTest,NotValidFromTest} : ~p\n", [{ValidFromTest,NotValidFromTest}]),
+	% io:format(
+	% 	"{ValidFromTest,NotValidFromTest} : ~p\n", 
+	% 	[{ValidFromTest,NotValidFromTest}]),
 	IniValid_ = 
 		lists:usort(ValidFromTest ++ ValidTrusted),
 	IniNotValid_ = 
@@ -270,3 +316,5 @@ get_initial_set_of_nodes(G, ValidTrusted, NotValidInitial, TestFiles) ->
 		end,
 	put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
 	{IniValid_, IniNotValid_}.
+
+
