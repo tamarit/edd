@@ -241,10 +241,15 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               		"Call to a function that contains an error"),
 	               	case SaveTests of 
 	               		true -> 
-	               			{RemoveableValidTest, RemovableNotValidTest} = get(test_to_NOT_store),
-	               			ExpectedValues = get(expected_values),
-	               			ValidNodesToStore = Valid -- RemoveableValidTest,
-	               			NotValidNodesToStore0 = NotValid -- RemovableNotValidTest,
+	               			UnknownInitial = 
+	               				get(unknown_initially),
+	               			ExpectedValues = 
+	               				get(expected_values),
+	               			ValidNodesToStore = 
+	               				[V || V <- Valid, lists:member(V, UnknownInitial)],
+	               			NotValidNodesToStore0 = 
+	               				[V || V <- NotValid, lists:member(V, UnknownInitial)],
+	               			% TODO: Calls to trusted functions should not be stored
 	               			{ExpectedValuesNodes, ExpectedValuesTest} = 
 	               				lists:unzip(ExpectedValues),
 	               			NotValidNodesToStore = 

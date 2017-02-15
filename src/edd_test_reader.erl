@@ -298,24 +298,9 @@ get_initial_set_of_nodes(G, ValidTrusted, NotValidInitial, TestFiles) ->
 		lists:usort(ValidFromTest ++ ValidTrusted),
 	IniNotValid_ = 
 		lists:usort(NotValidInitial ++ NotValidFromTest),
-	NewValidTests = 
-		case lists:usort(ValidFromTest) of 
-			IniValid_ ->
-				% Trusted nodes were already as test cases
-				[];
-			_ ->
-				lists:usort(ValidFromTest) -- lists:usort(ValidTrusted)
-		end,
-	NewNotValidTests = 
-		case lists:usort(NotValidFromTest) of 
-			IniNotValid_ ->
-				% Root was already as a test case
-				[];
-			_ ->
-				lists:usort(NotValidFromTest) -- lists:usort(NotValidInitial)
-		end,
-	% io:format("{IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}: ~p\n", [{IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}]),
-	put(test_to_NOT_store, {IniValid_ -- NewValidTests, IniNotValid_ -- NewNotValidTests}),
+	put(
+		unknown_initially, 
+		digraph:vertices(G) -- (IniValid_ ++ IniNotValid_)),
 	{IniValid_, IniNotValid_}.
 
 
