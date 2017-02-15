@@ -143,7 +143,6 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 		case LoadTest of 
 			true -> 
 				%  TODO: store/read the knowledge about trusted functions
-
 				{IniValidProper, IniNotValidProper} = 
 					edd_proper_reader:get_initial_set_of_nodes(
 						G, TrustedFunctions, TestFiles, IniValTuple),
@@ -192,10 +191,18 @@ ask(G, Strategy, Graph, {Load, Save, Files}) ->
 	% io:get_line(""),
 	STrustedFunctions = 
 	  io:get_line("Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):\n"),
-	TrustedFunctions = translate_string_to_functions(STrustedFunctions),
+	TrustedFunctionsShell = 
+		translate_string_to_functions(STrustedFunctions),
+	ModuleRoot = 
+		element(1, edd_lib:get_MFA_Label(G, look_for_root(G))),
+	ReadTrustedFunctions = 
+		edd_trusted_rw:read(ModuleRoot),
+	TrustedFunctions = 
+		lists:usort(ReadTrustedFunctions ++ TrustedFunctionsShell),
 	{Vertices0, Valid0, NoValid0} = 
 		initial_state(G, TrustedFunctions, Load, Files),
-	put(expected_values, []),	
+	put(expected_values, []),
+	put(trusted_functions, TrustedFunctions),	
 	ask_about(G,Strategy,Vertices0, Valid0, NoValid0, Graph, Save).
 
 ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) -> 
@@ -255,6 +262,7 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               			NotValidNodesToStore = 
 	               				NotValidNodesToStore0 -- ExpectedValuesNodes,
 	               			% io:format("test_to_NOT_store: ~w\n", [{RemoveableValidTest, RemovableNotValidTest}]),
+	               			edd_trusted_rw:write(element(1, edd_lib:get_MFA_Label(G, look_for_root(G)))),
 	               			edd_test_writer:write(G, ValidNodesToStore, NotValidNodesToStore, ExpectedValuesTest);
 	               		false -> 
 	               			ok 
@@ -364,6 +372,16 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 	               %       get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)],
 				   [V || V <- digraph:vertices(G),
 	                     get_MFA_Label(G,V) =:= get_MFA_Label(G,Selected)],
+	             OldTrustedValue = 
+	             	get(trusted_functions),
+	             MFA = 
+	             	get_MFA_Label(G,Selected),
+	             case is_atom(element(2, MFA)) of 
+	             	true -> 
+						put(trusted_functions, [get_MFA_Label(G,Selected) | OldTrustedValue]);
+					false -> 
+						put(trusted_functions, OldTrustedValue)
+	             end,
 	             {Vertices -- digraph_utils:reachable(NewValid,G),
 	              NewValid ++ Valid,NotValid,Unknown,
 	              [{Vertices,Valid,NotValid,Unknown}|State],Strategy,-1};

@@ -12,7 +12,7 @@ write(G, NewCorrect, NewNotCorrect, OtherTests) ->
 	LabeledOtherTests = 
 		lists:flatten(
 			[begin
-				{ok,Toks,_} = erl_scan:string(lists:flatten(Call)++"."),
+				{ok,Toks,_} = erl_scan:string(lists:flatten(Call) ++ "."),
 				{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
 				case Aexpr of 
 					{call,_,{remote,_,{atom,_,ModName},_},APars} ->
@@ -62,28 +62,46 @@ create_modules_dict([{V, Module, Type} | Tail], Dict) ->
 % 	create_modules_dict_test(Tail, NDict).
 
 write_in_file(Module, Tests, G) ->
-	{ok,Forms} = epp:parse_file(atom_to_list(Module) ++ ".erl", [], []),
+	{ok,Forms} = 
+		epp:parse_file(atom_to_list(Module) ++ ".erl", [], []),
 	edd_test_reader:put_attributes(Forms),
-	PreviousTests =
-		case lists:last(Forms -- [lists:last(Forms)]) of 
-			{function, _, edd_test, _, [Clause]} ->
-				edd_test_reader:read_from_clause(Clause);
-			_ ->
-				[]
+	% io:format("Forms: ~p\n", [Forms]),
+	PreviousTests0 =
+		[ 	edd_test_reader:read_from_clause(Clause) 
+		||  {function, _, edd_test, _, [Clause]} <- Forms],
+	PreviousTests = 
+		case PreviousTests0 of 
+			[] -> 
+				[];
+			[PT] -> 
+				PT 
 		end,
+	io:format("PreviousTests: ~p\n", [PreviousTests]),
+		% case lists:last(Forms -- [lists:last(Forms)]) of 
+		% 	{function, _, edd_test, _, [Clause]} ->
+		% 		edd_test_reader:read_from_clause(Clause);
+		% 	_ ->
+		% 		[]
+		% end,
 	StrTests1 = 
 		[ build_test_case(Type, Call, Value) 
 		 || {Call, Value, Type} <- PreviousTests],
-	StrTests2 = build_tests(Tests, G, []),
-	StrTests = StrTests1 ++ StrTests2,
-	StrTestFun = str_test_fun(StrTests),
+	StrTests2 = 
+		build_tests(Tests, G, []),
+	StrTests = 
+		StrTests1 ++ StrTests2,
+	StrTestFun = 
+		str_test_fun(StrTests),
 	% io:format("~s\n", [StrTestFun]),
-	StrModule = atom_to_list(Module) ++ ".erl", 
-	{ok, IODeviceR} = file:open(StrModule, [read]),
-	Read0 = read_file(IODeviceR),
+	StrModule = 
+		atom_to_list(Module) ++ ".erl", 
+	{ok, IODeviceR} = 
+		file:open(StrModule, [read]),
+	Read0 = 
+		read_file(IODeviceR),
 	file:close(IODeviceR),
-	Read1 = remove_previous_test(Read0, []),
-	Read = lists:reverse(Read1),
+	Read = 
+		remove_previous_test(Read0, []),
 	StrEunitInclude = 
 		case is_previous_include(Read) of 
 			true ->
@@ -91,19 +109,32 @@ write_in_file(Module, Tests, G) ->
 			false ->
 				"\n-include_lib(\"eunit/include/eunit.hrl\").\n"
 		end,
-	{ok, IODeviceW} = file:open(StrModule, [write]),
+	{ok, IODeviceW} = 
+		file:open(StrModule, [write]),
+	StrIni = 
+		"\n% begin edd test\n",
+	StrEnd = 
+		"\n% end edd test\n",
 	StrProgram = 
-		Read ++ StrEunitInclude ++ StrTestFun,
+		Read ++ StrIni ++ StrEunitInclude ++ StrTestFun ++ StrEnd,
 	file:write(IODeviceW, list_to_binary(StrProgram)),
 	file:close(IODeviceW),
 	ok.
 
-remove_previous_test([$e,$d,$d,$_,$t,$e,$s,$t,$(,$),$ ,$-,$> | _],Acc) ->
-	Acc;
+
+remove_previous_test([$%,$ ,$b,$e,$g,$i,$n,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
+	remove_previous_test_until(Tail, Acc);
 remove_previous_test([Other | Content],Acc) ->
 	remove_previous_test(Content, [Other|Acc]);
 remove_previous_test([],Acc) ->
-	Acc.
+	lists:reverse(Acc).
+
+remove_previous_test_until([$%,$ ,$e,$n,$d,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
+	lists:reverse(lists:reverse(Tail) ++ Acc);
+remove_previous_test_until([_ | Content],Acc) ->
+	remove_previous_test_until(Content, Acc);
+remove_previous_test_until([],Acc) ->
+	lists:reverse(Acc).
 
 is_previous_include([$e,$u,$n,$i,$t,$/,$i,$n,$c,$l,$u,$d,$e,$/,$e,$u,$n,$i,$t,$.,$h,$r,$l | _]) ->
 	true;

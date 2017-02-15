@@ -69,4 +69,3 @@ partition_split_proper() ->
       {Less,Greater} = partition(fun leq/2, Pivot, L),
       lists:all(fun(A) -> A =< Pivot end, Less) and lists:all(fun(A) -> Pivot =< A end, Greater)
     end).
-
