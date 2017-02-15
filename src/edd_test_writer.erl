@@ -105,7 +105,7 @@ remove_previous_test([Other | Content],Acc) ->
 remove_previous_test([],Acc) ->
 	Acc.
 
-is_previous_include([$-,$i,$n,$c,$l,$u,$d,$e,$_,$l,$i,$b,$(,$",$e,$u,$n,$i,$t,$/,$i,$n,$c,$l,$u,$d,$e,$/,$e,$u,$n,$i,$t,$.,$h,$r,$l,$",$),$.,$\n | _]) ->
+is_previous_include([$e,$u,$n,$i,$t,$/,$i,$n,$c,$l,$u,$d,$e,$/,$e,$u,$n,$i,$t,$.,$h,$r,$l | _]) ->
 	true;
 is_previous_include([Other | Content]) ->
 	is_previous_include(Content);
@@ -165,7 +165,7 @@ str_assert(not_equal) ->
 build_test_case(Type, StrCall0, StrValue) ->
 	{ok,Toks,_} = erl_scan:string(lists:flatten(StrCall0)++"."),
 	{ok,[Aexpr|_]} = erl_parse:parse_exprs(Toks),
-	NAexp = desremotize(Aexpr),
+	NAexp = disremotize(Aexpr),
 	StrCall = erl_prettypr:format(NAexp),
 	lists:flatten(
 		io_lib:format(
@@ -173,10 +173,10 @@ build_test_case(Type, StrCall0, StrValue) ->
 			[str_assert(Type), StrCall, StrValue])).
 
 
-desremotize(Node) ->
-	erl_syntax_lib:map(fun desremotize_node/1, Node).
+disremotize(Node) ->
+	erl_syntax_lib:map(fun disremotize_node/1, Node).
 
-desremotize_node(Node) -> 
+disremotize_node(Node) -> 
 	try
 		Operator = erl_syntax:application_operator(Node),
 		Module = get(module),
@@ -188,10 +188,10 @@ desremotize_node(Node) ->
 			erl_syntax:application_arguments(Node)) 
 	catch 
 		_:_ ->
-			desremotize_implicit_fun(Node)
+			disremotize_implicit_fun(Node)
 	end.
 
-desremotize_implicit_fun(Node) -> 
+disremotize_implicit_fun(Node) -> 
 	try
 		implicit_fun = 
 			erl_syntax:type(Node), 
