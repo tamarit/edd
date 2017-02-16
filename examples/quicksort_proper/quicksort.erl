@@ -37,6 +37,10 @@ quicksort_unit_test() ->
 %     lists:sort( fun leq/2, L) =:= quicksort(fun leq/2, L) ).
 
 
+partition_proper_complete() -> 
+   ?FORALL({L,P}, {list(integer()), integer()}, 
+      partition(fun leq/2, P, L ) =:= lists:partition(fun(E) -> leq(E,P) end, L)).
+
 quicksort_unitary_proper_complete() ->
     ?FORALL(X, list(integer()), 
       ?IMPLIES( length(X) =:= 1,
@@ -69,3 +73,4 @@ partition_split_proper() ->
       {Less,Greater} = partition(fun leq/2, Pivot, L),
       lists:all(fun(A) -> A =< Pivot end, Less) and lists:all(fun(A) -> Pivot =< A end, Greater)
     end).
+

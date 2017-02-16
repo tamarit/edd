@@ -75,14 +75,14 @@ write(Module) ->
 	ok.
 
 
-remove_previous_info([$%,$ ,$b,$e,$g,$i,$n,$ ,$e,$d,$d,$ ,$t,$r,$u,$s,$t,$e,$d | Tail], Acc) ->
+remove_previous_info([$\n,$%,$ ,$b,$e,$g,$i,$n,$ ,$e,$d,$d,$ ,$t,$r,$u,$s,$t,$e,$d | Tail], Acc) ->
 	remove_previous_info_until(Tail, Acc);
 remove_previous_info([Other | Content],Acc) ->
 	remove_previous_info(Content, [Other|Acc]);
 remove_previous_info([],Acc) ->
 	lists:reverse(Acc).
 
-remove_previous_info_until([$%,$ ,$e,$n,$d,$ ,$e,$d,$d,$ ,$t,$r,$u,$s,$t,$e,$d | Tail], Acc) ->
+remove_previous_info_until([$\n,$%,$ ,$e,$n,$d,$ ,$e,$d,$d,$ ,$t,$r,$u,$s,$t,$e,$d | Tail], Acc) ->
 	lists:reverse(lists:reverse(Tail) ++ Acc);
 remove_previous_info_until([_ | Content],Acc) ->
 	remove_previous_info_until(Content, Acc);

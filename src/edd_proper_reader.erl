@@ -50,6 +50,7 @@ put_attributes(Forms) ->
 	put(all_funs, AllFuns).
 
 form({function, _, Name, 0, Clauses}, Acc) ->
+	% io:format("Function: ~p\n", [Name]),
 	Mod = get(module),
 	SuffixComplete = 
 		"_complete",
@@ -116,9 +117,11 @@ extract_forAll(Application, Acc) ->
 			erl_syntax:clause_body(ClauseFunTest),
 		Calls = 
 			extract_calls(BodyTest),
+		CallNotInFun = 
+			extract_calls_not_in_fun(BodyTest),
 		AllFunsCalled = 
 			[{erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))} 
-			|| C <- Calls, not(is_trusted_fun({erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))}))],
+			|| C <- CallNotInFun, not(is_trusted_fun({erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))}))],
 		UsableCalls = 
 			lists:foldl(
 				fun(Call, CurrentUsableCalls) -> 
@@ -126,6 +129,7 @@ extract_forAll(Application, Acc) ->
 				end, 
 				[], 
 				Calls),
+		% io:format("UsableCalls: ~p\n", [UsableCalls]),
 		case UsableCalls of 
 			[] -> 
 				Acc;
@@ -165,6 +169,20 @@ extract_calls(Node) ->
 
 add_if_call(Node, Acc) -> 
 	case erl_syntax:type(Node) of 
+		application -> 
+			[Node | Acc];
+		_ ->
+			% io:format("Node: ~p\nType: ~p\n", [Node, erl_syntax:type(Node)]), 
+			Acc
+	end.
+
+extract_calls_not_in_fun(Node) -> 
+	erl_syntax_lib:fold(fun add_if_call_no_in_fun/2, [], Node).
+
+add_if_call_no_in_fun(Node, Acc) -> 
+	case erl_syntax:type(Node) of 
+		fun_expr -> 
+			Acc -- lists:append([extract_calls(C) || C <- erl_syntax:fun_expr_clauses(Node)]);
 		application -> 
 			[Node | Acc];
 		_ ->

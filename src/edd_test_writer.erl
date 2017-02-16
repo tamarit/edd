@@ -122,14 +122,14 @@ write_in_file(Module, Tests, G) ->
 	ok.
 
 
-remove_previous_test([$%,$ ,$b,$e,$g,$i,$n,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
+remove_previous_test([$\n,$%,$ ,$b,$e,$g,$i,$n,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
 	remove_previous_test_until(Tail, Acc);
 remove_previous_test([Other | Content],Acc) ->
 	remove_previous_test(Content, [Other|Acc]);
 remove_previous_test([],Acc) ->
 	lists:reverse(Acc).
 
-remove_previous_test_until([$%,$ ,$e,$n,$d,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
+remove_previous_test_until([$\n,$%,$ ,$e,$n,$d,$ ,$e,$d,$d,$ ,$t,$e,$s,$t | Tail], Acc) ->
 	lists:reverse(lists:reverse(Tail) ++ Acc);
 remove_previous_test_until([_ | Content],Acc) ->
 	remove_previous_test_until(Content, Acc);
