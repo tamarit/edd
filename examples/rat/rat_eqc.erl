@@ -5,6 +5,13 @@
 
 -compile(export_all).
 
+-export_type([as_rat/0,rat/0,pos_rat/0,non_zero_rat/0]).
+
+-type rat() :: {integer(), pos_integer()}.
+-type pos_rat() :: {pos_integer(),pos_integer()}.
+-type non_zero_rat() :: {neg_integer()|pos_integer(),pos_integer()}.
+-type as_rat() :: rat() | integer() | float().
+
 non_zero_nat() ->
     ?SUCHTHAT(N, nat(), N > 0).
 
@@ -21,19 +28,13 @@ gcd_1() ->
     ?FORALL( X, non_zero_nat(),
              rat:gcd(X,X+1) =:= 1).
 
-gcd_2_complete() ->
+gcd_2() ->
     ?FORALL( {X,Y}, { non_zero_nat(), non_zero_nat() },
              rat:gcd(X,Y) =:= rat:gcd(Y,X)).
 
-% gcd_4() ->
-%     ?FORALL( {X,Y}, { non_zero_nat(), non_zero_nat()},
-%              trusted(rat:gcd(X,Y))).
-
-% trusted(_) -> true.
-
-% trusted_fun({rat,gcd,2}) -> true;
-% trusted_fun(_) -> false.
-
+gcd_2_complete() ->
+    ?FORALL( {X,Y}, { non_zero_nat(), non_zero_nat() },
+             rat:gcd(X,Y) =:= rat:gcd(Y,X)).
 
 gcd_3() ->
     ?FORALL( {X,K}, {nat(),nat()},

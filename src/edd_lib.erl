@@ -315,7 +315,7 @@ asking_loop(G, FunGetNewStrategy, FunGetAnswer,
 						end,
 					SortedVertices = 
 						lists:sort(OrderingFunction, VerticesWithValues),
-					% io:format("SortedVertices: ~p\n", [SortedVertices]),
+					% io:format("SortedVertices: ~p\n", [SortedVertices]), 
 					Selected0 = element(1,hd(SortedVertices)),
 					NSortedVertices0 = [V || {V,_} <- tl(SortedVertices)],
 					{Selected0, NSortedVertices0};

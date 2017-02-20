@@ -501,6 +501,7 @@ get_compatible_usable_tests(
 				       						% TODO: Proper does not find the user-defined types
 					       					{value, TypeCorrect, _}	= 
 					       						erl_eval:expr(erl_syntax:revert(Call), []),
+					       					% io:format(erl_prettypr:format(Call) ++ "\n"),
 					       					% io:format("~p\n", [TypeCorrect]),
 					       					TypeCorrect
 				       					end 
