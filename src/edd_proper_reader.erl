@@ -56,7 +56,7 @@ form({function, _, Name, 0, Clauses}, Acc) ->
 		"_complete",
 	StrName = 
 		atom_to_list(Name),
-	IsComplete = 
+	IsComplete0 = 
 		case length(StrName) < length(SuffixComplete) of 
 			true -> 
 				false;
@@ -67,6 +67,26 @@ form({function, _, Name, 0, Clauses}, Acc) ->
 					_ -> 
 						false
 
+				end
+		end,
+	SuffixSubset = 
+		"_subset",
+	IsComplete =
+		case IsComplete0 of 
+			true -> 
+				true;
+			false -> 
+				case length(StrName) < length(SuffixSubset) of 
+					true -> 
+						false;
+					false -> 
+						case string:sub_string(StrName, length(StrName) - length(SuffixSubset) + 1,  length(StrName)) of 
+							SuffixSubset ->
+								true;
+							_ -> 
+								false
+
+						end
 				end
 		end,
 	case Clauses of 
