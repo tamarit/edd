@@ -27,10 +27,10 @@ read_file(File) ->
 			fun separeteUsefulDiscarded/2,
 			{[], []},
 			AllTestsCandidates),
-	% {ok, IODeviceW} = 
-	% 	file:open("result.txt",[write]),
-	% file:write(IODeviceW, list_to_binary(lists:flatten(io_lib:format("~p\n", [ProperTest])))),
-	% file:close(IODeviceW),
+	{ok, IODeviceW} = 
+		file:open(File ++ "_result.txt",[write]),
+	file:write(IODeviceW, list_to_binary(lists:flatten(io_lib:format("~p\n", [ProperTest])))),
+	file:close(IODeviceW),
 	ProperTest.
 
 separeteUsefulDiscarded({Fun, _, []}, {U, NU}) ->
@@ -91,7 +91,7 @@ form({function, _, Name, 0, Clauses}, Acc) ->
 		end,
 	case Clauses of 
 		[Clause] -> 
-			[{{Mod,Name,0}, IsComplete, read_from_clause(Clause)}] ++ Acc;
+			[{{Mod,Name,0}, IsComplete, read_from_clause(Clause)} | Acc];
 		_ -> 
 			Acc 
 	end;
