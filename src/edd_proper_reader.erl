@@ -373,7 +373,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles, {Valid0, NoValid0}) ->
 		NotValid -- NoValid0),
 	{Valid, NotValid}.
 
-check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]) -> 
+check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict, NonTrustedFunsBody} | Tests]) -> 
 	% proper:check(rat_eqc:floor_1(),[{Arg1, Arg2}]). 
 	ArgsValue = 
 		case Pars of 
@@ -414,12 +414,12 @@ check_call_with_property([{ModuleTest, FunTest, IsComplete, Pars, Dict} | Tests]
 	{value, Result, _}	=
 		erl_eval:expr(erl_syntax:revert(CheckCall), []),
 	% io:format("~p\n", [{Result, IsComplete}]),
-	case {Result, IsComplete} of 
-		{true, true} ->
+	case {Result, IsComplete, NonTrustedFunsBody} of 
+		{true, true, _} ->
 			valid;
-		{false, _} ->
+		{false, _, []} ->
 			no_valid;
-		{_, _} ->
+		{_, _, _} ->
 			check_call_with_property(Tests)
 	end;
 check_call_with_property([]) ->
@@ -456,8 +456,8 @@ get_test_bindings(
 			end,
 			[],
 			UsableCalls),
-	[{ModuleTest, FunTest, IsComplete, Pars, Dict} 
-	 || Dict <- Dicts].
+	[{ModuleTest, FunTest, IsComplete, Pars, Dict, NonTrustedFunsBody} 
+	 || {Dict, NonTrustedFunsBody} <- Dicts].
 
 
 get_compatible_usable_tests(
@@ -476,8 +476,8 @@ get_compatible_usable_tests(
 			TupledRestOfFuns = 
 				[tuple_function(ModuleTest, NeededFun, Arity) 
 				 || {NeededFun, Arity} <- RestOfFuns],
-			case (TupledRestOfFuns -- TrustedFunctions) of 
-				[] -> 
+			% case (TupledRestOfFuns -- TrustedFunctions) of 
+			% 	[] -> 
 					% io:format("Needed functions are trusted\n"),
 					% io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
 					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
@@ -530,16 +530,16 @@ get_compatible_usable_tests(
 		       				case AllTypesCorrect of 
 		       					true -> 
 		       						% io:format("Type constraints are hold."),
-		       						[Dict | Acc];
+		       						[{Dict, TupledRestOfFuns -- TrustedFunctions} | Acc];
 		       					false ->
 		       						% io:format("Type constraints are NOT hold."),
 		       						Acc
 		       				end
 					end;
-				_ ->
-					% io:format("Needed functions are NOT trusted\n"),
-					Acc 
-			end;
+				% _ ->
+				% 	% io:format("Needed functions are NOT trusted\n"),
+				% 	Acc 
+			% end;
 		false ->
 			Acc 
 	end.
