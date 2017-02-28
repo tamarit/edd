@@ -87,7 +87,7 @@ dd(Expr,Options) when is_list(Options)->
 				divide_query
 		end,
 	TestFiles  =
-		case [Files || {test_files, Files} <- Options ] of 
+		case [Files || {test_files, Files} <- Options ] of 
 			[] ->
 				[];
 			[ListFiles] ->
