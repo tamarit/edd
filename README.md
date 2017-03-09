@@ -186,14 +186,14 @@ behaviour, and the second is the timeout (in miliseconds) for the tracing
 process needed in this kind of debugging. 
     
 
-edd and eunit
--------------
+edd and eunit/proper
+--------------------
 
-The Erlang Declarative Debugger can interact with eunit in two ways:
-  * It reads eunit tests from a given files and use this information to automatically answer some questions.
+The Erlang Declarative Debugger can interact with eunit/proper in two ways:
+  * It reads eunit/proper tests from a given files and use this information to automatically answer some questions.
   * It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
   
-The default behaviour for edd is to read and store the eunit tests. However, there are some options to disable this functionality.
+The default behaviour for edd is to read and store the eunit/proper tests. However, there are some options to disable this functionality.
 
 Options for edd
 ---------------
