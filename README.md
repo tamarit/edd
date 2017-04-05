@@ -181,7 +181,7 @@ edd for concurrent programs
 
 The Erlang Declarative Debugger allows the user to debug concurrent programs in
 a similar way that sequential ones. To debug a function with concurrent features, 
-the user would use 'edd:ddc/2', where the first parameter is a call with a wrong
+the user would use 'edd:cdd/2', where the first parameter is a call with a wrong
 behaviour, and the second is the timeout (in miliseconds) for the tracing 
 process needed in this kind of debugging. 
     
