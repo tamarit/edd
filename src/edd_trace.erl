@@ -87,10 +87,17 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
     % io:format("Itera\n"),
     receive 
         TraceItem = {edd_trace, _, _, _} ->
+            NTraceItem = 
+                case TraceItem of 
+                    {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
+                        {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    _ -> 
+                        TraceItem
+                end,
             % io:format("Trace ~p\n", [TraceItem]),
             receive_loop(
                 Current + 1, 
-                [{Current,TraceItem} | Trace],
+                [{Current,NTraceItem} | Trace],
                 Loaded, FunDict, PidMain, Timeout, Dir);
         {edd_load_module, Module, PidAnswer} ->
             % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),

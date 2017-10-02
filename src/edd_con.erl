@@ -404,6 +404,7 @@ build_graph_trace(
 build_graph_trace(
 		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
+	% io:format("BGT: ~p\n", [{Pid, PidReceive, Msg, TraceId}]),
 	MessageRecord = 
 		#message_info{from = Pid, to = PidReceive, msg = Msg, trace = TraceId},
 	% Add to the communication history
@@ -447,12 +448,13 @@ build_graph_trace(
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
 	MsgSender = 
 		[PidSenderCom || 
-			{sent, #message_info{from = PidSenderCom, to = PidReceiverCom, msg = MsgCom}} <- Communication,
-			MsgCom == Msg, PidReceiverCom == Pid],
+			{sent, #message_info{from = PidSenderCom, to = PidReceiverCom, msg = MsgCom, trace = TraceIdSent}} <- Communication,
+			MsgCom == Msg, PidReceiverCom == Pid, TraceIdSent < TraceId],
+	% io:format("{Msg, Pid}: ~p\n", [{Msg, Pid}]),
 	{NCommunication, NPidsInfo} = 
 		case lists:usort(MsgSender) of 
 			% Only if a sender for the consumed message is found
-			[MsgSender_] ->
+			[MsgSender_|_] ->
 				MsgRecord = 
 					#message_info{from = MsgSender_, to = Pid, msg = Msg, trace = TraceId},
 				{
@@ -942,6 +944,10 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 		lists:reverse(Before0), 
 	PredTo = 
 		fun(Pid) -> str_term(To)  ==  Pid end,
+	% io:format("Before: ~p\n", [Before]),
+	% io:format("After: ~p\n", [After]),
+	% io:format("str_term(To): ~p\n", [str_term(To)]),
+	% try io:format("str_term(To): ~p\n", [whereis(To)]) catch _:_ -> ok end,
 	{ToInBefore, FoundBefore} = acc_search_in_list(PredTo, Before),
 	{ToInAfter, FoundAfter} = acc_search_in_list(PredTo, After),
 	ListWhereIsTo = 
@@ -949,7 +955,7 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 			{true, _} ->
 				ToInBefore;
 			{_, true} ->
-				 ToInAfter
+				ToInAfter
 		end,
 	% io:format("ListWhereIsTo: ~p\n",[ListWhereIsTo]),
 	build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties).
@@ -1013,6 +1019,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 			lists:zip3(lists:seq(NumPoints + 1, NumPoints + length(PidsStr)), PidsStr, PidsCall) ),
     CodeLines = [build_code_line(NumPoints, lists:last(PidsStr))],
 	Distribution = distribute_edge(PidsStr), 
+	% io:format("lists:reverse(Communications):\n~p\n", [lists:reverse(Communications)]),
 	{CommLines0,_} = 
 		lists:mapfoldl(
 			fun(Com, CurrentStep) -> communication_lines(Com, PidsStr, CurrentStep) end,
