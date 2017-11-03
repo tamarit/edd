@@ -30,7 +30,7 @@
 	tab_lines/1, build_call_string/1,
 	question_list/2, format/2,
 	initial_state/3, asking_loop/1,
-	buggy_node_str/3]).
+	buggy_node_str/3, complexity_term/1]).
 
 -include_lib("edd_con.hrl").
 	
@@ -785,5 +785,25 @@ get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 		_:_ ->
 			other
 	end.
+
+complexity_term(Term) ->
+	case is_list(Term) of 
+		true -> 
+			1 + lists:sum(
+				lists:map(
+					fun complexity_term/1, 
+					Term));
+		false -> 
+			case is_tuple(Term) of 
+				true -> 
+					1 + lists:sum(
+						lists:map(
+							fun complexity_term/1, 
+							tuple_to_list(Term)));
+				false -> 
+					1
+			end
+	end.
+
 
 
