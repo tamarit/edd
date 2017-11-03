@@ -295,7 +295,10 @@ build_graph(Trace, DictFuns, PidInit) ->
 
 
   	{_, DictPids} = 
-  		lists:foldl(fun assign_node_num/2, {0, dict:new()}, FinalState#evaltree_state.pids_info),
+  		lists:foldl(
+  			fun assign_node_num/2, 
+  				{0, dict:new()}, 
+  				FinalState#evaltree_state.pids_info),
 
 
   	PidsTree = digraph:new(),
@@ -308,13 +311,15 @@ build_graph(Trace, DictFuns, PidInit) ->
   	% io:format("~p\n", [FinalState]),
 
 
-	dot_graph_file_int(PidsTree, "pids_tree", fun dot_vertex_pids_tree/1),
+	dot_graph_file_int(PidsTree, "pids_tree", fun dot_vertex_pids_tree/1, false),
 
 	
 	communication_sequence_diagram(
 		FinalState#evaltree_state.pids_info,
 		FinalState#evaltree_state.communication),
 
+
+	TimeStartEvalTree = os:timestamp(),
 	PidsSummary = 
         summarizes_pidinfo(
             lists:reverse(FinalState#evaltree_state.pids_info)),
@@ -332,7 +337,10 @@ build_graph(Trace, DictFuns, PidInit) ->
     % io:format("~p\n", [FinalState#evaltree_state.communication]),
     % DictQuestions = [],
 	% io:format("G: ~p\n", [G]),
-    dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end),
+	TimeTotalEvalTree = 
+		timer:now_diff(os:timestamp(), TimeStartEvalTree), %/1000000
+	io:format("Time to create evaluation tree: ~p microseconds\n", [TimeTotalEvalTree]),
+    dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end, true),
     % edd_graph!del_disconected_vertices,
     {lists:reverse(FinalState#evaltree_state.pids_info), FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
 
@@ -800,8 +808,17 @@ dot_vertex_pids_tree({V,L}) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-dot_graph_file_int(G, Name, FunVertex) ->
-	file:write_file(Name++".dot", list_to_binary("digraph PDG {\n"++dot_graph(G, FunVertex)++"}")),
+dot_graph_file_int(G, Name, FunVertex, ShowInfo) ->
+	DotContent = 
+		"digraph PDG {\n"++dot_graph(G, FunVertex)++"}",
+	case ShowInfo of 
+		true -> 
+			io:format("Memory size: ~p bytes\n", [length(DotContent)]),
+			io:format("Nodes: ~p\n", [length(digraph:vertices(G))]);
+		false -> 
+			ok
+	end,
+	file:write_file(Name++".dot", list_to_binary(DotContent)),
 	os:cmd("dot -Tpdf "++ Name ++".dot > "++ Name ++".pdf").	
 
 dot_graph(G, FunVertex)->
@@ -992,6 +1009,8 @@ communication_lines(
 	{build_transitive_edge(Spawner, Spawned, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1}.
 
 communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) > 1 ->
+	TimeStart = 
+		os:timestamp(),
 	Header = 
 		["digraph G {"
 		,"  rankdir=\"LR\";"
@@ -1030,7 +1049,12 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 	Closer = "}",
 	DotContent = 
 		lines(Header ++ PidLines ++ CodeLines ++ [Distribution] ++ CommLines ++ [Closer]),
-
+	TimeTotal = 
+		timer:now_diff(os:timestamp(), TimeStart), %/1000000
+	io:format("Time to create sequence diagram: ~p microseconds\n", [TimeTotal]),	
+	io:format("Memory size: ~p bytes\n", [length(DotContent)]),
+	io:format("Events: ~p\n", [NumPoints]),
+	io:format("Events + last: ~p\n", [NumPoints + length(PidsStr)]),
 	Name = "comm_seq_diag",
 	file:write_file(Name ++ ".dot", list_to_binary(DotContent)),
 	os:cmd("dot -Tpdf "++ Name ++ ".dot > " ++ Name ++ ".pdf");
@@ -1048,7 +1072,13 @@ communication_sequence_diagram(_, _) ->
 build_answer(Str, Beh) ->
     #answer{
         text = Str,
-        when_chosen = Beh
+        when_chosen = Beh,
+        complexity = 1
+    }.
+
+build_answer(Str, Beh, Comp) ->
+    (build_answer(Str, Beh))#answer{
+        complexity = Comp
     }.
 
 list_ans(#answer{text = Text}) ->
@@ -1088,7 +1118,8 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
             [build_answer(
                 "Previous evaluated receive:\n" 
                 ++ edd_con_lib:tab_lines(PreRecInfoStr), 
-                {correct, {goto, NodeDest}})];       
+                {correct, {goto, NodeDest}},
+                complexity_term(PreRecInfoStr) + 1)];       
         _ ->
             []   
     end.
@@ -1104,14 +1135,15 @@ behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
                 [ 
                     begin
                         % io:format("Res: ~p\n", [dict:find(MS, DictNodes)]),
+                        % io:format("pp_item(MS): ~p\n", [MS]),
                         case dict:find(MS, DictNodes) of 
                             {ok, [Node]} -> 
-                                build_answer(pp_item(MS), BehEmptySame);
+                                build_answer(pp_item(MS), BehEmptySame, complexity_term(MS));
                             {ok, [NodeDest]} ->
-                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}});
+                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}, complexity_term(MS));
                             error ->
                                 % TODO: Not sure whether this is the expected behavior
-                                build_answer(pp_item(MS), BehEmptySame)
+                                build_answer(pp_item(MS), BehEmptySame, complexity_term(MS))
                         end
                     end
                 || MS <- SentSpawned
@@ -1132,11 +1164,19 @@ reached_value_answer(none, PrevRec) ->
     %         }}} = 
     %     element(2,digraph:vertex(G, NodeReceive)), 
     % [build_answer("Reached receive\n" ++ ReceiveStr, {goto, NodeReceive})];
-    [build_answer("Reached receive:\n" ++ PrevRec, incorrect)];
+    [build_answer(
+    	"Reached receive:\n" ++ PrevRec, 
+    	incorrect,
+    	complexity_term(PrevRec) + 1)];
 reached_value_answer(stuck_receive, _) ->
-    [build_answer("Blocked because it is waiting for a message", incorrect)];
+    [build_answer(
+    	"Blocked because it is waiting for a message", 
+    	incorrect)];
 reached_value_answer(Val, _) ->
-    [build_answer("Evaluated to value: " ++ edd_con_lib:any2str(Val), incorrect)].
+    [build_answer(
+    	"Evaluated to value: " ++ edd_con_lib:any2str(Val), 
+    	incorrect, 
+    	complexity_term(Val) + 1)].
 
 build_questions(G, DictNodes) ->
     DictsQuestionsTrace = 
@@ -1197,8 +1237,14 @@ build_question(
         PrevReceive ++ 
         reached_value_answer(Result, PrevRec) ++ 
         [
-         build_answer(edd_con_lib:question_list("sent messages",Sent), behavior_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(edd_con_lib:question_list("created processes",Spawned), behavior_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(
+         	edd_con_lib:question_list("sent messages",Sent), 
+         	behavior_question(Sent, DictNodes, Node, incorrect, correct),
+         	complexity_term(Sent)),
+         build_answer(
+         	edd_con_lib:question_list("created processes",Spawned), 
+         	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
+         	complexity_term(Spawned)),
          build_answer("Nothing", correct)
         ],
     % Question ++ "\n" ++ edd_con_lib:any2str(Answers);
@@ -1250,15 +1296,30 @@ build_question(
     Answers = 
         PrevReceive ++
         [
-         build_answer(edd_con_lib:question_list("Context",Context), correct),
+         build_answer(
+         	edd_con_lib:question_list("Context",Context), 
+         	correct, 
+         	complexity_term(Context)),
          % build_answer("ContextRec: " ++ edd_con_lib:any2str(ContextRec), correct),
-         build_answer(edd_con_lib:question_list("received messages",Received),behavior_question(Received, DictNodes, Node, correct, correct)),
-         build_answer(edd_con_lib:question_list("consumed message",Consumed), incorrect)
+         build_answer(
+         	edd_con_lib:question_list("received messages",Received),
+         	behavior_question(Received, DictNodes, Node, correct, correct),
+         	complexity_term(Received)),
+         build_answer(
+         	edd_con_lib:question_list("consumed message",Consumed), 
+         	incorrect,
+         	complexity_term(Consumed))
         ]
         ++ reached_value_answer(Result, PrevRec) ++
         [
-         build_answer(edd_con_lib:question_list("sent messages",Sent), behavior_question(Sent, DictNodes, Node, incorrect, correct)),
-         build_answer(edd_con_lib:question_list("created processes",Spawned), behavior_question(Spawned, DictNodes, Node, incorrect, correct)),
+         build_answer(
+         	edd_con_lib:question_list("sent messages",Sent), 
+         	behavior_question(Sent, DictNodes, Node, incorrect, correct),
+         	complexity_term(Sent)),
+         build_answer(
+         	edd_con_lib:question_list("created processes",Spawned), 
+         	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
+         	complexity_term(Spawned)),
          build_answer("Nothing", correct)
         ],
     NDictTraces  = 
@@ -1475,3 +1536,26 @@ tupled_vertex(G, {V,Info}, DictQA) ->
         
 tupled_edge({V1,V2}) -> 
     {V1, V2}.
+
+complexity_term(#message_info{msg = Msg}) ->
+	2 + complexity_term(Msg);
+complexity_term(#spawn_info{}) ->
+	1;
+complexity_term(Term) ->
+	case is_list(Term) of 
+		true -> 
+			1 + lists:sum(
+				lists:map(
+					fun complexity_term/1, 
+					Term));
+		false -> 
+			case is_tuple(Term) of 
+				true -> 
+					1 + lists:sum(
+						lists:map(
+							fun complexity_term/1, 
+							tuple_to_list(Term)));
+				false -> 
+					1
+			end
+	end.

@@ -8,7 +8,8 @@
 -record(answer,
     {
         text = none,
-        when_chosen = none
+        when_chosen = none,
+        complexity = 1
     }).
 
 -record(callrec_stack_item,
