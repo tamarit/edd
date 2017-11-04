@@ -151,11 +151,11 @@ ask_initial_process(Pids) ->
 				++ "Pid selection" 
 				++ space() 
 				++ Options 
-				++ "\nPlease, insert a PID where you have observed a wrong behavior: [1..~p]: ",
-			[LastId + 1]),
+				++ "\nPlease, insert a PID where you have observed a wrong behavior (or ~p to select an event): [1..~p]: ",
+			[LastId, LastId + 1]),
 	Answer = 
 		% get_answer(pids_wo_quotes(Question),lists:seq(0,LastId)),
-		get_answer(Question,lists:seq(1,LastId)),
+		get_answer(Question,lists:seq(1,LastId + 1)),
 	Result = 
 		[Data || {Option,Data} <- NDict, Answer =:= Option],
 	{FirstPid, SelectEvent} = 
@@ -284,9 +284,9 @@ print_help() ->
 			[
 				  space()
 				, "#. - Indicates that the corresponding option is wrong"
-				, "t. - Means \"trust\". Select this when the process or function is reliable."
+				, "t. - Means \"trust\". Select this when the process or function is reliable"
 				, "d. - Means \"don't know\". Select this when you are not sure what is the answer"
-				, "c. - Chooses the question where a given event from the sequence diagram occurs"
+				, "c. - Chooses the question related with a selected event from the sequence diagram"
 				, "s. - Changes the search strategy"
 				, "p. - Changes the search priority"
 				, "u. - Undoes last answer"
@@ -719,11 +719,15 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 			1,
 			Answers
 		),
-	AnswersList = 
-		lists:map(
-			fun({Id, #answer{text = AnswerStr, complexity = Comp}}) ->
-				format("~p. - ~s \n(Complexity: ~p)", [Id, AnswerStr, Comp])
+	{AnswersList, QuestionComp} = 
+		lists:mapfoldl(
+			fun({Id, #answer{text = AnswerStr, complexity = Comp}}, Acc) ->
+				{
+					format("~p. - ~s \n(Complexity: ~p)", [Id, AnswerStr, Comp]),
+					Acc + Comp
+				}
 			end,
+			0,
 			DictAnswers
 		),
 	AnswersStr = 
@@ -732,11 +736,14 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 		[any2str(Opt) || Opt <- lists:seq(1, LastOpt - 1)],
 	OptionsStr = 
 		string:join(Options, "/"),
+	QuestionCompStr = 
+		format("\n\n<Question complexity: ~p>\n", [QuestionComp]),
 	Prompt = 
 		space()
 		++ QuestionStr 
 		++ "\n"
 		++ AnswersStr
+		++ QuestionCompStr
 		++ "\n[" 
 		++ OptionsStr
 		++ "/t/d/c/s/p/r/u/h/a]: ",
@@ -774,7 +781,7 @@ get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
 		case Behaviour of 
 			#question{answers = [Answer = #answer{text = TextAns, when_chosen = BehAns}]} ->
-				io:format("Auto-selecting, only one option:\n" ++ TextAns),
+				io:format("Automatic selection (only one option):\n" ++ TextAns),
 				BehAns;
 			#question{} ->
 				FunAsk(-1, Behaviour, OptsDiagramSeq, FunAsk);

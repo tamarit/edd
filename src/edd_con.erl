@@ -1099,27 +1099,37 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
         {ok, NodeDests} ->
             NodeDest = lists:last(NodeDests),
             {NodeDest, NodeInfo} = digraph:vertex(G, NodeDest),
+            {_,CallStackItem} =
+            	NodeInfo,
+            {{pos_info,{_, _, _, StrPrevReceiveWithoutLine}}} =
+            	(CallStackItem#callrec_stack_item.origin_callrec)#receive_info.pos_pp,
             {#question{
                 str_callrec = StrPrevReceive,
                 answers = AnsPrevReceive
             }, _} = 
                 build_question(NodeInfo, DictNodes, G, NodeDest, dict:new()),
+        	CleanAnsPrevReceive = 
+	        	lists:foldl(
+	                fun(_, Acc) -> lists:droplast(Acc) end,
+	                AnsPrevReceive,
+	                lists:seq(1,4)),
             PreRecInfoStr = 
                 StrPrevReceive ++ "\n" 
                 ++ lists:flatten(
                         lists:map(
                             fun list_ans/1,
-                            lists:foldl(
-                                fun(_, Acc) -> lists:droplast(Acc) end,
-                                AnsPrevReceive,
-                                lists:seq(1,4)
-                                ))),
+                            CleanAnsPrevReceive)),
                             % lists:droplast(AnsPrevReceive))),
+            Complexity = 
+            	complexity_receive(
+            		StrPrevReceiveWithoutLine, 
+            		CleanAnsPrevReceive),
+            % io:format("Complexity: ~p\n", [Complexity]),
             [build_answer(
                 "Previous evaluated receive:\n" 
                 ++ edd_con_lib:tab_lines(PreRecInfoStr), 
                 {correct, {goto, NodeDest}},
-                complexity_term(PreRecInfoStr) + 1)];       
+                Complexity)];       
         _ ->
             []   
     end.
@@ -1129,6 +1139,7 @@ behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
         [] ->
             BehEmptySame;
         _ ->
+        	% The complexity of all these answers is put to 0 since they have been questioned previously.
             #question{
                 text = "Which one is not expected?",
                 answers = 
@@ -1138,12 +1149,15 @@ behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
                         % io:format("pp_item(MS): ~p\n", [MS]),
                         case dict:find(MS, DictNodes) of 
                             {ok, [Node]} -> 
-                                build_answer(pp_item(MS), BehEmptySame, complexity_term(MS));
+                                % build_answer(pp_item(MS), BehEmptySame, complexity_term(MS));
+                                build_answer(pp_item(MS), BehEmptySame, 0); 
                             {ok, [NodeDest]} ->
-                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}, complexity_term(MS));
+                                % build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}, complexity_term(MS));
+                                build_answer(pp_item(MS), {BehOther, {goto, NodeDest}}, 0);
                             error ->
                                 % TODO: Not sure whether this is the expected behavior
-                                build_answer(pp_item(MS), BehEmptySame, complexity_term(MS))
+                                % build_answer(pp_item(MS), BehEmptySame, complexity_term(MS))
+                                build_answer(pp_item(MS), BehEmptySame, 0)
                         end
                     end
                 || MS <- SentSpawned
@@ -1167,7 +1181,7 @@ reached_value_answer(none, PrevRec) ->
     [build_answer(
     	"Reached receive:\n" ++ PrevRec, 
     	incorrect,
-    	complexity_term(PrevRec) + 1)];
+    	complexity_receive(PrevRec))];
 reached_value_answer(stuck_receive, _) ->
     [build_answer(
     	"Blocked because it is waiting for a message", 
@@ -1299,7 +1313,7 @@ build_question(
          build_answer(
          	edd_con_lib:question_list("Context",Context), 
          	correct, 
-         	complexity_term(Context)),
+         	complexity_term(Context) - length(Context)),
          % build_answer("ContextRec: " ++ edd_con_lib:any2str(ContextRec), correct),
          build_answer(
          	edd_con_lib:question_list("received messages",Received),
@@ -1542,20 +1556,95 @@ complexity_term(#message_info{msg = Msg}) ->
 complexity_term(#spawn_info{}) ->
 	1;
 complexity_term(Term) ->
-	case is_list(Term) of 
+	case io_lib:printable_list(Term) of % is_string/1 Erlang's way
 		true -> 
-			1 + lists:sum(
-				lists:map(
-					fun complexity_term/1, 
-					Term));
+			1;
 		false -> 
-			case is_tuple(Term) of 
+			case is_list(Term) of 
 				true -> 
 					1 + lists:sum(
 						lists:map(
 							fun complexity_term/1, 
-							tuple_to_list(Term)));
+							Term));
 				false -> 
-					1
+					case is_tuple(Term) of 
+						true -> 
+							1 + lists:sum(
+								lists:map(
+									fun complexity_term/1, 
+									tuple_to_list(Term)));
+						false -> 
+							1
+					end
 			end
 	end.
+
+complexity_receive(StrReceive, AnsReceive) ->
+	% io:format("StrReceive: ~s\n", [StrReceive]),
+	% io:format("AnsReceive: ~p\n", [AnsReceive]),
+	{ok, Toks, _} = 
+		erl_scan:string(StrReceive ++ "."),
+	{ok, [AExpr | _]} = 
+		erl_parse:parse_exprs(Toks),
+	Clauses = 
+		erl_syntax:receive_expr_clauses(AExpr),
+	ClausesPatternsComplexities = 
+		lists:map(
+			fun(Clause) ->
+				[Pattern] = 
+					erl_syntax:clause_patterns(Clause),
+				PatternWithoutVars = 
+					erl_syntax_lib:map(
+						fun(N) ->
+							case erl_syntax:type(N) of 
+								variable -> 
+									erl_syntax:integer(1);
+								_ ->
+									N 
+							end
+						end,
+						Pattern),
+				complexity_term(erl_syntax:concrete(PatternWithoutVars))
+			end,
+			Clauses),
+	ComplexityAfter = 
+		case erl_syntax:receive_expr_timeout(AExpr) of 
+			none -> 
+				0;
+			_ -> 
+				2 % 1 because the after clause, and 1 because the term defining the timeout
+		end,
+	ComplexityAns = 
+		[Ans#answer.complexity || Ans <- AnsReceive],
+	% io:format("Clauses: ~p\n", [length(Clauses) ]),
+	% io:format("ClausesPatternsComplexities: ~p\n", [lists:sum(ClausesPatternsComplexities) ]),
+	% io:format("ComplexityAfter: ~p\n", [ComplexityAfter]),
+	% io:format("ComplexityAns: ~p\n", [lists:sum(ComplexityAns)]),
+		length(Clauses) 
+	+ 	lists:sum(ClausesPatternsComplexities) 
+	+	ComplexityAfter
+	+ 	lists:sum(ComplexityAns)
+	+ 	1.
+
+complexity_receive(StrReceive) ->
+	ReversedStrReceive = 
+		lists:reverse(StrReceive),
+	{true, CleanedStrReceive} = 
+		lists:foldl(
+			fun
+				(Char, {true, Acc})->
+					{true, [Char | Acc]};
+				($\n, {false, []}) ->
+					{true, []};
+				(_ , {false, []}) ->
+					{false, []}
+			end,
+			{false, []},
+			ReversedStrReceive),
+	% io:format("CleanedStrReceive: ~s\n", [CleanedStrReceive]),
+	complexity_receive(CleanedStrReceive, []).
+
+
+
+
+
