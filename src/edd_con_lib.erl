@@ -376,6 +376,8 @@ ask(Info, Strategy, Priority) ->
 	FirstState = #edd_con_state{summary_pids = SummaryPids} = 
 		initial_state(Info, Strategy, Priority),
 	print_root_info(SummaryPids),
+	put(question_answered, 0),
+	put(question_complexity, 0),
 	{Pids, ChooseEvent} = ask_initial_process(SummaryPids),
 	State0 = FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4},
 	State1 =
@@ -435,7 +437,25 @@ ask_about(State) ->
 					end;
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G, NotCorrectVertex,
-	               		"\nThe error has been detected:\n")
+	               		"\nThe error has been detected:\n"),
+	               	io:format(space()),
+	               	io:format("SESSION DATA\n"),
+	               	io:format("Answered questions:\t~p\n", [get(question_answered)]),
+	               	io:format("Questions complexity:\t~p\n", [get(question_complexity)]),
+	               	io:format(space()),
+	               	io:format(space()),
+	               	io:format("EVALUATION TREE BUILDING DATA\n"),
+	               	io:format("Time:\t~p microseconds\n", [get(eval_tree_time)]),
+	               	io:format("Memory:\t~p bytes\n", [get(eval_tree_memory)]),
+					io:format("Nodes:\t~p\n", [get(eval_tree_nodes)]),
+					io:format(space()),
+					io:format(space()),
+	               	io:format("SEQUENCE DIAGRAM BUILDING DATA\n"),
+	               	io:format("Time:\t\t~p microseconds\n", [get(seq_diag_time)]),
+	               	io:format("Memory:\t\t~p bytes\n", [get(seq_diag_memory)]),
+					io:format("Events:\t\t~p\n", [get(seq_diag_events)]),
+					io:format("Events + Lasts:\t~p\n", [get(seq_diag_events_lasts)]),
+					io:format(space())
 	        end
 	end,
 	ok.
@@ -776,9 +796,14 @@ get_behavior("c", _, OptsDiagramSeq, _) ->
 			lists:seq(1,OptsDiagramSeq))
 	};
 get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
+	put(question_answered, get(question_answered) + 1),
 	try 
 		Number = element(1,string:to_integer(NumberStr)),
 		#answer{when_chosen = Behaviour} = element(2, lists:keyfind(Number, 1, DictAnswers)),
+		AccComplexity = 
+			[(element(2, lists:keyfind(N, 1, DictAnswers)))#answer.complexity
+			|| N <- lists:seq(1, Number)],
+		put(question_complexity, get(question_complexity) + lists:sum(AccComplexity)),
 		case Behaviour of 
 			#question{answers = [Answer = #answer{text = TextAns, when_chosen = BehAns}]} ->
 				io:format("Automatic selection (only one option):\n" ++ TextAns),

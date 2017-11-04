@@ -339,7 +339,8 @@ build_graph(Trace, DictFuns, PidInit) ->
 	% io:format("G: ~p\n", [G]),
 	TimeTotalEvalTree = 
 		timer:now_diff(os:timestamp(), TimeStartEvalTree), %/1000000
-	io:format("Time to create evaluation tree: ~p microseconds\n", [TimeTotalEvalTree]),
+	% io:format("Time to create evaluation tree: ~p microseconds\n", [TimeTotalEvalTree]),
+	put(eval_tree_time, TimeTotalEvalTree),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end, true),
     % edd_graph!del_disconected_vertices,
     {lists:reverse(FinalState#evaltree_state.pids_info), FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
@@ -813,8 +814,10 @@ dot_graph_file_int(G, Name, FunVertex, ShowInfo) ->
 		"digraph PDG {\n"++dot_graph(G, FunVertex)++"}",
 	case ShowInfo of 
 		true -> 
-			io:format("Memory size: ~p bytes\n", [length(DotContent)]),
-			io:format("Nodes: ~p\n", [length(digraph:vertices(G))]);
+			% io:format("Memory size: ~p bytes\n", [length(DotContent)]),
+			% io:format("Nodes: ~p\n", [length(digraph:vertices(G))]);
+			put(eval_tree_memory, length(DotContent)),
+			put(eval_tree_nodes, length(digraph:vertices(G)));
 		false -> 
 			ok
 	end,
@@ -1051,10 +1054,14 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		lines(Header ++ PidLines ++ CodeLines ++ [Distribution] ++ CommLines ++ [Closer]),
 	TimeTotal = 
 		timer:now_diff(os:timestamp(), TimeStart), %/1000000
-	io:format("Time to create sequence diagram: ~p microseconds\n", [TimeTotal]),	
-	io:format("Memory size: ~p bytes\n", [length(DotContent)]),
-	io:format("Events: ~p\n", [NumPoints]),
-	io:format("Events + last: ~p\n", [NumPoints + length(PidsStr)]),
+	% io:format("Time to create sequence diagram: ~p microseconds\n", [TimeTotal]),	
+	% io:format("Memory size: ~p bytes\n", [length(DotContent)]),
+	% io:format("Events: ~p\n", [NumPoints]),
+	% io:format("Events + last: ~p\n", [NumPoints + length(PidsStr)]),
+	put(seq_diag_time, TimeTotal),
+	put(seq_diag_memory, length(DotContent)),
+	put(seq_diag_events, NumPoints),
+	put(seq_diag_events_lasts, NumPoints + length(PidsStr)),
 	Name = "comm_seq_diag",
 	file:write_file(Name ++ ".dot", list_to_binary(DotContent)),
 	os:cmd("dot -Tpdf "++ Name ++ ".dot > " ++ Name ++ ".pdf");
