@@ -73,6 +73,13 @@ print_summary_pid({Pid, Call, Sent, Spawned, Result}) ->
 		++ space(),
 	io:format("~s", [Str]).
 
+complexity_pid({_, _, Sent, Spawned, Result}) ->
+	% The call is not counted (Should we add it?)
+		1 
+	+ 	edd_con:complexity_term(Result)
+	+ 	(edd_con:complexity_term(Sent) - 1)
+	+ 	(edd_con:complexity_term(Spawned) - 1).
+
 any2str(stuck_receive) ->
     "Blocked because it is waiting for a message";
 any2str(Any) ->
@@ -278,6 +285,12 @@ print_root_info(SummaryPidsInfo) ->
 		fun print_summary_pid/1, 
 		SummaryPidsInfo).
 
+get_initial_complexity(SummaryPidsInfo) ->
+	lists:sum(
+		lists:map(
+			fun complexity_pid/1, 
+			SummaryPidsInfo)).
+
 print_help() ->
 	Msg = 
 		string:join(
@@ -376,6 +389,7 @@ ask(Info, Strategy, Priority) ->
 	FirstState = #edd_con_state{summary_pids = SummaryPids} = 
 		initial_state(Info, Strategy, Priority),
 	print_root_info(SummaryPids),
+	put(initial_complexity, get_initial_complexity(SummaryPids)),
 	put(question_answered, 0),
 	put(question_complexity, 0),
 	{Pids, ChooseEvent} = ask_initial_process(SummaryPids),
@@ -441,7 +455,11 @@ ask_about(State) ->
 	               	io:format(space()),
 	               	io:format("SESSION DATA\n"),
 	               	io:format("Answered questions:\t~p\n", [get(question_answered)]),
-	               	io:format("Questions complexity:\t~p\n", [get(question_complexity)]),
+	               	io:format("Questions' complexity:\t~p\n", [get(question_complexity)]),
+	               	io:format(space()),
+	               	io:format(space()),
+	               	io:format("INITIAL PID SELECTION COMPLEXITY\n"),
+	               	io:format("Complexity:\t~p\n", [get(initial_complexity)]),
 	               	io:format(space()),
 	               	io:format(space()),
 	               	io:format("EVALUATION TREE BUILDING DATA\n"),

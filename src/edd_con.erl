@@ -24,7 +24,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd_con).
--export([cdd/2, cdd/4, cdd_server/3, summarizes_pidinfo/1, pp_item/1]).
+-export([cdd/2, cdd/4, cdd_server/3, summarizes_pidinfo/1, pp_item/1, complexity_term/1]).
 
 -include_lib("edd_con.hrl").
 
