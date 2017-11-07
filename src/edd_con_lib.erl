@@ -419,13 +419,15 @@ ask_about(State) ->
 	   	asking_loop(State),
 	case NotCorrect of
 	     [-1] ->
-	     	io:format("Debugging process finished\n");
+	     	io:format("Debugging process finished\n"),
+	     	session_report();
 	     _ -> 
 	        NotCorrectVertexs = [NCV || NCV <- NotCorrect, 
 	                                   (digraph:out_neighbours(G, NCV)--Correct)==[] ],
 	        case NotCorrectVertexs of
 	             [] ->
 	             	io:format("Not enough information.\n"),
+	             	session_report(),
 	             	NotCorrectWithUnwnownVertexs = 
 			  			[NCV || NCV <- NotCorrect, 
 	                          (digraph:out_neighbours(G, NCV)--(Correct++Unknown))=:=[]],
@@ -452,28 +454,7 @@ ask_about(State) ->
 	             [NotCorrectVertex|_] ->
 	               	print_buggy_node(G, NotCorrectVertex,
 	               		"\nThe error has been detected:\n"),
-	               	io:format(space()),
-	               	io:format("SESSION DATA\n"),
-	               	io:format("Answered questions:\t~p\n", [get(question_answered)]),
-	               	io:format("Questions' complexity:\t~p\n", [get(question_complexity)]),
-	               	io:format(space()),
-	               	io:format(space()),
-	               	io:format("INITIAL PID SELECTION COMPLEXITY\n"),
-	               	io:format("Complexity:\t~p\n", [get(initial_complexity)]),
-	               	io:format(space()),
-	               	io:format(space()),
-	               	io:format("EVALUATION TREE BUILDING DATA\n"),
-	               	io:format("Time:\t~p microseconds\n", [get(eval_tree_time)]),
-	               	io:format("Memory:\t~p bytes\n", [get(eval_tree_memory)]),
-					io:format("Nodes:\t~p\n", [get(eval_tree_nodes)]),
-					io:format(space()),
-					io:format(space()),
-	               	io:format("SEQUENCE DIAGRAM BUILDING DATA\n"),
-	               	io:format("Time:\t\t~p microseconds\n", [get(seq_diag_time)]),
-	               	io:format("Memory:\t\t~p bytes\n", [get(seq_diag_memory)]),
-					io:format("Events:\t\t~p\n", [get(seq_diag_events)]),
-					io:format("Events + Lasts:\t~p\n", [get(seq_diag_events_lasts)]),
-					io:format(space())
+	               	session_report()
 	        end
 	end,
 	ok.
@@ -836,4 +817,27 @@ get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 			other
 	end.
 
+session_report() ->
+	io:format(space()),
+	io:format("SESSION DATA\n"),
+	io:format("Answered questions:\t~p\n", [get(question_answered)]),
+	io:format("Questions' complexity:\t~p\n", [get(question_complexity)]),
+	io:format(space()),
+	io:format(space()),
+	io:format("INITIAL PID SELECTION COMPLEXITY\n"),
+	io:format("Complexity:\t~p\n", [get(initial_complexity)]),
+	io:format(space()),
+	io:format(space()),
+	io:format("EVALUATION TREE BUILDING DATA\n"),
+	io:format("Time:\t~p microseconds\n", [get(eval_tree_time)]),
+	io:format("Memory:\t~p bytes\n", [get(eval_tree_memory)]),
+	io:format("Nodes:\t~p\n", [get(eval_tree_nodes)]),
+	io:format(space()),
+	io:format(space()),
+	io:format("SEQUENCE DIAGRAM BUILDING DATA\n"),
+	io:format("Time:\t\t~p microseconds\n", [get(seq_diag_time)]),
+	io:format("Memory:\t\t~p bytes\n", [get(seq_diag_memory)]),
+	io:format("Events:\t\t~p\n", [get(seq_diag_events)]),
+	io:format("Events + Lasts:\t~p\n", [get(seq_diag_events_lasts)]),
+	io:format(space()).
 
