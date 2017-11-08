@@ -105,3 +105,6 @@ philosophers.erl
 *.merge
 
 *.core_old
+
+pc/*.erl
+

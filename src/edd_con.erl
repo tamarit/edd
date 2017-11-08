@@ -302,6 +302,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 
 
   	PidsTree = digraph:new(),
+  	put(dict_funs, DictFuns),
     % io:format("~p\n", [FinalState#evaltree_state.pids_info]),
   	[build_pids_tree(PidInfo, DictPids, DictFuns, PidsTree) 
   	 || PidInfo <- lists:reverse(lists:sort(FinalState#evaltree_state.pids_info))],
@@ -493,9 +494,10 @@ build_graph_trace(
 	% New state
 	State#evaltree_state{
 		pids_info = NPidsInfo
-	}.
-% build_graph_trace(_, State) ->	
-% 	State.
+	};
+build_graph_trace({TraceId, Msg}, State) ->	
+	% io:format("ALGO RARO: ~p\n", [Msg]), 
+	State.
 
 summarizes_pidinfo(PidsInfo) -> 
     [ {Pid, Call, Sent, Spawned, Result}

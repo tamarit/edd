@@ -30,6 +30,7 @@
 
 
 parse_transform(Forms, _) ->
+	% io:format("Trans: ~p\n", [hd(Forms)]),
 	put(free, 0),
 	ModFileName = 
 		lists:sort(
@@ -151,6 +152,7 @@ inst_expr(T) ->
 					get_ann_info(env, T),
 				Context = 
 					build_dict_var(VarsContext),
+				% io:format("PP: ~p\n", [erl_syntax:tuple(pos_and_pp(T))]),
 				SendReceive = 
 						build_send_trace(
 							receive_reached, 

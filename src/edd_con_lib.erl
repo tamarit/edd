@@ -66,7 +66,7 @@ space() ->
 print_summary_pid({Pid, Call, Sent, Spawned, Result}) ->
 	Str =
 		space() ++ "PROCESS " ++ any2str(Pid)
-		++ "\nFirst call " ++ build_call_string(element(2, Call))
+		++ "\nFirst call " ++ build_call_string_or_afun(Call)
 		++ "\nResult " ++ any2str(Result)
 		++ "\n" ++ question_list("sent messages", Sent)
 		++ "\n" ++ question_list("spawned processes", Spawned)
@@ -98,7 +98,7 @@ question_list(Text, []) ->
     "No " ++ Text;
 question_list(Text, List) ->
     PPList = 
-        lists:foldl(fun(E, Acc) -> Acc ++ [$\t|edd_con:pp_item(E)] ++ "\n" end, "", List), 
+        lists:foldl(fun(E, Acc) -> Acc ++ [$\t | edd_con:pp_item(E)] ++ "\n" end, "", List), 
     capfirst(Text) ++ ":\n" ++ lists:droplast(PPList).
 
 capfirst([Head | Tail]) when Head >= $a, Head =< $z ->
@@ -119,7 +119,8 @@ build_call_string({ModFun,IdFun,ArgsFun}) ->
                 [ModFun,IdFun,build_args_list_string(ArgsFun)])
     end;
 % TODO: This clause is temporal. Should be removed
-build_call_string(_) ->
+build_call_string(Format) ->
+	% io:format("Format: ~p\n", [Format]),
     "".
 
 build_args_list_string([]) ->
@@ -129,12 +130,27 @@ build_args_list_string([E]) ->
 build_args_list_string([E | Rest]) ->
     format("~p, ~s", [E, build_args_list_string(Rest)]).
 
+build_call_string_or_afun(Call) -> 
+	FunCall = element(2, Call),
+	case FunCall of 
+		{M,F,As} ->
+			build_call_string(FunCall);
+		{AnoFun} -> 
+			case get(dict_funs) of 
+				undefined -> 
+					"";
+				DictFuns -> 
+					PosInfo = {pos_info,{Mod,_,_,_}} = hd(dict:fetch(AnoFun, DictFuns)),
+					build_call_string({Mod, PosInfo, []})
+			end
+	end.
+
 ask_initial_process(Pids) ->
 	PidsString = 
 		[
 			{Pid, format(
 				"~p\n\tFirst call:~s\n\tResult: ~s", 
-				[Pid, build_call_string(element(2, Call)), any2str(Result)]
+				[Pid, build_call_string_or_afun(Call), any2str(Result)]
 			) }
 		|| {Pid, Call, _, _, Result} <- Pids],
 	{StrPidsDict,LastId} = 
@@ -393,7 +409,8 @@ ask(Info, Strategy, Priority) ->
 	put(question_answered, 0),
 	put(question_complexity, 0),
 	{Pids, ChooseEvent} = ask_initial_process(SummaryPids),
-	State0 = FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4},
+	State0 = 
+		FirstState#edd_con_state{pids = Pids, fun_ask_question = fun ask_question/4},
 	State1 =
 		case ChooseEvent of 
 			true ->
