@@ -833,28 +833,50 @@ get_behavior(NumberStr, DictAnswers, OptsDiagramSeq, FunAsk) ->
 		_:_ ->
 			other
 	end.
+	
+marca() ->
+  "@@--@@\n".
 
 session_report() ->
-	io:format(space()),
-	io:format("SESSION DATA\n"),
-	io:format("Answered questions:\t~p\n", [get(question_answered)]),
-	io:format("Questions' complexity:\t~p\n", [get(question_complexity)]),
-	io:format(space()),
-	io:format(space()),
-	io:format("INITIAL PID SELECTION COMPLEXITY\n"),
-	io:format("Complexity:\t~p\n", [get(initial_complexity)]),
-	io:format(space()),
-	io:format(space()),
-	io:format("EVALUATION TREE BUILDING DATA\n"),
-	io:format("Time:\t~p microseconds\n", [get(eval_tree_time)]),
-	io:format("Memory:\t~p bytes\n", [get(eval_tree_memory)]),
-	io:format("Nodes:\t~p\n", [get(eval_tree_nodes)]),
-	io:format(space()),
-	io:format(space()),
-	io:format("SEQUENCE DIAGRAM BUILDING DATA\n"),
-	io:format("Time:\t\t~p microseconds\n", [get(seq_diag_time)]),
-	io:format("Memory:\t\t~p bytes\n", [get(seq_diag_memory)]),
-	io:format("Events:\t\t~p\n", [get(seq_diag_events)]),
-	io:format("Events + Lasts:\t~p\n", [get(seq_diag_events_lasts)]),
-	io:format(space()).
+	io:format(marca()),
+	io:format("{\n"),
+  io:format("\t\"Answered questions\" : ~p,\n", [get(question_answered)]),
+	io:format("\t\"Questions' complexity\" : ~p,\n", [get(question_complexity)]),
+	
+	io:format("\t\"Initial PID selection Complexity\" : ~p,\n", [get(initial_complexity)]),
+	
+	io:format("\t\"Evaluation tree time (microseconds)\" : ~p,\n", [get(eval_tree_time)]),
+	io:format("\t\"Evaluation tree memory (bytes)\" : ~p,\n", [get(eval_tree_memory)]),
+	io:format("\t\"Evaluation tree nodes\" : ~p,\n", [get(eval_tree_nodes)]),
+
+	io:format("\t\"Sequence diagram time (microseconds)\" : ~p,\n", [get(seq_diag_time)]),
+	io:format("\t\"Sequence diagram memory (bytes)\" : ~p,\n", [get(seq_diag_memory)]),
+	io:format("\t\"Sequence diagram events\" : ~p,\n", [get(seq_diag_events)]),
+	io:format("\t\"Sequence diagram events + Lasts\" : ~p\n", [get(seq_diag_events_lasts)]),
+	io:format("}\n"),
+	io:format(marca()).
+
+%session_report() ->
+%	io:format(space()),
+%	io:format("SESSION DATA\n"),
+%	io:format("Answered questions:\t~p\n", [get(question_answered)]),
+%	io:format("Questions' complexity:\t~p\n", [get(question_complexity)]),
+%	io:format(space()),
+%	io:format(space()),
+%	io:format("INITIAL PID SELECTION COMPLEXITY\n"),
+%	io:format("Complexity:\t~p\n", [get(initial_complexity)]),
+%	io:format(space()),
+%	io:format(space()),
+%	io:format("EVALUATION TREE BUILDING DATA\n"),
+%	io:format("Time:\t~p microseconds\n", [get(eval_tree_time)]),
+%	io:format("Memory:\t~p bytes\n", [get(eval_tree_memory)]),
+%	io:format("Nodes:\t~p\n", [get(eval_tree_nodes)]),
+%	io:format(space()),
+%	io:format(space()),
+%	io:format("SEQUENCE DIAGRAM BUILDING DATA\n"),
+%	io:format("Time:\t\t~p microseconds\n", [get(seq_diag_time)]),
+%	io:format("Memory:\t\t~p bytes\n", [get(seq_diag_memory)]),
+%	io:format("Events:\t\t~p\n", [get(seq_diag_events)]),
+%	io:format("Events + Lasts:\t~p\n", [get(seq_diag_events_lasts)]),
+%	io:format(space()).
 
