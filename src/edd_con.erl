@@ -327,7 +327,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 
     edd_graph!{add_vertex, 0, {PidsSummary, lists:reverse(FinalState#evaltree_state.communication)}},
     {_,DictNodes} = lists:foldl(fun build_eval_tree/2, {1, dict:new()} , lists:reverse(FinalState#evaltree_state.pids_info)),
-    % io:format("~p\n", [dict:to_list(DictNodes)]), 
+    % io:format("DictNodes: ~p\n", [dict:to_list(DictNodes)]), 
     edd_graph!{get,self()},
 	receive 
 		G -> ok
@@ -574,6 +574,7 @@ add_snapshot(
 			callrec_stack = CallRecStack,
 			snapshots = Snapshots}, 
 		Pid) ->
+	% io:format("CallRecStack: ~p\n", [CallRecStack]),
 	PidInfo#pid_info{
 		snapshots = 
 			Snapshots ++ [#snapshot_info{rest = CallRecStack}]
@@ -793,7 +794,7 @@ build_pids_tree(#pid_info{pid = Pid, spawned = Spawned, first_call = #call_info{
 				edd_con_lib:build_call_string({Mod, PosInfo, []})
 		end,
 	Label = 
-		lists:flatten(io_lib:format("~p\n~s", [Pid, StrFun])),
+		edd_con_lib:format("~p\n~s", [Pid, StrFun]),
 	digraph:add_vertex(PidsTree, V, Label),
     % io:format("Edges: ~p\n", [digraph:no_edges(PidsTree)]),
 	[digraph:add_edge(PidsTree, V, hd(dict:fetch(PidSpawned, DictPids)))
@@ -853,7 +854,7 @@ quote_enclosing(Str) ->
 	"\"" ++ Str ++ "\"".
 
 str_term(Pid) ->
-	lists:flatten(io_lib:format("~p", [Pid]) ).
+	edd_con_lib:format("~p", [Pid]).
 
 build_pid_line(Pid, Call, Code, NumPoints) ->
 	Steps = 
@@ -994,7 +995,7 @@ communication_lines(
 		{received, #message_info{from = From , to = To, msg = Msg}}, 
 		Pids, CurrentStep) -> 
 	Label = 
-		lists:flatten(io_lib:format("~p (from ~p)", [Msg, From]) ), 
+		edd_con_lib:format("~p (from ~p)", [Msg, From]), 
 	%  TODO: Should be  the same CurrentStep for both. 
 	ReceiveEdge = 
 		[	
@@ -1140,7 +1141,21 @@ prev_recieve_answer(PrevRec, DictNodes, G) ->
                 {correct, {goto, NodeDest}},
                 Complexity)];       
         _ ->
-            []   
+        	% io:format("\nNOT FOUND: ~p\n", [PrevRec]),
+        	case PrevRec of 
+        		{reached_receive, _, PR} -> 
+        			prev_recieve_answer(PR, DictNodes, G);
+        			% case dict:find(PR, DictNodes) of 
+        			% 	{ok, NodeDests} ->
+        			% 		% io:format("\n... BUT FOUND: ~p\n", [NodeDests]);
+        			% 		prev_recieve_answer(PR, DictNodes, G);
+        			% 	_ -> 
+        			% 		% io:format("\n... BUT DEFINETELY NOT FOUND: ~p\n", [PrevRec])
+        			% 		[]
+        			% end;
+        		_ -> 
+        			[]
+        	end
     end.
 
 behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
@@ -1175,27 +1190,63 @@ behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
     end.
 
 
-reached_value_answer(none, none) ->
+reached_value_answer(none, none,_,_) ->
     [];
-reached_value_answer(none, PrevRec) ->
+reached_value_answer(none, {reached_receive, CSI, _},DictNodes, G) ->
+	% % io:format("Reached receive: ~p\n", [PrevRec]),
+ %    % {ok, [NodeReceive]} = 
+ %    %     dict:find(PrevRec, DictNodes),
+ %    % {_,#callrec_stack_item{
+ %    %     origin_callrec = 
+ %    %         #receive_info{
+ %    %             pos_pp = {{pos_info,{_, F, L, ReceiveStr0}}}
+ %    %         }}} = 
+ %    %     element(2,digraph:vertex(G, NodeReceive)), 
+ %    % ReceiveStr = 
+ %    % 	edd_con_lib:format("~s\nin ~s:~p", [ReceiveStr0, F, L]),
+ %    % [build_answer(
+ %    % 	"Reached receive\n" ++ ReceiveStr, 
+ %    % 	% {goto, NodeReceive})];
+ %    % 	incorrect,
+ %    % 	complexity_receive(ReceiveStr))];
+ %    [build_answer(
+ %    	"Reached receive:\n" ++ edd_con_lib:tab_lines(PrevRec), 
+ %    	incorrect,
+ %    	complexity_receive(PrevRec))];
     % {ok, [NodeReceive]} = 
     %     dict:find(PrevRec, DictNodes),
-    % {_,#callrec_stack_item{
-    %     origin_callrec = 
-    %         #receive_info{
-    %             pos_pp = {{pos_info,{_, _, _, ReceiveStr}}}
-    %         }}} = 
-    %     element(2,digraph:vertex(G, NodeReceive)), 
-    % [build_answer("Reached receive\n" ++ ReceiveStr, {goto, NodeReceive})];
+    #callrec_stack_item{
+    	context = Context,
+        origin_callrec = 
+            #receive_info{
+                pos_pp = {{pos_info,{_, F, L, ReceiveStr0}}}
+            }} = CSI, 
+    ContextStr = 
+    	edd_con_lib:question_list("Context", Context),
+    ReceiveStr = 
+    	edd_con_lib:format("~s\nin ~s:~p", [ReceiveStr0, F, L]),
+    ReceiveAllStr = 
+    	ReceiveStr ++ "\n" ++ ContextStr,
+    ComplexityReceive = 
+    	complexity_receive(ReceiveStr),
+    ComplexityContext = 
+    	complexity_term(Context) - length(Context),
+    % [build_answer(
+    % 	"Reached receive\n" ++ ReceiveStr, 
+    % 	% {goto, NodeReceive})];
+    % 	incorrect,
+    % 	complexity_receive(ReceiveStr))];
     [build_answer(
-    	"Reached receive:\n" ++ PrevRec, 
+    	"Reached receive:\n" ++ edd_con_lib:tab_lines(ReceiveAllStr), 
     	incorrect,
-    	complexity_receive(PrevRec))];
-reached_value_answer(stuck_receive, _) ->
+    	ComplexityReceive + ComplexityContext)];
+ 	% io:format("PrevRec: ~p\n", [PrevRec]),
+ 	% [];
+reached_value_answer(stuck_receive, _,_,_) ->
     [build_answer(
     	"Blocked because it is waiting for a message", 
     	incorrect)];
-reached_value_answer(Val, _) ->
+reached_value_answer(Val, _,_,_) ->
     [build_answer(
     	"Evaluated to value: " ++ edd_con_lib:any2str(Val), 
     	incorrect, 
@@ -1254,11 +1305,12 @@ build_question(
         "Process " ++ edd_con_lib:any2str(Pid) ++ " called " 
         ++ CallStr ++ ".\nWhat is wrong?",
     % io:format(Question),
+    % io:format("PrevRec CALL: ~p\n", [PrevRec]),
     PrevReceive = 
         prev_recieve_answer(PrevRec, DictNodes, G),
     Answers = 
         PrevReceive ++ 
-        reached_value_answer(Result, PrevRec) ++ 
+        reached_value_answer(Result, PrevRec, DictNodes, G) ++ 
         [
          build_answer(
          	edd_con_lib:question_list("sent messages",Sent), 
@@ -1314,6 +1366,7 @@ build_question(
     Question = 
         "Process " ++ edd_con_lib:any2str(Pid) ++ " evaluated\n" 
         ++ ReceiveStr ++ "\nWhat is wrong?",
+    % io:format("PrevRec RECEIVE: ~p\n", [PrevRec]),
     PrevReceive = 
         prev_recieve_answer(PrevRec, DictNodes, G),
     Answers = 
@@ -1329,11 +1382,11 @@ build_question(
          	behavior_question(Received, DictNodes, Node, correct, correct),
          	complexity_term(Received)),
          build_answer(
-         	edd_con_lib:question_list("consumed message",Consumed), 
+         	edd_con_lib:question_list("consumed messages",Consumed), 
          	incorrect,
          	complexity_term(Consumed))
         ]
-        ++ reached_value_answer(Result, PrevRec) ++
+        ++ reached_value_answer(Result, PrevRec, DictNodes, G) ++
         [
          build_answer(
          	edd_con_lib:question_list("sent messages",Sent), 
@@ -1390,6 +1443,7 @@ build_eval_tree(#pid_info{
             pid = Pid, 
             result = Result, 
             snapshots = Snapshots}, {Free, Dict}) ->
+	% io:format("Snapshots:\n~p\n", [Snapshots]),
     build_eval_tree_snap(Free, Dict, Pid, Snapshots, Result, [], [], [], none).
 
 
@@ -1400,7 +1454,7 @@ build_eval_tree_snap(Free, Dict, Pid, [#snapshot_info{top = Top, rest = Rest} | 
     Res = 
         case Top of 
             none -> 
-                {build_stack_nodes(Free, Dict, Pid, Rest, none, Pending, none, [], []), 
+                {build_stack_nodes(Free, Dict, Pid, Rest, none, Pending, none, [], [], PrevEvalRec), 
                  [], [], none};
             #callrec_stack_item{origin_callrec = CallRec, sent = Sent, spawned = Spawned, trace = TraceId} ->
                 NPrevSent_ = PrevSent ++ Sent,
@@ -1411,6 +1465,7 @@ build_eval_tree_snap(Free, Dict, Pid, [#snapshot_info{top = Top, rest = Rest} | 
                         none -> 
                             NTop0;
                         _ ->
+                        	% io:format("build_eval_tree_snap: ~p\n", [PrevEvalRec]),
                            NTop0#callrec_stack_item{reached_rec_val = PrevEvalRec}
                     end,
                 edd_graph!{add_vertex, Free, {Pid, NTop}},
@@ -1435,7 +1490,7 @@ build_eval_tree_snap(Free, Dict, Pid, [#snapshot_info{top = Top, rest = Rest} | 
                     end,
                 {{Free + 1, [{Free, length(Rest)}], NDict1}, NPrevSent_, NPrevSpawned_, NPrevEvalRec_}
         end,
-    % io:format("~p\n", [Res]),
+    % io:format("Res = ~p\n", [Res]),
     {{NFree, NPending, NDict}, NPrevSent, NPrevSpawned, NPrevEvalRec} = Res,
     build_eval_tree_snap(NFree, NDict, Pid, Snapshots, Result, NPending, NPrevSent, NPrevSpawned, NPrevEvalRec);
 build_eval_tree_snap(Free, Dict, Pid, [], _, Pending, _ , _, _) ->
@@ -1451,22 +1506,27 @@ build_stack_nodes(
                     origin_callrec = 
                         #receive_info{
                             pos_pp = {{pos_info,{M, F, L, ReceiveStr0}}}
-                        }
+                        },
+                    context = Context
                 }
             | T], 
-        Previous, Pending, none, PrevSent, PrevSpawnwed) ->
+        Previous, Pending, none, PrevSent, PrevSpawnwed, PrevEvalRec) ->
     % io:format("H: ~p. - ~p\n", [none, H]),
-    ReceiveStr = 
-        lists:flatten(io_lib:format("~s\n ~s:~p", [ReceiveStr0, F, L])),
-    build_stack_nodes(Free, Dict, Pid, T, none, Pending, ReceiveStr, PrevSent, PrevSpawnwed);
+    % ContextStr = 
+    % 	edd_con_lib:question_list("Context", Context),
+    % ReceiveStr = 
+    %     edd_con_lib:format("~s\nin ~s:~p\n~s\n", [ReceiveStr0, F, L, ContextStr]),
+    ReceiveStr = {reached_receive, H, PrevEvalRec},
+    build_stack_nodes(Free, Dict, Pid, T, none, Pending, ReceiveStr, PrevSent, PrevSpawnwed, PrevEvalRec);
 build_stack_nodes(
         Free, Dict, Pid,  
         Stack = 
             [H = #callrec_stack_item{sent = Sent, spawned = Spawned, trace = TraceId} | T], 
-        Previous, Pending, ReachedRec, PrevSent, PrevSpawnwed) ->
+        Previous, Pending, ReachedRec, PrevSent, PrevSpawnwed, PrevEvalRec) ->
     % io:format("H: ~p. - ~p\n", [Free, H]),
     NSent = PrevSent ++ Sent, 
     NSpawned = PrevSpawnwed ++ Spawned,
+    % io:format("build_stack_nodes: ~p\n", [ReachedRec]),
     edd_graph!
         {
             add_vertex, 
@@ -1497,8 +1557,8 @@ build_stack_nodes(
         [NodeInfo || NodeInfo = {_, SizeStack} <- Pending, length(Stack) == SizeStack],
     NPending = Pending -- PendingSameSize,
     [edd_graph!{add_edge, Free, Node} || {Node, _} <- PendingSameSize],
-    build_stack_nodes(Free + 1, NDict, Pid, T, Free, NPending, ReachedRec, NSent, NSpawned);
-build_stack_nodes(Free, Dict, _, [], Previous, Pending, _, _, _) ->
+    build_stack_nodes(Free + 1, NDict, Pid, T, Free, NPending, ReachedRec, NSent, NSpawned, PrevEvalRec);
+build_stack_nodes(Free, Dict, _, [], Previous, Pending, _, _, _, _) ->
     edd_graph!{add_edge, 0, Previous},
     {Free, Pending, Dict}.
 
@@ -1511,12 +1571,12 @@ dot_vertex_eval_tree({V,NodeInfo}, DictQuestion) ->
     StrQuestion = 
         case Question of 
             none ->
-                lists:flatten(io_lib:format("~p", [NodeInfo])) ;
+                edd_con_lib:format("~p", [NodeInfo]) ;
             _ ->
                 Question ++ "\n" ++ StrAnswers
         end,
     integer_to_list(V) ++ " " ++ "[shape=ellipse, label=\""
-    ++ change_new_lines(lists:flatten(io_lib:format("~p. -\n ~s", [V, StrQuestion]) ))
+    ++ change_new_lines(edd_con_lib:format("~p. -\n ~s", [V, StrQuestion]))
     % ++ change_new_lines(lists:flatten(io_lib:format("~p. -\n ~p", [V, NodeInfo]) ))
     ++ "\"];\n".  
 
@@ -1560,6 +1620,13 @@ tupled_vertex(G, {V,Info}, DictQA) ->
 tupled_edge({V1,V2}) -> 
     {V1, V2}.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Complexities
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 complexity_term(#message_info{msg = Msg}) ->
 	2 + complexity_term(Msg);
 complexity_term(#spawn_info{}) ->
@@ -1589,7 +1656,7 @@ complexity_term(Term) ->
 	end.
 
 complexity_receive(StrReceive, AnsReceive) ->
-	% io:format("StrReceive: ~s\n", [StrReceive]),
+	io:format("StrReceive: ~s\n", [StrReceive]),
 	% io:format("AnsReceive: ~p\n", [AnsReceive]),
 	{ok, Toks, _} = 
 		erl_scan:string(StrReceive ++ "."),
@@ -1636,6 +1703,7 @@ complexity_receive(StrReceive, AnsReceive) ->
 	+ 	1.
 
 complexity_receive(StrReceive) ->
+	% io:format("StrReceive: ~p\n", [StrReceive]),
 	ReversedStrReceive = 
 		lists:reverse(StrReceive),
 	{true, CleanedStrReceive} = 
