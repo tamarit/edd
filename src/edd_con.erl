@@ -1190,9 +1190,9 @@ behavior_question(SentSpawned, DictNodes, Node, BehEmptySame, BehOther) ->
     end.
 
 
-reached_value_answer(none, none,_,_) ->
+reached_value_answer(none, none) ->
     [];
-reached_value_answer(none, {reached_receive, CSI, _},DictNodes, G) ->
+reached_value_answer(none, {reached_receive, CSI, _}) ->
 	% % io:format("Reached receive: ~p\n", [PrevRec]),
  %    % {ok, [NodeReceive]} = 
  %    %     dict:find(PrevRec, DictNodes),
@@ -1242,11 +1242,11 @@ reached_value_answer(none, {reached_receive, CSI, _},DictNodes, G) ->
     	ComplexityReceive + ComplexityContext)];
  	% io:format("PrevRec: ~p\n", [PrevRec]),
  	% [];
-reached_value_answer(stuck_receive, _,_,_) ->
+reached_value_answer(stuck_receive, _) ->
     [build_answer(
     	"Blocked because it is waiting for a message", 
     	incorrect)];
-reached_value_answer(Val, _,_,_) ->
+reached_value_answer(Val, _) ->
     [build_answer(
     	"Evaluated to value: " ++ edd_con_lib:any2str(Val), 
     	incorrect, 
@@ -1310,7 +1310,7 @@ build_question(
         prev_recieve_answer(PrevRec, DictNodes, G),
     Answers = 
         PrevReceive ++ 
-        reached_value_answer(Result, PrevRec, DictNodes, G) ++ 
+        reached_value_answer(Result, PrevRec) ++ 
         [
          build_answer(
          	edd_con_lib:question_list("sent messages",Sent), 
@@ -1386,7 +1386,7 @@ build_question(
          	incorrect,
          	complexity_term(Consumed))
         ]
-        ++ reached_value_answer(Result, PrevRec, DictNodes, G) ++
+        ++ reached_value_answer(Result, PrevRec) ++
         [
          build_answer(
          	edd_con_lib:question_list("sent messages",Sent), 
