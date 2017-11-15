@@ -1656,7 +1656,7 @@ complexity_term(Term) ->
 	end.
 
 complexity_receive(StrReceive, AnsReceive) ->
-	io:format("StrReceive: ~s\n", [StrReceive]),
+	% io:format("StrReceive: ~s\n", [StrReceive]),
 	% io:format("AnsReceive: ~p\n", [AnsReceive]),
 	{ok, Toks, _} = 
 		erl_scan:string(StrReceive ++ "."),
