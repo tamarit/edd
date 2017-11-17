@@ -1638,13 +1638,22 @@ complexity_term(Term) ->
 		false -> 
 			case is_list(Term) of 
 				true -> 
-					1 + lists:sum(
-						lists:map(
-							fun complexity_term/1, 
-							Term));
+					% io:format("IS_LIST: ~p\n", [Term]),
+					case is_proper_list(Term) of 
+						true -> 
+							1 + lists:sum(
+								lists:map(
+									fun complexity_term/1, 
+									Term));
+						false -> 
+								1 
+							+ 	complexity_term(hd(Term))
+							+ 	complexity_term(tl(Term))
+					end;
 				false -> 
 					case is_tuple(Term) of 
 						true -> 
+							% io:format("IS_TUPLE: ~p\n", [Term]),
 							1 + lists:sum(
 								lists:map(
 									fun complexity_term/1, 
@@ -1654,6 +1663,12 @@ complexity_term(Term) ->
 					end
 			end
 	end.
+is_proper_list([])  ->
+	true;
+is_proper_list([_|T]) when is_list(T) ->
+	is_proper_list(T);
+is_proper_list(_) ->
+	false.
 
 complexity_receive(StrReceive, AnsReceive) ->
 	% io:format("StrReceive: ~s\n", [StrReceive]),
