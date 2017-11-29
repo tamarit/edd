@@ -1687,14 +1687,18 @@ complexity_receive(StrReceive, AnsReceive) ->
 				PatternWithoutVars = 
 					erl_syntax_lib:map(
 						fun(N) ->
+							% io:format("TYPE: ~p\n", [{N, erl_syntax:type(N)}]),
 							case erl_syntax:type(N) of 
 								variable -> 
+									erl_syntax:integer(1);
+								underscore -> 
 									erl_syntax:integer(1);
 								_ ->
 									N 
 							end
 						end,
 						Pattern),
+				% io:format("~p\n", [PatternWithoutVars]),
 				complexity_term(erl_syntax:concrete(PatternWithoutVars))
 			end,
 			Clauses),

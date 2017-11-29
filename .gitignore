@@ -110,3 +110,7 @@ pc/*.erl
 
 
 mergesort.erl
+
+mapreduce.erl
+
+tcp.erl
