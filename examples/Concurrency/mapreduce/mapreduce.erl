@@ -1,3 +1,6 @@
+% Author: Jesús Doménech
+% Asignatura: Programación Declarativo Aplicada
+
 -module(mapreduce).
 % atajos para ejemplos
 -export([ejemplo1/0,fmap1/2,freduce1/3,client1/1]).
