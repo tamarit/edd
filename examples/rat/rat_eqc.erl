@@ -12,6 +12,9 @@
 -type non_zero_rat() :: {neg_integer()|pos_integer(),pos_integer()}.
 -type as_rat() :: rat() | integer() | float().
 
+rat_test() ->
+    ?assertEqual(rat:gcd(18,8), 2).
+
 non_zero_nat() ->
     ?SUCHTHAT(N, nat(), N > 0).
 

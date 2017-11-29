@@ -1,0 +1,240 @@
+100> edd:cdd("philosophers:init(2)", 2000).  
+philosophers.erl:7: Warning: export_all flag enabled - all functions will be exported
+{'Philosopher',1} is thinking.
+{'Philosopher',0} is thinking.
+{'Philosopher',1} is hungry.
+{'Philosopher',1} is eating.
+{'Philosopher',0} is hungry.
+{'Philosopher',1} is leaving.
+{'Philosopher',0} is eating.
+{'Philosopher',0} is leaving.
+Forks put away.
+Waiter is leaving.
+Dining room closed.
+
+Execution result: true
+
+**********************************
+PROCESS <0.669.0>
+First call philosophers:philosopher({'Philosopher',1}, {1,0}, 2)
+Result {leaving}
+Sent messages:
+        {leaving} (from <0.669.0> to <0.667.0>)
+        {finished} (from <0.669.0> to <0.667.0>)
+        {releaseforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {eating,{<0.669.0>,{1,0}}} (from <0.669.0> to <0.667.0>)
+        {grabforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {waiting,{<0.669.0>,{1,0}}} (from <0.669.0> to <0.667.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.668.0>
+First call philosophers:philosopher({'Philosopher',0}, {0,1}, 2)
+Result {leaving}
+Sent messages:
+        {leaving} (from <0.668.0> to <0.667.0>)
+        {finished} (from <0.668.0> to <0.667.0>)
+        {releaseforks,{0,1}} (from <0.668.0> to <0.666.0>)
+        {eating,{<0.668.0>,{0,1}}} (from <0.668.0> to <0.667.0>)
+        {grabforks,{0,1}} (from <0.668.0> to <0.666.0>)
+        {waiting,{<0.668.0>,{0,1}}} (from <0.668.0> to <0.667.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.667.0>
+First call philosophers:doWaiter([], 2, 0, false)
+Result {allgone}
+Sent messages:
+        {allgone} (from <0.667.0> to <0.664.0>)
+        {die} (from <0.667.0> to <0.666.0>)
+        {served} (from <0.667.0> to <0.668.0>)
+        {available,{0,1},<0.667.0>} (from <0.667.0> to <0.666.0>)
+        {available,{0,1},<0.667.0>} (from <0.667.0> to <0.666.0>)
+        {served} (from <0.667.0> to <0.669.0>)
+        {available,{1,0},<0.667.0>} (from <0.667.0> to <0.666.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.666.0>
+First call philosophers:doForks([0,1])
+Result true
+Sent messages:
+        {areAvailable,true} (from <0.666.0> to <0.667.0>)
+        {areAvailable,false} (from <0.666.0> to <0.667.0>)
+        {areAvailable,true} (from <0.666.0> to <0.667.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.664.0>
+First call philosophers:init(2)
+Result true
+No sent messages
+Spawned processes:
+        <0.669.0>
+        <0.668.0>
+        <0.667.0>
+        <0.666.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <0.669.0>
+        First call:philosophers:philosopher({'Philosopher',1}, {1,0}, 2)
+        Result: {leaving}
+2.- <0.668.0>
+        First call:philosophers:philosopher({'Philosopher',0}, {0,1}, 2)
+        Result: {leaving}
+3.- <0.667.0>
+        First call:philosophers:doWaiter([], 2, 0, false)
+        Result: {allgone}
+4.- <0.666.0>
+        First call:philosophers:doForks([0,1])
+        Result: true
+5.- <0.664.0>
+        First call:philosophers:init(2)
+        Result: true
+6.- Choose an event
+7.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 6 to select an event): [1..7]: 1
+
+Selected initial PID: <0.669.0>
+        First call:philosophers:philosopher({'Philosopher',1}, {1,0}, 2)
+        Result: {leaving}
+
+**********************************
+
+**********************************
+Process <0.669.0> called philosophers:philosopher({'Philosopher',1}, {1,0}, 0).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {served} ->
+              forks ! {grabforks, Forks},
+              waiter ! {eating, {self(), Forks}},
+              io:format("~p is eating.~n", [Name])
+        end
+        in philosophers.erl:79
+        Context:
+                'Cycle' = 2
+                'Forks' = {1,0}
+                'Name' = {'Philosopher',1}
+        Received messages:
+                {served} (from <0.667.0> to <0.669.0>)
+        Consumed messages:
+                {served} (from <0.667.0> to <0.669.0>) 
+(Complexity: 25)
+2. - Evaluated to value: {leaving} 
+(Complexity: 3)
+3. - Sent messages:
+        {grabforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {eating,{<0.669.0>,{1,0}}} (from <0.669.0> to <0.667.0>)
+        {leaving} (from <0.669.0> to <0.667.0>) 
+(Complexity: 21)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 51>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 5
+
+**********************************
+Process <0.669.0> called philosophers:philosopher({'Philosopher',1}, {1,0}, 2).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {served} ->
+              forks ! {grabforks, Forks},
+              waiter ! {eating, {self(), Forks}},
+              io:format("~p is eating.~n", [Name])
+        end
+        in philosophers.erl:79
+        Context:
+                'Cycle' = 2
+                'Forks' = {1,0}
+                'Name' = {'Philosopher',1}
+        Received messages:
+                {served} (from <0.667.0> to <0.669.0>)
+        Consumed messages:
+                {served} (from <0.667.0> to <0.669.0>) 
+(Complexity: 25)
+2. - Evaluated to value: {leaving} 
+(Complexity: 3)
+3. - Sent messages:
+        {grabforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {eating,{<0.669.0>,{1,0}}} (from <0.669.0> to <0.667.0>)
+        {leaving} (from <0.669.0> to <0.667.0>)
+        {releaseforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {finished} (from <0.669.0> to <0.667.0>) 
+(Complexity: 32)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 62>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <0.669.0> evaluated
+receive
+  {served} ->
+      forks ! {grabforks, Forks},
+      waiter ! {eating, {self(), Forks}},
+      io:format("~p is eating.~n", [Name])
+end
+in philosophers.erl:79
+What is wrong?
+1. - Context:
+        'Cycle' = 2
+        'Forks' = {1,0}
+        'Name' = {'Philosopher',1} 
+(Complexity: 11)
+2. - Received messages:
+        {served} (from <0.667.0> to <0.669.0>) 
+(Complexity: 5)
+3. - Consumed messages:
+        {served} (from <0.667.0> to <0.669.0>) 
+(Complexity: 5)
+4. - Evaluated to value: ok 
+(Complexity: 2)
+5. - Sent messages:
+        {grabforks,{1,0}} (from <0.669.0> to <0.666.0>)
+        {eating,{<0.669.0>,{1,0}}} (from <0.669.0> to <0.667.0>) 
+(Complexity: 17)
+6. - No created processes 
+(Complexity: 1)
+7. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 42>
+
+[1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 7
+
+The error has been detected:
+The problem is in pid <0.669.0>
+while running call philosophers:philosopher({'Philosopher',1}, {1,0}, 2)
+@@--@@
+{
+        "Answered questions" : 3,
+        "Questions' complexity" : 121,
+        "Initial PID selection Complexity" : 152,
+        "Evaluation tree time (microseconds)" : 117604,
+        "Evaluation tree memory (bytes)" : 403844,
+        "Evaluation tree nodes" : 211,
+        "Sequence diagram time (microseconds)" : 2403,
+        "Sequence diagram memory (bytes)" : 26985,
+        "Sequence diagram events" : 70,
+        "Sequence diagram events + Lasts" : 75
+}
+@@--@@
+ok
+

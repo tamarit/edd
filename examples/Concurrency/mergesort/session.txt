@@ -1,0 +1,241 @@
+> edd:cdd("mergesort:mergesort([3,2,1])", 2000). 
+
+Execution result: [2,2,3]
+
+**********************************
+PROCESS <0.795.0>
+First call mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+Result {result,[2]}
+Sent messages:
+        {result,[2]} (from <0.795.0> to <0.793.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.794.0>
+First call mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+Result {result,[2]}
+Sent messages:
+        {result,[2]} (from <0.794.0> to <0.793.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.793.0>
+First call mergesort:mergesort([2,2], #Fun<mergesort.comp.2>, <0.790.0>)
+Result {result,[2,2]}
+Sent messages:
+        {result,[2,2]} (from <0.793.0> to <0.790.0>)
+Spawned processes:
+        <0.795.0>
+        <0.794.0>
+**********************************
+
+**********************************
+PROCESS <0.792.0>
+First call mergesort:mergesort([3], #Fun<mergesort.comp.2>, <0.790.0>)
+Result {result,[3]}
+Sent messages:
+        {result,[3]} (from <0.792.0> to <0.790.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.790.0>
+First call mergesort:mergesort([3,2,1])
+Result [2,2,3]
+No sent messages
+Spawned processes:
+        <0.793.0>
+        <0.792.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <0.795.0>
+        First call:mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+        Result: {result,[2]}
+2.- <0.794.0>
+        First call:mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+        Result: {result,[2]}
+3.- <0.793.0>
+        First call:mergesort:mergesort([2,2], #Fun<mergesort.comp.2>, <0.790.0>)
+        Result: {result,[2,2]}
+4.- <0.792.0>
+        First call:mergesort:mergesort([3], #Fun<mergesort.comp.2>, <0.790.0>)
+        Result: {result,[3]}
+5.- <0.790.0>
+        First call:mergesort:mergesort([3,2,1])
+        Result: [2,2,3]
+6.- Choose an event
+7.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 6 to select an event): [1..7]: 5
+
+Selected initial PID: <0.790.0>
+        First call:mergesort:mergesort([3,2,1])
+        Result: [2,2,3]
+
+**********************************
+
+**********************************
+Process <0.790.0> called mergesort:mergesort([3,2,1]).
+What is wrong?
+1. - Previous evaluated receive:
+        receive {result, LOrd2_} -> LOrd2_ end
+        in mergesort.erl:25
+        Context:
+                'Comp' = #Fun<mergesort.comp.2>
+                'Half' = 1
+                'L' = [3,2,1]
+                'L1' = [3]
+                'L2' = [2,2]
+                'LOrd1' = [3]
+                'LOrd2_' = [2,2]
+                'Parent' = none
+        Received messages:
+                {result,[2,2]} (from <0.793.0> to <0.790.0>)
+        Consumed messages:
+                {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+(Complexity: 47)
+2. - Evaluated to value: [2,2,3] 
+(Complexity: 5)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 55>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <0.790.0> evaluated
+receive {result, LOrd2_} -> LOrd2_ end
+in mergesort.erl:25
+What is wrong?
+1. - Context:
+        'Comp' = #Fun<mergesort.comp.2>
+        'Half' = 1
+        'L' = [3,2,1]
+        'L1' = [3]
+        'L2' = [2,2]
+        'LOrd1' = [3]
+        'LOrd2_' = [2,2]
+        'Parent' = none 
+(Complexity: 26)
+2. - Received messages:
+        {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+(Complexity: 8)
+3. - Consumed messages:
+        {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+(Complexity: 8)
+4. - Evaluated to value: [2,2] 
+(Complexity: 4)
+5. - No sent messages 
+(Complexity: 1)
+6. - No created processes 
+(Complexity: 1)
+7. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 49>
+
+[1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <0.790.0> called mergesort:mergesort([3,2,1], #Fun<mergesort.comp.2>, none).
+What is wrong?
+1. - Reached receive:
+        receive {result, LOrd1_} -> LOrd1_ end
+        in mergesort.erl:20
+        Context:
+                'Comp' = #Fun<mergesort.comp.2>
+                'Half' = 1
+                'L' = [3,2,1]
+                'L1' = [3]
+                'L2' = [2,2]
+                'Parent' = none 
+(Complexity: 24)
+2. - No sent messages 
+(Complexity: 1)
+3. - Created processes:
+        <0.792.0>
+        <0.793.0> 
+(Complexity: 3)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 29>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <0.790.0> called mergesort:take(1, [2,3]).
+What is wrong?
+1. - Evaluated to value: [2] 
+(Complexity: 3)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes  
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 6>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <0.790.0> called mergesort:take(2, [1,2,3]).
+What is wrong?
+1. - Evaluated to value: [2,2] 
+(Complexity: 4)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 7>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <0.790.0> called mergesort:take(1, [3,2,1]).
+What is wrong?
+1. - Evaluated to value: [3] 
+(Complexity: 3)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 6>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+The error has been detected:
+The problem is in pid <0.790.0>
+while running call mergesort:take(2, [1,2,3])
+@@--@@
+{
+        "Answered questions" : 6,
+        "Questions' complexity" : 113,
+        "Initial PID selection Complexity" : 55,
+        "Evaluation tree time (microseconds)" : 3671,
+        "Evaluation tree memory (bytes)" : 33660,
+        "Evaluation tree nodes" : 37,
+        "Sequence diagram time (microseconds)" : 415,
+        "Sequence diagram memory (bytes)" : 7619,
+        "Sequence diagram events" : 16,
+        "Sequence diagram events + Lasts" : 21
+}
+@@--@@
+ok

@@ -1,0 +1,222 @@
+104> edd:cdd("master:init(1)", 2000).
+Consumer number 1 created
+Buffer created
+Producer number 1 created
+Producer 1 inserted item 1. There are 1 items in buffer.
+Producer number 1 finished
+Buffer: [{item,1,2}]
+Consumer 1 removed item {item,1,2}. There are 0 items in buffer.
+Consumer number 1 finished
+Buffer: []
+
+Execution result: ok
+
+**********************************
+PROCESS <0.739.0>
+First call fun () -> consumer:init(Buffer, Cons_Id, TimesC) end()
+fun location: (master.erl, line 24)
+Result ok
+Sent messages:
+        {occupied,<0.739.0>,1} (from <0.739.0> to <0.737.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.738.0>
+First call fun () -> producer:init(Buffer, Prod_Id, TimesP) end()
+fun location: (master.erl, line 18)
+Result ok
+Sent messages:
+        {available,<0.738.0>,{item,1,2},1} (from <0.738.0> to <0.737.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.737.0>
+First call fun () -> buffer:init(MaxSize) end()
+fun location: (master.erl, line 13)
+Result Blocked because it is waiting for a message
+Sent messages:
+        removeItem (from <0.737.0> to <0.739.0>)
+        putItem (from <0.737.0> to <0.738.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.735.0>
+First call master:init(1)
+Result ok
+No sent messages
+Spawned processes:
+        <0.739.0>
+        <0.738.0>
+        <0.737.0>
+**********************************
+
+                                                                                           
+                                                                                               
+**********************************
+Pid selection
+**********************************
+1.- <0.739.0>
+        First call:fun () -> consumer:init(Buffer, Cons_Id, TimesC) end()
+fun location: (master.erl, line 24)
+        Result: ok
+2.- <0.738.0>
+        First call:fun () -> producer:init(Buffer, Prod_Id, TimesP) end()
+fun location: (master.erl, line 18)
+        Result: ok
+3.- <0.737.0>
+        First call:fun () -> buffer:init(MaxSize) end()
+fun location: (master.erl, line 13)
+        Result: Blocked because it is waiting for a message
+4.- <0.735.0>
+        First call:master:init(1)
+        Result: ok
+5.- Choose an event
+6.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 5 to select an event): [1..6]: 2
+
+Selected initial PID: <0.738.0>
+        First call:fun () -> producer:init(Buffer, Prod_Id, TimesP) end()
+fun location: (master.erl, line 18)
+        Result: ok
+
+**********************************
+
+**********************************
+Process <0.738.0> called producer:listen(<0.737.0>, 1, 2).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          full ->
+              io:format("Producer ~w tried to insert item. But "
+                        "buffer is full.~n",
+                        [Prod_Id]),
+              listen(Buffer, Prod_Id, TimesP);
+          putItem -> listen(Buffer, Prod_Id, TimesP - 2)
+        end
+        in producer.erl:15
+        Context:
+                'Buffer' = <0.737.0>
+                'Item' = {item,1,2}
+                'Prod_Id' = 1
+                'TimesP' = 2
+        Received messages:
+                putItem (from <0.737.0> to <0.738.0>)
+        Consumed messages:
+                putItem (from <0.737.0> to <0.738.0>) 
+(Complexity: 25)
+2. - Evaluated to value: ok 
+(Complexity: 2)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 30>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <0.738.0> called producer:listen(<0.737.0>, 1, 0).
+What is wrong?
+1. - Evaluated to value: ok 
+(Complexity: 2)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 5>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <0.738.0> evaluated
+receive
+  full ->
+      io:format("Producer ~w tried to insert item. But "
+                "buffer is full.~n",
+                [Prod_Id]),
+      listen(Buffer, Prod_Id, TimesP);
+  putItem -> listen(Buffer, Prod_Id, TimesP - 2)
+end
+in producer.erl:15
+What is wrong?
+1. - Context:
+        'Buffer' = <0.737.0>
+        'Item' = {item,1,2}
+        'Prod_Id' = 1
+        'TimesP' = 2 
+(Complexity: 12)
+2. - Received messages:
+        putItem (from <0.737.0> to <0.738.0>) 
+(Complexity: 4)
+3. - Consumed messages:
+        putItem (from <0.737.0> to <0.738.0>) 
+(Complexity: 4)
+4. - Evaluated to value: ok 
+(Complexity: 2)
+5. - No sent messages 
+(Complexity: 1)
+6. - No created processes 
+(Complexity: 1)
+7. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 25>
+
+[1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <0.738.0> called master:{pos_info,{master,"master.erl",18,
+                         "fun () -> producer:init(Buffer, Prod_Id, TimesP) end"}}().
+What is wrong?
+1. - Evaluated to value: ok 
+(Complexity: 2)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 5>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+The error has been detected:
+The problem is in pid <0.738.0>
+while running receive
+receive
+  full ->
+      io:format("Producer ~w tried to insert item. But "
+                "buffer is full.~n",
+                [Prod_Id]),
+      listen(Buffer, Prod_Id, TimesP);
+  putItem -> listen(Buffer, Prod_Id, TimesP - 2)
+end
+in producer.erl:15
+@@--@@
+{
+        "Answered questions" : 4,
+        "Questions' complexity" : 59,
+        "Initial PID selection Complexity" : 33,
+        "Evaluation tree time (microseconds)" : 7769,
+        "Evaluation tree memory (bytes)" : 68096,
+        "Evaluation tree nodes" : 45,
+        "Sequence diagram time (microseconds)" : 640,
+        "Sequence diagram memory (bytes)" : 6580,
+        "Sequence diagram events" : 15,
+        "Sequence diagram events + Lasts" : 19
+}
+@@--@@
+ok
+105> 
+

@@ -1,0 +1,447 @@
+> edd:cdd("mapreduce:init(1)", 2000).                                                                                                              
+mapreduce.erl:9: Warning: export_all flag enabled - all functions will be exported
+
+Execution result: {[{madrid,34}]}
+
+**********************************
+PROCESS <0.631.0>
+First call mapreduce:loop_reduce(<0.629.0>, #Fun<mapreduce.freduce1.3>, madrid, 37)
+Result {<0.631.0>,{madrid,34}}
+Sent messages:
+        {<0.631.0>,{madrid,34}} (from <0.631.0> to <0.629.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.630.0>
+First call fun () ->
+        lists:map(fun (Part) ->
+                          List = FMap(Id, Part),
+                          lists:map(fun ({C, V}) -> From ! {Self, {C, V}} end,
+                                    List)
+                  end,
+                  Info),
+        From ! {Self, {fin}}
+end()
+fun location: (mapreduce.erl, line 58)
+Result {<0.628.0>,{fin}} 
+Sent messages:
+        {<0.628.0>,{fin}} (from <0.630.0> to <0.629.0>)
+        {<0.628.0>,{madrid,34}} (from <0.630.0> to <0.629.0>)
+        {<0.628.0>,{madrid,37}} (from <0.630.0> to <0.629.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.629.0>
+First call fun () ->
+        send_all(Nodes, {self(), {startmap, self(), FMap}}),
+        Dict = dict:new(),
+        {State, R} = loop_admin_map(Dict, length(Nodes), 0,
+                                    FReduce),
+        case State of
+          error ->
+              send_all(Nodes, stop),
+              io:format("Error MAP: ~p~n", [R]);
+          ok ->
+              send_all(R, {self(), {fin}}),
+              {S2, R2} = loop_admin_reduce(length(R), []),
+              case S2 of
+                error ->
+                    send_all(R, stop),
+                    io:format("Error Reduce: ~p~n", [R2]);
+                ok -> Client ! {self(), {R2}}
+              end
+        end
+end()
+fun location: (mapreduce.erl, line 95)
+Result {<0.629.0>,{[{madrid,34}]}}
+Sent messages:
+        {<0.629.0>,{[{madrid,34}]}} (from <0.629.0> to <0.625.0>)
+        {<0.629.0>,{fin}} (from <0.629.0> to <0.631.0>)
+        {<0.629.0>,{newvalue,34}} (from <0.629.0> to <0.631.0>)
+        {<0.629.0>,{startmap,<0.629.0>,#Fun<mapreduce.fmap1.2>}} (from <0.629.0> to <0.628.0>)
+Spawned processes:
+        <0.631.0>
+**********************************
+
+**********************************
+PROCESS <0.628.0>
+First call mapreduce:loop_map(1, <0.627.0>, [{madrid,37},
+ {madrid,34},
+ {barcelona,19},
+ {teruel,-5},
+ {teruel,14},
+ {barcelona,22},
+ {teruel,-8},
+ {barcelona,17},
+ {teruel,10},
+ {teruel,11}])
+Result <0.630.0>
+No sent messages
+Spawned processes:
+        <0.630.0>
+**********************************
+
+**********************************
+PROCESS <0.627.0>
+First call mapreduce:master([{madrid,37},
+ {madrid,34},
+ {barcelona,19},
+ {teruel,-5},
+ {teruel,14},
+ {barcelona,22},
+ {teruel,-8},
+ {barcelona,17},
+ {teruel,10}, 
+ {teruel,11}], 1)
+Result stop
+Sent messages:
+        {<0.627.0>,{admin,<0.629.0>}} (from <0.627.0> to <0.625.0>)
+Spawned processes:
+        <0.629.0>
+        <0.628.0>
+**********************************
+
+**********************************
+PROCESS <0.625.0>
+First call mapreduce:init(1)
+Result {[{madrid,34}]}
+Sent messages:
+        stop (from <0.625.0> to <0.627.0>)
+        {<0.625.0>,
+ {mapreduce,<0.625.0>,#Fun<mapreduce.fmap1.2>,#Fun<mapreduce.freduce1.3>}} (from <0.625.0> to <0.627.0>)
+Spawned processes:
+        <0.627.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <0.631.0>
+        First call:mapreduce:loop_reduce(<0.629.0>, #Fun<mapreduce.freduce1.3>, madrid, 37)
+        Result: {<0.631.0>,{madrid,34}}
+2.- <0.630.0>
+        First call:fun () ->
+        lists:map(fun (Part) ->
+                          List = FMap(Id, Part),
+                          lists:map(fun ({C, V}) -> From ! {Self, {C, V}} end,
+                                    List)
+                  end,
+                  Info),
+        From ! {Self, {fin}}
+end()
+fun location: (mapreduce.erl, line 58)
+        Result: {<0.628.0>,{fin}}
+3.- <0.629.0>
+        First call:fun () ->
+        send_all(Nodes, {self(), {startmap, self(), FMap}}),
+        Dict = dict:new(),
+        {State, R} = loop_admin_map(Dict, length(Nodes), 0,
+                                    FReduce),
+        case State of
+          error ->
+              send_all(Nodes, stop),
+              io:format("Error MAP: ~p~n", [R]);
+          ok ->
+              send_all(R, {self(), {fin}}), 
+              {S2, R2} = loop_admin_reduce(length(R), []),
+              case S2 of
+                error ->
+                    send_all(R, stop),
+                    io:format("Error Reduce: ~p~n", [R2]);
+                ok -> Client ! {self(), {R2}}
+              end
+        end
+end()
+fun location: (mapreduce.erl, line 95)
+        Result: {<0.629.0>,{[{madrid,34}]}}
+4.- <0.628.0>
+        First call:mapreduce:loop_map(1, <0.627.0>, [{madrid,37},
+ {madrid,34},
+ {barcelona,19},
+ {teruel,-5},
+ {teruel,14},
+ {barcelona,22},
+ {teruel,-8},
+ {barcelona,17},
+ {teruel,10},
+ {teruel,11}])
+        Result: <0.630.0>
+5.- <0.627.0>
+        First call:mapreduce:master([{madrid,37},
+ {madrid,34},
+ {barcelona,19},
+ {teruel,-5},
+ {teruel,14},
+ {barcelona,22},
+ {teruel,-8},
+ {barcelona,17},
+ {teruel,10},
+ {teruel,11}], 1)
+        Result: stop
+6.- <0.625.0>
+        First call:mapreduce:init(1)
+        Result: {[{madrid,34}]}
+7.- Choose an event
+8.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 7 to select an event): [1..8]: 1
+
+Selected initial PID: <0.631.0>
+        First call:mapreduce:loop_reduce(<0.629.0>, #Fun<mapreduce.freduce1.3>, madrid, 37)
+        Result: {<0.631.0>,{madrid,34}}
+
+**********************************
+
+**********************************
+Process <0.631.0> called mapreduce:loop_reduce(<0.629.0>, #Fun<mapreduce.freduce1.3>, madrid, 37).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          stop -> stop;
+          {_From, {newvalue, Valor}} ->
+              V = FReduce(Clave, ValorActual, Valor),
+              loop_reduce(Mradmin, FReduce, Clave, V);
+          {_From, {fin}} ->
+              Mradmin ! {self(), {Clave, ValorActual}};
+          X ->
+              io:format("Reduce...: ~p~n", [X]),
+              loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+        end
+        in mapreduce.erl:78
+        Previous evaluated receive:
+                receive
+                  stop -> stop;
+                  {_From, {newvalue, Valor}} ->
+                      V = FReduce(Clave, ValorActual, Valor),
+                      loop_reduce(Mradmin, FReduce, Clave, V);
+                  {_From, {fin}} ->
+                      Mradmin ! {self(), {Clave, ValorActual}};
+                  X ->
+                      io:format("Reduce...: ~p~n", [X]),
+                      loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+                end
+                in mapreduce.erl:78
+                Context:
+                        'Clave' = madrid
+                        'FReduce' = #Fun<mapreduce.freduce1.3>
+                        'Mradmin' = <0.629.0>
+                        'ValorActual' = 34
+                        '_From' = <0.629.0>
+                No received messages
+                No consumed messages
+        Context:
+                'Clave' = madrid
+                'FReduce' = #Fun<mapreduce.freduce1.3>
+                'Mradmin' = <0.629.0>
+                'V' = 34
+                'Valor' = 34
+                'ValorActual' = 37
+                '_From' = <0.629.0>
+        No received messages
+        No consumed messages 
+(Complexity: 62)
+2. - Evaluated to value: {<0.631.0>,{madrid,34}} 
+(Complexity: 6)
+3. - Sent messages:
+        {<0.631.0>,{madrid,34}} (from <0.631.0> to <0.629.0>) 
+(Complexity: 8)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 78>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <0.631.0> evaluated
+receive
+  stop -> stop;
+  {_From, {newvalue, Valor}} ->
+      V = FReduce(Clave, ValorActual, Valor),
+      loop_reduce(Mradmin, FReduce, Clave, V); 
+  {_From, {fin}} ->
+      Mradmin ! {self(), {Clave, ValorActual}};
+  X ->
+      io:format("Reduce...: ~p~n", [X]),
+      loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+end
+in mapreduce.erl:78
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          stop -> stop;
+          {_From, {newvalue, Valor}} ->
+              V = FReduce(Clave, ValorActual, Valor),
+              loop_reduce(Mradmin, FReduce, Clave, V);
+          {_From, {fin}} ->
+              Mradmin ! {self(), {Clave, ValorActual}};
+          X ->
+              io:format("Reduce...: ~p~n", [X]),
+              loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+        end
+        in mapreduce.erl:78
+        Context:
+                'Clave' = madrid
+                'FReduce' = #Fun<mapreduce.freduce1.3>
+                'Mradmin' = <0.629.0>
+                'ValorActual' = 34
+                '_From' = <0.629.0>
+        No received messages
+        No consumed messages 
+(Complexity: 29)
+2. - Context:
+        'Clave' = madrid
+        'FReduce' = #Fun<mapreduce.freduce1.3>
+        'Mradmin' = <0.629.0>
+        'V' = 34
+        'Valor' = 34
+        'ValorActual' = 37
+        '_From' = <0.629.0> 
+(Complexity: 15)
+3. - No received messages 
+(Complexity: 1)
+4. - No consumed messages  
+(Complexity: 1)
+5. - Evaluated to value: {<0.631.0>,{madrid,34}} 
+(Complexity: 6)
+6. - Sent messages:
+        {<0.631.0>,{madrid,34}} (from <0.631.0> to <0.629.0>) 
+(Complexity: 8)
+7. - No created processes 
+(Complexity: 1)
+8. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 62>
+
+[1/2/3/4/5/6/7/8/t/d/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <0.631.0> evaluated
+receive
+  stop -> stop;
+  {_From, {newvalue, Valor}} ->
+      V = FReduce(Clave, ValorActual, Valor),
+      loop_reduce(Mradmin, FReduce, Clave, V); 
+  {_From, {fin}} ->
+      Mradmin ! {self(), {Clave, ValorActual}};
+  X ->
+      io:format("Reduce...: ~p~n", [X]),
+      loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+end
+in mapreduce.erl:78
+What is wrong?
+1. - Context:
+        'Clave' = madrid
+        'FReduce' = #Fun<mapreduce.freduce1.3>
+        'Mradmin' = <0.629.0>
+        'ValorActual' = 37 
+(Complexity: 9)
+2. - Received messages:
+        {<0.629.0>,{newvalue,34}} (from <0.629.0> to <0.631.0>) 
+(Complexity: 8)
+3. - Consumed messages:
+        {<0.629.0>,{newvalue,34}} (from <0.629.0> to <0.631.0>) 
+(Complexity: 8)
+4. - Reached receive:
+        receive
+          stop -> stop;
+          {_From, {newvalue, Valor}} ->
+              V = FReduce(Clave, ValorActual, Valor),
+              loop_reduce(Mradmin, FReduce, Clave, V);
+          {_From, {fin}} ->
+              Mradmin ! {self(), {Clave, ValorActual}};
+          X ->
+              io:format("Reduce...: ~p~n", [X]),
+              loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+        end
+        in mapreduce.erl:78
+        Context:
+                'Clave' = madrid
+                'FReduce' = #Fun<mapreduce.freduce1.3>
+                'Mradmin' = <0.629.0>
+                'ValorActual' = 34 
+(Complexity: 25)
+5. - No sent messages 
+(Complexity: 1)
+6. - No created processes 
+(Complexity: 1)
+7. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 53>
+
+[1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <0.631.0> called mapreduce:loop_reduce(<0.629.0>, #Fun<mapreduce.freduce1.3>, madrid, 34).
+What is wrong?
+1. - Reached receive:
+        receive
+          stop -> stop; 
+          {_From, {newvalue, Valor}} ->
+              V = FReduce(Clave, ValorActual, Valor),
+              loop_reduce(Mradmin, FReduce, Clave, V);
+          {_From, {fin}} ->
+              Mradmin ! {self(), {Clave, ValorActual}};
+          X ->
+              io:format("Reduce...: ~p~n", [X]),
+              loop_reduce(Mradmin, FReduce, Clave, ValorActual)
+        end
+        in mapreduce.erl:78
+        Context:
+                'Clave' = madrid
+                'FReduce' = #Fun<mapreduce.freduce1.3>
+                'Mradmin' = <0.629.0>
+                'ValorActual' = 34 
+(Complexity: 25)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 28>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <0.631.0> called mapreduce:freduce1(madrid, 37, 34).
+What is wrong?
+1. - Evaluated to value: 34 
+(Complexity: 2)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 5>
+
+[1/2/3/4/t/d/c/s/p/r/u/h/a]: 1
+
+The error has been detected:
+The problem is in pid <0.631.0>
+while running call mapreduce:freduce1(madrid, 37, 34)
+@@--@@
+{
+        "Answered questions" : 5,
+        "Questions' complexity" : 186,
+        "Initial PID selection Complexity" : 110,
+        "Evaluation tree time (microseconds)" : 20238,
+        "Evaluation tree memory (bytes)" : 189031,
+        "Evaluation tree nodes" : 101,
+        "Sequence diagram time (microseconds)" : 1000,
+        "Sequence diagram memory (bytes)" : 12616,
+        "Sequence diagram events" : 26,
+        "Sequence diagram events + Lasts" : 32
+}
+@@--@@
+ok
+
