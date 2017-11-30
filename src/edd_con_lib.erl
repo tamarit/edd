@@ -838,23 +838,28 @@ marca() ->
   "@@--@@\n".
 
 session_report() ->
-	io:format(marca()),
-	io:format("{\n"),
-  io:format("\t\"Answered questions\" : ~p,\n", [get(question_answered)]),
-	io:format("\t\"Questions' complexity\" : ~p,\n", [get(question_complexity)]),
-	
-	io:format("\t\"Initial PID selection Complexity\" : ~p,\n", [get(initial_complexity)]),
-	
-	io:format("\t\"Evaluation tree time (microseconds)\" : ~p,\n", [get(eval_tree_time)]),
-	io:format("\t\"Evaluation tree memory (bytes)\" : ~p,\n", [get(eval_tree_memory)]),
-	io:format("\t\"Evaluation tree nodes\" : ~p,\n", [get(eval_tree_nodes)]),
+	case get(print_session_info) of 
+		true -> 
+			io:format(marca()),
+			io:format("{\n"),
+		  	io:format("\t\"Answered questions\" : ~p,\n", [get(question_answered)]),
+			io:format("\t\"Questions' complexity\" : ~p,\n", [get(question_complexity)]),
+			
+			io:format("\t\"Initial PID selection Complexity\" : ~p,\n", [get(initial_complexity)]),
+			
+			io:format("\t\"Evaluation tree time (microseconds)\" : ~p,\n", [get(eval_tree_time)]),
+			io:format("\t\"Evaluation tree memory (bytes)\" : ~p,\n", [get(eval_tree_memory)]),
+			io:format("\t\"Evaluation tree nodes\" : ~p,\n", [get(eval_tree_nodes)]),
 
-	io:format("\t\"Sequence diagram time (microseconds)\" : ~p,\n", [get(seq_diag_time)]),
-	io:format("\t\"Sequence diagram memory (bytes)\" : ~p,\n", [get(seq_diag_memory)]),
-	io:format("\t\"Sequence diagram events\" : ~p,\n", [get(seq_diag_events)]),
-	io:format("\t\"Sequence diagram events + Lasts\" : ~p\n", [get(seq_diag_events_lasts)]),
-	io:format("}\n"),
-	io:format(marca()).
+			io:format("\t\"Sequence diagram time (microseconds)\" : ~p,\n", [get(seq_diag_time)]),
+			io:format("\t\"Sequence diagram memory (bytes)\" : ~p,\n", [get(seq_diag_memory)]),
+			io:format("\t\"Sequence diagram events\" : ~p,\n", [get(seq_diag_events)]),
+			io:format("\t\"Sequence diagram events + Lasts\" : ~p\n", [get(seq_diag_events_lasts)]),
+			io:format("}\n"),
+			io:format(marca());
+		false -> 
+			ok 
+	end.
 
 %session_report() ->
 %	io:format(space()),
