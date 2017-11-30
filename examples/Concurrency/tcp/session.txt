@@ -1,0 +1,160 @@
+> edd:cdd("tcp:main()", 1000).
+
+Tracing timeout
+
+**********************************
+PROCESS <0.87.0>
+First call tcp:client(<0.85.0>, 50, 200, client2)
+Result Blocked because it is waiting for a message
+Sent messages:
+        {<0.87.0>,50,syn,200} (from <0.87.0> to <0.85.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.86.0>
+First call tcp:client(<0.85.0>, 57, 100, client1)
+Result ok
+Sent messages:
+        {<0.86.0>,57,syn,100} (from <0.86.0> to <0.85.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.85.0>
+First call tcp:server(<0.83.0>, 50, 500)
+Result rst
+Sent messages:
+        rst (from <0.85.0> to <0.86.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <0.83.0>
+First call tcp:main()
+Result Blocked because it is waiting for a message
+No sent messages
+Spawned processes:
+        <0.87.0>
+        <0.86.0>
+        <0.85.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <0.87.0>
+        First call:tcp:client(<0.85.0>, 50, 200, client2)
+        Result: Blocked because it is waiting for a message
+2.- <0.86.0>
+        First call:tcp:client(<0.85.0>, 57, 100, client1)
+        Result: ok
+3.- <0.85.0>
+        First call:tcp:server(<0.83.0>, 50, 500)
+        Result: rst
+4.- <0.83.0>
+        First call:tcp:main()
+        Result: Blocked because it is waiting for a message
+5.- Choose an event
+6.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 5 to select an event): [1..6]: 3
+
+Selected initial PID: <0.85.0>
+        First call:tcp:server(<0.83.0>, 50, 500)
+        Result: rst
+
+**********************************
+
+**********************************
+Process <0.85.0> called tcp:server(<0.83.0>, 50, 500).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Client_PID, Port, syn, SeqCl} ->
+              Ack_ID = spawn(tcp, ack,
+                             [Main_ID, Port, SeqCl + 1, Seq, Client_PID]),
+              Client_PID ! {Ack_ID, syn_ack, SeqCl + 1, Seq},
+              server(Main_ID, Port, Seq + 1); 
+          {Client_PID, _, syn, _SeqCl} -> Client_PID ! rst
+        end
+        in tcp.erl:16
+        Context:
+                'Client_PID' = <0.86.0>
+                'Main_ID' = <0.83.0>
+                'Port' = 50
+                'Seq' = 500
+                '_SeqCl' = 100
+        Received messages:
+                {<0.86.0>,57,syn,100} (from <0.86.0> to <0.85.0>)
+                {<0.87.0>,50,syn,200} (from <0.87.0> to <0.85.0>)
+        Consumed messages:
+                {<0.86.0>,57,syn,100} (from <0.86.0> to <0.85.0>) 
+(Complexity: 47)
+2. - Evaluated to value: rst 
+(Complexity: 2)
+3. - Sent messages:
+        rst (from <0.85.0> to <0.86.0>) 
+(Complexity: 4)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 55>
+
+[1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <0.85.0> evaluated
+receive
+  {Client_PID, Port, syn, SeqCl} ->
+      Ack_ID = spawn(tcp, ack,
+                     [Main_ID, Port, SeqCl + 1, Seq, Client_PID]),
+      Client_PID ! {Ack_ID, syn_ack, SeqCl + 1, Seq},
+      server(Main_ID, Port, Seq + 1);
+  {Client_PID, _, syn, _SeqCl} -> Client_PID ! rst
+end
+in tcp.erl:16
+What is wrong?
+1. - Context:
+        'Client_PID' = <0.86.0>
+        'Main_ID' = <0.83.0>
+        'Port' = 50
+        'Seq' = 500
+        '_SeqCl' = 100 
+(Complexity: 11)
+2. - Received messages:
+        {<0.86.0>,57,syn,100} (from <0.86.0> to <0.85.0>)
+        {<0.87.0>,50,syn,200} (from <0.87.0> to <0.85.0>) 
+(Complexity: 15)
+3. - Consumed messages:
+        {<0.86.0>,57,syn,100} (from <0.86.0> to <0.85.0>) 
+(Complexity: 8)
+4. - Evaluated to value: rst 
+(Complexity: 2)
+5. - Sent messages:
+        rst (from <0.85.0> to <0.86.0>) 
+(Complexity: 4)
+6. - No created processes 
+(Complexity: 1)
+7. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 42>
+
+[1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 4
+
+The error has been detected:
+The problem is in pid <0.85.0>
+while running receive
+receive
+  {Client_PID, Port, syn, SeqCl} ->
+      Ack_ID = spawn(tcp, ack,
+                     [Main_ID, Port, SeqCl + 1, Seq, Client_PID]),
+      Client_PID ! {Ack_ID, syn_ack, SeqCl + 1, Seq},
+      server(Main_ID, Port, Seq + 1);
+  {Client_PID, _, syn, _SeqCl} -> Client_PID ! rst
+end
+in tcp.erl:16
+ok
