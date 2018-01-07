@@ -162,9 +162,9 @@ digraph_server(G) ->
 		{add_edge,V1,V2} ->
 			digraph:add_edge(G,V1,V2),
 			digraph_server(G);	
-		{get,Pid} ->
+		{get,Ref,Pid} ->
 			% io:format("G SERVER: ~p \n", [G]),
-			Pid!G,
+			Pid!{Ref, G},
 			digraph_server(G);
 		del_disconected_vertices ->
 			[case digraph:in_degree(G, V) +  digraph:out_degree(G, V) of 
@@ -327,11 +327,13 @@ build_graph(Trace, DictFuns, PidInit) ->
 
     edd_graph!{add_vertex, 0, {PidsSummary, lists:reverse(FinalState#evaltree_state.communication)}},
     {_,DictNodes} = lists:foldl(fun build_eval_tree/2, {1, dict:new()} , lists:reverse(FinalState#evaltree_state.pids_info)),
-    % io:format("DictNodes: ~p\n", [dict:to_list(DictNodes)]), 
-    edd_graph!{get,self()},
+    % io:format("DictNodes: ~p\n", [dict:to_list(DictNodes)]),
+    GRef = make_ref(), 
+    edd_graph!{get,GRef,self()},
 	receive 
-		G -> ok
+		{GRef, G} -> ok
 	end,
+	% io:format("G: ~p\n", [G]),
     {DictQuestions, DictTrace} = build_questions(G, DictNodes),
     % io:format("~p\n", [lists:sort(dict:to_list(DictTrace))]), 
 
@@ -978,10 +980,17 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 			{true, _} ->
 				ToInBefore;
 			{_, true} ->
-				ToInAfter
+				ToInAfter;
+			{_, _} ->
+				[]
 		end,
 	% io:format("ListWhereIsTo: ~p\n",[ListWhereIsTo]),
-	build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties).
+	case ListWhereIsTo of 
+		[] ->
+			[];
+		_ ->
+			build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties)
+	end.
 
 communication_lines(
 		{sent, #message_info{from = From , to = To, msg = Msg}}, 
