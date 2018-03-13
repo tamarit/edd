@@ -171,12 +171,16 @@ get_file_path(ModName, Dir) ->
 instrument_and_reload(ModName, Dir) ->
     % try 
     CompileOpts = 
-         [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}],
-    {ok,ModName,Binary} = 
+         [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
+    % io:format("~p\n", [get_file_path(ModName, Dir)]),
+    % io:format("~p\n", [CompileOpts]),
+    {ok,ModName,Binary,_} = 
         case compile:file(get_file_path(ModName, Dir), CompileOpts) of 
-            {ok,_,_} = Res ->
+            {ok,_,_,_} = Res ->
                 Res
-                % ; 
+            %     ;
+            % Other ->
+            %     io:format("~p\n", [Other])
             % _ ->
             %     io:format("~p\n", [element(1, filename:find_src(ModName))]),
             %     Res = compile:file(element(1, filename:find_src(ModName)) ++ ".erl", CompileOpts),

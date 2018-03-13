@@ -54,7 +54,12 @@ parse_transform(Forms, _) ->
 	% 		erl_pp:form(Form)
 	% 	 catch 
 	% 	 _:_ -> 
-	% 	 	""
+	% 	 	try
+	% 	 		erl_pp:function(Form)
+	% 	 	catch 
+	% 	 	_:_ ->
+	% 	 		"error" ++ lists:flatten(io_lib:format("~p", [Form]))
+	% 	 	end
 	% 	 end || Form <- erl_syntax:revert_forms(NForms)],
 	% [io:format("~s\n", [StrForm]) || StrForm <- StrRevertedNForms],
 	erl_syntax:revert_forms(NForms).
@@ -197,68 +202,77 @@ inst_expr(T) ->
 						% 	inst_spawn(T, erl_syntax:application_arguments(T));
 						% _ -> 
 						% 	case erl_syntax:type(AppOper) of 
-								module_qualifier -> 
-									ModName = 
-										erl_syntax:module_qualifier_argument(AppOper),
-									FunName = 
-										erl_syntax:module_qualifier_body(AppOper),
-									case {ModName, FunName} of 
-										{erlang, send} ->
-											inst_send(T, erl_syntax:application_arguments(T));
-										{erlang, spawn} ->
-											inst_spawn(T, erl_syntax:application_arguments(T));
-										_ ->
-											ModNameStr = erl_syntax:atom_literal(ModName),
-											% {[VarCall], [StoreCall]} = 
-											% 	args_assign("EDDCallResult", [T]),
-											% io:format("~p\n", [{ModNameStr, FunName}]),
-											erl_syntax:case_expr(
+						module_qualifier -> 
+							ModName = 
+								erl_syntax:module_qualifier_argument(AppOper),
+							FunName = 
+								erl_syntax:module_qualifier_body(AppOper),
+							case {ModName, FunName} of 
+								{erlang, send} ->
+									inst_send(T, erl_syntax:application_arguments(T));
+								{erlang, spawn} ->
+									inst_spawn(T, erl_syntax:application_arguments(T));
+								% {var,_,_} ->
+								% 	T;
+								_ ->
+									% ModNameStr = erl_syntax:atom_literal(ModName),
+									% {[VarCall], [StoreCall]} = 
+									% 	args_assign("EDDCallResult", [T]),
+									% io:format("~p\n", [{ModNameStr, FunName}]),
+									erl_syntax:case_expr(
+										erl_syntax:application(
+											erl_syntax:atom(code), 
+											erl_syntax:atom(where_is_file), 
+											[erl_syntax:infix_expr(
 												erl_syntax:application(
-													erl_syntax:atom(code) , 
-													erl_syntax:atom(where_is_file), 
-													[erl_syntax:string(ModNameStr ++ ".erl")]),
-												[
-													%TODO: try to load also from src directory
-													erl_syntax:clause(
-														[erl_syntax:cons(
-															erl_syntax:char($.), 
-															erl_syntax:underscore())] ,
-														[],
-														[	
-															% erl_syntax:application(
-															% 	erl_syntax:atom(io) , 
-															% 	erl_syntax:atom(format), 
-															% 	[erl_syntax:string("entra desde " ++ erl_syntax:atom_literal(get(module_name)) ++ " : " ++ ModNameStr ++ " " ++ erl_syntax:atom_literal(FunName) ++ "\n")]),
-															% erl_syntax:application(
-															% 	erl_syntax:atom(edd_trace_new) , 
-															% 	erl_syntax:atom(compile_and_reload), 
-															% 	[ModName]),
-															build_send_load(ModName),
-															build_receive_load(),
-															T
-															% StoreCall,
-															% erl_syntax:application(
-															% 	erl_syntax:atom(edd_trace_new) , 
-															% 	erl_syntax:atom(undo_compile_and_reload), 
-															% 	[ModName]),
-															% VarCall
-														]),
-													erl_syntax:clause(
-														[erl_syntax:underscore()],
-														[],
-														[	
-														% erl_syntax:application(
-														% 	erl_syntax:atom(io) , 
-														% 	erl_syntax:atom(format), 
-														% 	[erl_syntax:string("NO entra " ++ ModNameStr ++ " " ++ erl_syntax:atom_literal(FunName) ++ "\n")]),
-														T])
-												])
-										% _ -> 
-										% 	T
-									end;
-								% _ ->
+													erl_syntax:atom(erlang),
+													erl_syntax:atom(atom_to_list),
+													[erl_syntax:module_qualifier_argument(AppOper)]), 
+												erl_syntax:operator("++"), 
+												erl_syntax:string(".erl"))]),
+											% [erl_syntax:string(ModNameStr ++ ".erl")]),
+										[
+											%TODO: try to load also from src directory
+											erl_syntax:clause(
+												[erl_syntax:cons(
+													erl_syntax:char($.), 
+													erl_syntax:underscore())] ,
+												[],
+												[	
+													% erl_syntax:application(
+													% 	erl_syntax:atom(io) , 
+													% 	erl_syntax:atom(format), 
+													% 	[erl_syntax:string("entra desde " ++ erl_syntax:atom_literal(get(module_name)) ++ " : " ++ ModNameStr ++ " " ++ erl_syntax:atom_literal(FunName) ++ "\n")]),
+													% erl_syntax:application(
+													% 	erl_syntax:atom(edd_trace_new) , 
+													% 	erl_syntax:atom(compile_and_reload), 
+													% 	[ModName]),
+													build_send_load(ModName),
+													build_receive_load(),
+													T
+													% StoreCall,
+													% erl_syntax:application(
+													% 	erl_syntax:atom(edd_trace_new) , 
+													% 	erl_syntax:atom(undo_compile_and_reload), 
+													% 	[ModName]),
+													% VarCall
+												]),
+											erl_syntax:clause(
+												[erl_syntax:underscore()],
+												[],
+												[	
+												% erl_syntax:application(
+												% 	erl_syntax:atom(io) , 
+												% 	erl_syntax:atom(format), 
+												% 	[erl_syntax:string("NO entra " ++ ModNameStr ++ " " ++ erl_syntax:atom_literal(FunName) ++ "\n")]),
+												T])
+										])
+								% _ -> 
 								% 	T
-							% end;
+							end;
+						% _ ->
+						% 	T
+					% end;
 						variable -> 
 							T;
 						fun_expr -> 
