@@ -791,6 +791,8 @@ build_pids_tree(#pid_info{pid = Pid, spawned = Spawned, first_call = #call_info{
 		case FunCall of 
 			{M,F,As} ->
 				edd_con_lib:build_call_string(FunCall);
+			{M,F,As,_} ->
+				edd_con_lib:build_call_string({M,F,As});
 			{AnoFun} -> 
 				PosInfo = {pos_info,{Mod,_,_,_}} = hd(dict:fetch(AnoFun, DictFuns)),
 				edd_con_lib:build_call_string({Mod, PosInfo, []})

@@ -135,6 +135,8 @@ build_call_string_or_afun(Call) ->
 	case FunCall of 
 		{M,F,As} ->
 			build_call_string(FunCall);
+		{M,F,As,_} ->
+			build_call_string({M,F,As});
 		{AnoFun} -> 
 			case get(dict_funs) of 
 				undefined -> 

@@ -86,15 +86,19 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
 receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
     % io:format("Itera\n"),
     receive 
-        TraceItem = {edd_trace, _, _, _} ->
+        TraceItem = {edd_trace, Type, _, _} ->
             NTraceItem = 
                 case TraceItem of 
                     {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
                         {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    % {edd_trace, made_spawn, Pid,  {Args, Res, PosAndPP}} -> 
+                    %     io:format("made_spawn: ~p\n", [{Args, Res, PosAndPP}]),
+                    %     TraceItem;
                     _ -> 
                         TraceItem
                 end,
             % io:format("Trace ~p\n", [TraceItem]),
+            % io:format("Type ~p\n", [Type]),
             receive_loop(
                 Current + 1, 
                 [{Current,NTraceItem} | Trace],
@@ -172,15 +176,15 @@ instrument_and_reload(ModName, Dir) ->
     % try 
     CompileOpts = 
          [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
-    % io:format("~p\n", [get_file_path(ModName, Dir)]),
+    io:format("Instrumenting...~p\n", [get_file_path(ModName, Dir)]),
     % io:format("~p\n", [CompileOpts]),
     {ok,ModName,Binary,_} = 
         case compile:file(get_file_path(ModName, Dir), CompileOpts) of 
             {ok,_,_,_} = Res ->
                 Res
-            %     ;
-            % Other ->
-            %     io:format("~p\n", [Other])
+                ;
+            Other ->
+                io:format("~p\n", [Other])
             % _ ->
             %     io:format("~p\n", [element(1, filename:find_src(ModName))]),
             %     Res = compile:file(element(1, filename:find_src(ModName)) ++ ".erl", CompileOpts),
