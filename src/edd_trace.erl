@@ -90,7 +90,17 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
             NTraceItem = 
                 case TraceItem of 
                     {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
+                        % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
                         {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    {edd_trace, send_sent, Pid,  {PidReceive, Msg, _, PosAndPP}} when is_atom(PidReceive) -> 
+                        % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
+                        {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    {edd_trace, send_sent, Pid,  {PidReceive, Msg, _, PosAndPP}}  -> 
+                        % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
+                        {edd_trace, send_sent, Pid, {PidReceive, Msg, PosAndPP}};
+                    % {edd_trace, send_sent, Pid, Params} -> 
+                    %     io:format("SEND TRACED: ~p\n", [{ Pid,  Params}]),
+                    %     TraceItem;
                     % {edd_trace, made_spawn, Pid,  {Args, Res, PosAndPP}} -> 
                     %     io:format("made_spawn: ~p\n", [{Args, Res, PosAndPP}]),
                     %     TraceItem;

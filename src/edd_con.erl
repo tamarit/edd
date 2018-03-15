@@ -414,25 +414,15 @@ build_graph_trace(
 		communication = NCommunication
 	};
 build_graph_trace(
-		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
-		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
-	% io:format("BGT: ~p\n", [{Pid, PidReceive, Msg, TraceId}]),
-	MessageRecord = 
-		#message_info{from = Pid, to = PidReceive, msg = Msg, trace = TraceId},
-	% Add to the communication history
-	NCommunication = 
-		[{sent,MessageRecord} | Communication],
-	% Add sent info to the stack 
-	NPidsInfo0 = 
-		lists:map(fun(PI) -> add_msg_sent_stack(PI, {Pid, MessageRecord}) end, PidsInfo),
-	% Add received info to the stack 
-	NPidsInfo = 
-		lists:map(fun(PI) -> add_msg_received_stack(PI, {PidReceive, MessageRecord}) end, NPidsInfo0),
-	% New state
-	State#evaltree_state{
-		communication = NCommunication,
-		pids_info = NPidsInfo
-	};
+		T = {TraceId, {edd_trace, send_sent, _, {_, _, _}}}, 
+		State) ->
+	build_graph_trace_send(T, State);
+build_graph_trace(
+		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _, PosAndPP}}}, 
+		State ) ->
+	build_graph_trace_send(
+		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, PosAndPP}}}, 
+		State);
 build_graph_trace(
 		{TraceId, {edd_trace, receive_reached, Pid, {Context, Receive = {{pos_info,{_Module, _File, _Line, _StrReceive}}}}}}, 
 		State = #evaltree_state{pids_info = PidsInfo}) ->
@@ -500,6 +490,27 @@ build_graph_trace(
 build_graph_trace({TraceId, Msg}, State) ->	
 	% io:format("ALGO RARO: ~p\n", [Msg]), 
 	State.
+
+build_graph_trace_send(
+		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
+		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
+	% io:format("BGT: ~p\n", [{Pid, PidReceive, Msg, TraceId}]),
+	MessageRecord = 
+		#message_info{from = Pid, to = PidReceive, msg = Msg, trace = TraceId},
+	% Add to the communication history
+	NCommunication = 
+		[{sent,MessageRecord} | Communication],
+	% Add sent info to the stack 
+	NPidsInfo0 = 
+		lists:map(fun(PI) -> add_msg_sent_stack(PI, {Pid, MessageRecord}) end, PidsInfo),
+	% Add received info to the stack 
+	NPidsInfo = 
+		lists:map(fun(PI) -> add_msg_received_stack(PI, {PidReceive, MessageRecord}) end, NPidsInfo0),
+	% New state
+	State#evaltree_state{
+		communication = NCommunication,
+		pids_info = NPidsInfo
+	}.
 
 summarizes_pidinfo(PidsInfo) -> 
     [ {Pid, Call, Sent, Spawned, Result}

@@ -427,10 +427,13 @@ inst_send(T, SendArgs) ->
 			VarArgs ++ pos_and_pp(T)), 	
 
 	NT = 
-		erl_syntax:infix_expr(
-			lists:nth(1, VarArgs), 
-			erl_syntax:operator('!'), 
-			lists:nth(2, VarArgs)),
+		build_send_par(
+			hd(VarArgs),
+			tl(VarArgs)),
+		% erl_syntax:infix_expr(
+		% 	lists:nth(1, VarArgs), 
+		% 	erl_syntax:operator('!'), 
+		% 	lists:nth(2, VarArgs)),
 
 	BlockSend = 
 		erl_syntax:block_expr(StoreArgs ++ [NT, SendSend, lists:nth(2, VarArgs)]),
@@ -575,12 +578,16 @@ build_dict_var(Vars) ->
 			[erl_syntax:string(V) || V <- Vars],
 			[erl_syntax:variable(V)  || V <- Vars] )).
 
-build_send(Msg) ->
+build_send_par(Dest, Pars) ->
 	erl_syntax:application(
 		erl_syntax:atom(erlang) , 
 		erl_syntax:atom(send), 
-		[erl_syntax:atom(edd_tracer),
-		 erl_syntax:tuple(Msg)]).
+		[Dest| Pars]).
+
+build_send(Msg) ->
+	build_send_par(
+		erl_syntax:atom(edd_tracer),
+		[erl_syntax:tuple(Msg)]).
 
 build_send_trace(Tag, Args) -> 
 	build_send(
