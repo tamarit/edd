@@ -1342,6 +1342,7 @@ build_question(
          	edd_con_lib:question_list("created processes",Spawned), 
          	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
          	complexity_term(Spawned)),
+         build_answer("Inadmissible", correct),
          build_answer("Nothing", correct)
         ],
     % Question ++ "\n" ++ edd_con_lib:any2str(Answers);
@@ -1418,6 +1419,7 @@ build_question(
          	edd_con_lib:question_list("created processes",Spawned), 
          	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
          	complexity_term(Spawned)),
+         build_answer("Inadmissible", correct),
          build_answer("Nothing", correct)
         ],
     NDictTraces  = 

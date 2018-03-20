@@ -242,6 +242,7 @@ buggy_node_str(G, NotCorrectVertex, Message) ->
 		end.
 
 print_buggy_node(G, NotCorrectVertex, Message) ->
+	io:format("\nBuggy node: ~p\n", [NotCorrectVertex]),
 	io:format("~s", [buggy_node_str(G, NotCorrectVertex, Message)]).
 
 get_answer(Message,Answers) ->
@@ -748,7 +749,7 @@ asking_loop(State0 = #edd_con_state{
 		end,
 	asking_loop(NState).
 
-ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq, FunAsk) ->
+ask_question(Selected, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq, FunAsk) ->
 	{DictAnswers, LastOpt} = 
 		lists:mapfoldl(
 			fun(E, Id) ->
@@ -775,7 +776,9 @@ ask_question(_, #question{text = QuestionStr, answers = Answers}, OptsDiagramSeq
 	OptionsStr = 
 		string:join(Options, "/"),
 	QuestionCompStr = 
-		format("\n\n<Question complexity: ~p>\n", [QuestionComp]),
+		format(
+			"\n\n<Question complexity: ~p> <Node selected: ~p>\n", 
+			[QuestionComp, Selected]),
 	Prompt = 
 		space()
 		++ QuestionStr 
