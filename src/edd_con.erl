@@ -1042,6 +1042,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 	Header = 
 		["digraph G {"
 		,"  rankdir=\"LR\";"
+		,"  nodesep = 0.75;"
 		,"  node[shape=\"point\"];"
 		,"  edge[arrowhead=\"none\"]"],
 	LengthReceives = 
