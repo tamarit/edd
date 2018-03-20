@@ -1606,6 +1606,8 @@ dot_vertex_eval_tree({V,NodeInfo}, DictQuestion) ->
 
 change_new_lines([10|Chars]) ->
     [$\\,$l|change_new_lines(Chars)];
+change_new_lines([$\\, $"|Chars]) ->
+    [$\\,$"|change_new_lines(Chars)];
 change_new_lines([$"|Chars]) ->
     [$\\,$"|change_new_lines(Chars)];
 change_new_lines([Other|Chars]) ->
