@@ -101,9 +101,9 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
                     % {edd_trace, send_sent, Pid, Params} -> 
                     %     io:format("SEND TRACED: ~p\n", [{ Pid,  Params}]),
                     %     TraceItem;
-                    % {edd_trace, made_spawn, Pid,  {Args, Res, PosAndPP}} -> 
-                    %     io:format("made_spawn: ~p\n", [{Args, Res, PosAndPP}]),
-                    %     TraceItem;
+                    {edd_trace, made_spawn, Pid,  {{A1, A2, A3, _}, Res, PosAndPP}} -> 
+                        % io:format("made_spawn: ~p\n", [{Args, Res, PosAndPP}]),
+                        {edd_trace, made_spawn, Pid,  {{A1, A2, A3}, Res, PosAndPP}};
                     _ -> 
                         TraceItem
                 end,
