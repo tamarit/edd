@@ -1,0 +1,167 @@
+digraph G {
+  rankdir="LR";
+  //nodesep = 0.75;
+  margin = 2.5;
+  node[shape="point"];
+  edge[arrowhead="none"]
+{
+  rank="same";
+  "<0.75.0>"[shape="plaintext", label="<0.75.0>
+poolboy:bug1()"]; 
+  "<0.75.0>" -> "<0.75.0>1" -> "<0.75.0>2" -> "<0.75.0>3" -> "<0.75.0>4" -> "<0.75.0>5" -> "<0.75.0>6" -> "<0.75.0>7" -> "<0.75.0>8" -> "<0.75.0>9" -> "<0.75.0>10" -> "<0.75.0>11" -> "<0.75.0>12" -> "<0.75.0>13" -> "<0.75.0>14" -> "<0.75.0>15" -> "<0.75.0>16" -> "<0.75.0>17" -> "<0.75.0>18" -> "<0.75.0>19" -> "<0.75.0>20" -> "<0.75.0>21" -> "<0.75.0>22" -> "<0.75.0>23" -> "<0.75.0>24" -> "<0.75.0>25" -> "<0.75.0>26" -> "<0.75.0>27" -> "<0.75.0>28" -> "<0.75.0>29" -> "<0.75.0>30" -> "<0.75.0>31" -> "<0.75.0>32" -> "<0.75.0>33" -> "<0.75.0>34" -> "<0.75.0>35" -> "<0.75.0>36" -> "<0.75.0>37";
+  "<0.75.0>code"[shape="plaintext", label="38", fontcolor = "grey", fontsize = 20];
+  "<0.75.0>37" -> "<0.75.0>code" [penwidth = 1, style = dotted, color = grey];
+} 
+{
+  rank="same";
+  "<0.86.0>"[shape="plaintext", label="<0.86.0>
+my_proc_lib:init_p(<0.75.0>, [], my_gen, init_it, [my_gen_fsm,<0.75.0>,<0.75.0>,
+ {local,pool_aritmetico},
+ poolboy,
+ [{name,{local,pool_aritmetico}},
+  {worker_module,poolboy_test_worker},
+  {size,0},
+  {max_overflow,1}],
+ []])"]; 
+  "<0.86.0>" -> "<0.86.0>1" -> "<0.86.0>2" -> "<0.86.0>3" -> "<0.86.0>4" -> "<0.86.0>5" -> "<0.86.0>6" -> "<0.86.0>7" -> "<0.86.0>8" -> "<0.86.0>9" -> "<0.86.0>10" -> "<0.86.0>11" -> "<0.86.0>12" -> "<0.86.0>13" -> "<0.86.0>14" -> "<0.86.0>15" -> "<0.86.0>16" -> "<0.86.0>17" -> "<0.86.0>18" -> "<0.86.0>19" -> "<0.86.0>20" -> "<0.86.0>21" -> "<0.86.0>22" -> "<0.86.0>23" -> "<0.86.0>24" -> "<0.86.0>25" -> "<0.86.0>26" -> "<0.86.0>27" -> "<0.86.0>28" -> "<0.86.0>29" -> "<0.86.0>30" -> "<0.86.0>31" -> "<0.86.0>32" -> "<0.86.0>33" -> "<0.86.0>34" -> "<0.86.0>35" -> "<0.86.0>36" -> "<0.86.0>37";
+  "<0.86.0>code"[shape="plaintext", label="39", fontcolor = "grey", fontsize = 20];
+  "<0.86.0>37" -> "<0.86.0>code" [penwidth = 1, style = dotted, color = grey];
+} 
+{
+  rank="same";
+  "<0.96.0>"[shape="plaintext", label="<0.96.0>
+my_proc_lib:init_p(pool_aritmetico, [<0.75.0>], my_gen, init_it, [my_gen_server,<0.86.0>,<0.86.0>,my_supervisor,
+ {self,poolboy_sup,{poolboy_test_worker,[{size,0},{max_overflow,1}]}},
+ []])"]; 
+  "<0.96.0>" -> "<0.96.0>1" -> "<0.96.0>2" -> "<0.96.0>3" -> "<0.96.0>4" -> "<0.96.0>5" -> "<0.96.0>6" -> "<0.96.0>7" -> "<0.96.0>8" -> "<0.96.0>9" -> "<0.96.0>10" -> "<0.96.0>11" -> "<0.96.0>12" -> "<0.96.0>13" -> "<0.96.0>14" -> "<0.96.0>15" -> "<0.96.0>16" -> "<0.96.0>17" -> "<0.96.0>18" -> "<0.96.0>19" -> "<0.96.0>20" -> "<0.96.0>21" -> "<0.96.0>22" -> "<0.96.0>23" -> "<0.96.0>24" -> "<0.96.0>25" -> "<0.96.0>26" -> "<0.96.0>27" -> "<0.96.0>28" -> "<0.96.0>29" -> "<0.96.0>30" -> "<0.96.0>31" -> "<0.96.0>32" -> "<0.96.0>33" -> "<0.96.0>34" -> "<0.96.0>35" -> "<0.96.0>36" -> "<0.96.0>37";
+  "<0.96.0>code"[shape="plaintext", label="40", fontcolor = "grey", fontsize = 20];
+  "<0.96.0>37" -> "<0.96.0>code" [penwidth = 1, style = dotted, color = grey];
+} 
+{
+  rank="same";
+  "<0.100.0>"[shape="plaintext", label="<0.100.0>
+my_proc_lib:init_p(<0.96.0>, [pool_aritmetico,<0.75.0>], my_gen, init_it, [my_gen_server,<0.96.0>,<0.96.0>,poolboy_test_worker,[],[]])"]; 
+  "<0.100.0>" -> "<0.100.0>1" -> "<0.100.0>2" -> "<0.100.0>3" -> "<0.100.0>4" -> "<0.100.0>5" -> "<0.100.0>6" -> "<0.100.0>7" -> "<0.100.0>8" -> "<0.100.0>9" -> "<0.100.0>10" -> "<0.100.0>11" -> "<0.100.0>12" -> "<0.100.0>13" -> "<0.100.0>14" -> "<0.100.0>15" -> "<0.100.0>16" -> "<0.100.0>17" -> "<0.100.0>18" -> "<0.100.0>19" -> "<0.100.0>20" -> "<0.100.0>21" -> "<0.100.0>22" -> "<0.100.0>23" -> "<0.100.0>24" -> "<0.100.0>25" -> "<0.100.0>26" -> "<0.100.0>27" -> "<0.100.0>28" -> "<0.100.0>29" -> "<0.100.0>30" -> "<0.100.0>31" -> "<0.100.0>32" -> "<0.100.0>33" -> "<0.100.0>34" -> "<0.100.0>35" -> "<0.100.0>36" -> "<0.100.0>37";
+  "<0.100.0>code"[shape="plaintext", label="41", fontcolor = "grey", fontsize = 20];
+  "<0.100.0>37" -> "<0.100.0>code" [penwidth = 1, style = dotted, color = grey];
+} 
+{
+  rank="same";
+  "code"[shape="plaintext", label="           Code", fontcolor = grey, fontsize = 20]; 
+"code1"[style=invis]; 
+"code2"[style=invis]; 
+"code3"[style=invis]; 
+"code4"[style=invis]; 
+"code5"[style=invis]; 
+"code6"[style=invis]; 
+"code7"[style=invis]; 
+"code8"[style=invis]; 
+"code9"[style=invis]; 
+"code10"[style=invis]; 
+"code11"[style=invis]; 
+"code12"[style=invis]; 
+"code13"[style=invis]; 
+"code14"[style=invis]; 
+"code15"[style=invis]; 
+"code16"[style=invis]; 
+"code17"[style=invis]; 
+"code18"[style=invis]; 
+"code19"[style=invis]; 
+"code20"[style=invis]; 
+"code21"[style=invis]; 
+"code22"[style=invis]; 
+"code23"[style=invis]; 
+"code24"[style=invis]; 
+"code25"[style=invis]; 
+"code26"[style=invis]; 
+"code27"[style=invis]; 
+"code28"[style=invis]; 
+"code29"[style=invis]; 
+"code30"[style=invis]; 
+"code31"[style=invis]; 
+"code32"[style=invis]; 
+"code33"[style=invis]; 
+"code34"[style=invis]; 
+"code35"[style=invis]; 
+"code36"[style=invis]; 
+"code37"[style=invis]; 
+  "code" -> "code1" -> "code2" -> "code3" -> "code4" -> "code5" -> "code6" -> "code7" -> "code8" -> "code9" -> "code10" -> "code11" -> "code12" -> "code13" -> "code14" -> "code15" -> "code16" -> "code17" -> "code18" -> "code19" -> "code20" -> "code21" -> "code22" -> "code23" -> "code24" -> "code25" -> "code26" -> "code27" -> "code28" -> "code29" -> "code30" -> "code31" -> "code32" -> "code33" -> "code34" -> "code35" -> "code36" -> "code37"[style=invis];
+} 
+  "code1" -> "<0.100.0>1" [taillabel="           1", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code2" -> "<0.100.0>2" [taillabel="           2", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code3" -> "<0.100.0>3" [taillabel="           3", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code4" -> "<0.100.0>4" [taillabel="           4", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code5" -> "<0.100.0>5" [taillabel="           5", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code6" -> "<0.100.0>6" [taillabel="           6", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code7" -> "<0.100.0>7" [taillabel="           7", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code8" -> "<0.100.0>8" [taillabel="           8", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code9" -> "<0.100.0>9" [taillabel="           9", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code10" -> "<0.100.0>10" [taillabel="           10", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code11" -> "<0.100.0>11" [taillabel="           11", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code12" -> "<0.100.0>12" [taillabel="           12", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code13" -> "<0.100.0>13" [taillabel="           13", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code14" -> "<0.100.0>14" [taillabel="           14", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code15" -> "<0.100.0>15" [taillabel="           15", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code16" -> "<0.100.0>16" [taillabel="           16", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code17" -> "<0.100.0>17" [taillabel="           17", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code18" -> "<0.100.0>18" [taillabel="           18", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code19" -> "<0.100.0>19" [taillabel="           19", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code20" -> "<0.100.0>20" [taillabel="           20", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code21" -> "<0.100.0>21" [taillabel="           21", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code22" -> "<0.100.0>22" [taillabel="           22", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code23" -> "<0.100.0>23" [taillabel="           23", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code24" -> "<0.100.0>24" [taillabel="           24", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code25" -> "<0.100.0>25" [taillabel="           25", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code26" -> "<0.100.0>26" [taillabel="           26", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code27" -> "<0.100.0>27" [taillabel="           27", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code28" -> "<0.100.0>28" [taillabel="           28", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code29" -> "<0.100.0>29" [taillabel="           29", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code30" -> "<0.100.0>30" [taillabel="           30", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code31" -> "<0.100.0>31" [taillabel="           31", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code32" -> "<0.100.0>32" [taillabel="           32", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code33" -> "<0.100.0>33" [taillabel="           33", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code34" -> "<0.100.0>34" [taillabel="           34", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code35" -> "<0.100.0>35" [taillabel="           35", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code36" -> "<0.100.0>36" [taillabel="           36", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+  "code37" -> "<0.100.0>37" [taillabel="           37", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];
+"<0.75.0>" -> "<0.86.0>" -> "<0.96.0>" -> "<0.100.0>"-> code [style=invis];
+"<0.75.0>1" -> "<0.86.0>1" -> "<0.96.0>1" -> "<0.100.0>1" [style=dotted, color = grey];
+"<0.75.0>2" -> "<0.86.0>2" -> "<0.96.0>2" -> "<0.100.0>2" [style=dotted, color = grey];
+"<0.75.0>3" -> "<0.86.0>3" -> "<0.96.0>3" -> "<0.100.0>3" [style=dotted, color = grey];
+"<0.75.0>4" -> "<0.86.0>4" -> "<0.96.0>4" -> "<0.100.0>4" [style=dotted, color = grey];
+"<0.75.0>5" -> "<0.86.0>5" -> "<0.96.0>5" -> "<0.100.0>5" [style=dotted, color = grey];
+"<0.75.0>37" -> "<0.86.0>37" -> "<0.96.0>37" -> "<0.100.0>37" [style=dotted, color = grey];
+
+"<0.75.0>1" -> "<0.86.0>1" [label="", penwidth = 3, color = red, arrowhead="normal"];
+"<0.86.0>2" -> "<0.96.0>2" [label="", penwidth = 3, color = red, arrowhead="normal"];
+"<0.96.0>3" -> "<0.86.0>3" [label="{ack,<0.96.0>,{ok,<0.96.0>}}", arrowhead="normal"];
+"<0.86.0>4" -> "<0.86.0>5" [label="{ack,<0.96.0>,{ok,<0.96.0>}} (from <0.96.0>)"];
+"<0.86.0>6" -> "<0.75.0>6" [label="{ack,<0.86.0>,{ok,<0.86.0>}}", arrowhead="normal"];
+"<0.75.0>7" -> "<0.75.0>8" [label="{ack,<0.86.0>,{ok,<0.86.0>}} (from <0.86.0>)"];
+"<0.75.0>9" -> "<0.86.0>9" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132442>},
+                   {checkout,false}}", arrowhead="normal"];
+"<0.86.0>10" -> "<0.86.0>11" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132442>},
+                   {checkout,false}} (from <0.75.0>)"];
+"<0.86.0>12" -> "<0.96.0>12" [label="{'$gen_call',{<0.86.0>,#Ref<0.1516765931.1380188161.132449>},{start_child,[]}}", arrowhead="normal"];
+"<0.96.0>13" -> "<0.96.0>14" [label="{'$gen_call',{<0.86.0>,#Ref<0.1516765931.1380188161.132449>},{start_child,[]}} (from <0.86.0>)"];
+"<0.96.0>15" -> "<0.100.0>15" [label="", penwidth = 3, color = red, arrowhead="normal"];
+"<0.100.0>16" -> "<0.96.0>16" [label="{ack,<0.100.0>,{ok,<0.100.0>}}", arrowhead="normal"];
+"<0.96.0>17" -> "<0.96.0>18" [label="{ack,<0.100.0>,{ok,<0.100.0>}} (from <0.100.0>)"];
+"<0.96.0>19" -> "<0.86.0>19" [label="{#Ref<0.1516765931.1380188161.132449>,{ok,<0.100.0>}}", arrowhead="normal"];
+"<0.86.0>20" -> "<0.86.0>21" [label="{#Ref<0.1516765931.1380188161.132449>,{ok,<0.100.0>}} (from <0.96.0>)"];
+"<0.86.0>22" -> "<0.75.0>22" [label="{#Ref<0.1516765931.1380188161.132442>,<0.100.0>}", arrowhead="normal"];
+"<0.75.0>23" -> "<0.75.0>24" [label="{#Ref<0.1516765931.1380188161.132442>,<0.100.0>} (from <0.86.0>)"];
+"<0.75.0>25" -> "<0.86.0>25" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132532>},
+                   {checkout,true}}", arrowhead="normal"];
+"<0.86.0>26" -> "<0.86.0>27" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132532>},
+                   {checkout,true}} (from <0.75.0>)"];
+"<0.75.0>28" -> "<0.86.0>28" [label="{'$gen_event',{checkin,<0.100.0>}}", arrowhead="normal"];
+"<0.86.0>29" -> "<0.86.0>30" [label="{'$gen_event',{checkin,<0.100.0>}} (from <0.75.0>)"];
+"<0.75.0>31" -> "<0.86.0>31" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132547>},
+                   {checkout,false}}", arrowhead="normal"];
+"<0.86.0>32" -> "<0.75.0>32" [label="{#Ref<0.1516765931.1380188161.132532>,<0.100.0>}", arrowhead="normal"];
+"<0.86.0>33" -> "<0.86.0>34" [label="{'$gen_sync_event',{<0.75.0>,#Ref<0.1516765931.1380188161.132547>},
+                   {checkout,false}} (from <0.75.0>)"];
+"<0.86.0>35" -> "<0.75.0>35" [label="{#Ref<0.1516765931.1380188161.132547>,full}", arrowhead="normal"];
+"<0.75.0>36" -> "<0.75.0>37" [label="{#Ref<0.1516765931.1380188161.132547>,full} (from <0.86.0>)"];
+}

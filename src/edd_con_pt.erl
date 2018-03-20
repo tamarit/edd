@@ -330,8 +330,8 @@ inst_call_loading(T, ModName) ->
 								erl_syntax:atom(gen_server),
 								erl_syntax:atom(gen_fsm),
 								erl_syntax:atom(supervisor),
-								erl_syntax:atom(proc_lib)%,
-								% erl_syntax:atom(gen)
+								erl_syntax:atom(proc_lib),
+								erl_syntax:atom(gen)
 								])]),
 						[
 							erl_syntax:clause(
@@ -617,7 +617,10 @@ build_send_par(Dest, Pars) ->
 
 build_send(Msg) ->
 	build_send_par(
-		erl_syntax:atom(edd_tracer),
+		erl_syntax:tuple([
+			erl_syntax:atom(edd_tracer),
+			erl_syntax:atom(node())
+		]),
 		[erl_syntax:tuple(Msg)]).
 
 build_send_trace(Tag, Args) -> 

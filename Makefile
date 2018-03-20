@@ -5,7 +5,7 @@ all:
 	erl -run edd_comp compile -noshell -s erlang halt
 
 load:
-	erl -run edd_comp load
+	erl -run edd_comp load -rsh ssh -sname edd_main -setcookie edd_cookie
 
 # --- remove compiled beam and edoc
 clean:

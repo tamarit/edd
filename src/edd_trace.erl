@@ -30,17 +30,27 @@
 
 trace(InitialCall, Timeout, PidAnswer, Dir) -> 
     ModName = get_mod_name(InitialCall),
+    % Host = 
+    %     list_to_atom(net_adm:localhost()),
+    % io:format("~p\n", [Host]),
+    {ok, TracingNode} = 
+        slave:start(
+            list_to_atom(net_adm:localhost()), 
+            edd_tracing, 
+            "-setcookie edd_cookie"),
+    % io:format("~p\n", [SO]),
     % io:format("~p\n~p\n", [ModName, Dir]),
     % OriginalLibCode = 
     %     [code:get_object_code(Mod) || Mod <- [gen_server, supervisor, gen_fsm, proc_lib, gen]],
-    instrument_and_reload(ModName, Dir),
+    instrument_and_reload(ModName, Dir, TracingNode),
     PidMain = self(),
-    PidCall = execute_call(InitialCall, self()),
+    PidCall = execute_call(InitialCall, self(), Dir, TracingNode),
+    % io:format("PIDCALL: ~p\n", [PidCall]),
     TimeoutServer = Timeout,
     PidTrace = 
     spawn(
         fun() ->
-            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer, Dir)
+            receive_loop(0, [],[ModName], dict:new(), PidMain, TimeoutServer, Dir, TracingNode)
         end),
     register(edd_tracer, PidTrace),
     PidCall!start,
@@ -57,8 +67,9 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
         Timeout ->
             io:format("\nTracing timeout\n")
     end,
-    PidTrace!stop,
     unregister(edd_tracer),
+    PidTrace!stop,
+    slave:stop(TracingNode),
     Trace = 
         receive 
             {trace,Trace0} ->
@@ -95,12 +106,14 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
     % [erlang:purge_module(Mod) || Mod <- Loaded, lists:member( Mod, [gen_fsm, supervisor, proc_lib, gen])],
 
      % [ code:load_binary(Mod, Filename, Binary) || {Mod, Binary, Filename}  <- OriginalLibCode],
-    [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded, not(lists:member( Mod, [gen_server, gen_fsm, supervisor, proc_lib, gen]))],
+    % [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded, not(lists:member( Mod, [gen_server, gen_fsm, supervisor, proc_lib, gen]))],
+    % [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded],
     DictFun = 
         receive 
             {fun_dict,FunDict0} ->
                 FunDict0
         end,
+    % unregister(edd_tracer),
     % io:format("~p\n",[dict:to_list(DictFun)]),
 
     % build_graph(Trace, DictFun, PidCall), 
@@ -111,7 +124,7 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
     % ok.
     PidAnswer!{Trace, DictFun, PidCall}.
 
-receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
+receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir, TracingNode) ->
     % io:format("Itera\n"),
     receive 
         TraceItem = {edd_trace, _, _, _} ->
@@ -140,7 +153,7 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
             receive_loop(
                 Current + 1, 
                 [{Current,NTraceItem} | Trace],
-                Loaded, FunDict, PidMain, Timeout, Dir);
+                Loaded, FunDict, PidMain, Timeout, Dir, TracingNode);
         {edd_load_module, Module, PidAnswer} ->
             % io:format("Load module " ++ atom_to_list(Module) ++ "\n"),
             NLoaded = 
@@ -149,11 +162,11 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
                         PidAnswer!loaded,
                         Loaded;
                     false ->
-                       instrument_and_reload(Module, Dir),
+                       instrument_and_reload(Module, Dir, TracingNode),
                        PidAnswer!loaded,
                        [Module | Loaded] 
                 end, 
-            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout, Dir);
+            receive_loop(Current, Trace, NLoaded, FunDict, PidMain, Timeout, Dir, TracingNode);
         {edd_store_fun, Name, FunInfo} ->
             NFunDict = 
                 case dict:is_key(Name, FunDict) of 
@@ -162,34 +175,53 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
                     false ->
                         dict:append(Name, FunInfo, FunDict) 
                 end, 
-            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout, Dir);
+            receive_loop(Current, Trace, Loaded, NFunDict, PidMain, Timeout, Dir, TracingNode);
         stop -> 
             PidMain!{trace, Trace},
             PidMain!{loaded, Loaded},
             PidMain!{fun_dict, FunDict};
         Other -> 
             io:format("Untracked msg ~p\n", [Other]),
-            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir)
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir, TracingNode)
     after 
         Timeout ->
             PidMain!idle,
-            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir)
+            receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir, TracingNode)
     end.
 
+send_module(TracingNode, Module, Dir) ->
+    CompileOpts = 
+        [binary, {i,Dir}, {outdir,Dir}, return],
+    File = 
+        get_file_path(Module, Dir),
+    {ok, Module, Bin , _} = 
+        compile:file(File, CompileOpts),
+    {_ResL, _BadNodes} = rpc:call(
+        TracingNode, code, load_binary, [Module, File, Bin]),
+    ok.
 
-execute_call(Call,PidParent) ->
-    M1 = smerl:new(foo),
-    {ok, M2} = 
-    smerl:add_func(M1, "bar() -> try " ++ Call ++ " catch E1:E2 -> {E1,E2} end."),
-    smerl:compile(M2,[nowarn_format]),
-    spawn(
+
+execute_call(Call, PidParent, Dir, TracingNode) ->
+    % spawn(
+    %     TracingNode,
+    send_module(TracingNode, ?MODULE, filename:absname(filename:dirname(code:which(?MODULE)) ++ "/..") ++ "/src"),
+    send_module(TracingNode, smerl, filename:absname(filename:dirname(code:which(?MODULE)) ++ "/..") ++ "/src"),
+    FUN = 
         fun() -> 
+            % io:format("START\n")%,
+            M1 = smerl:new(foo),
+            {ok, M2} = 
+            smerl:add_func(M1, "bar() -> try " ++ Call ++ " catch E1:E2 -> {E1,E2} end."),
+            smerl:compile(M2,[nowarn_format]),
             receive 
                 start -> ok 
             end,
             Res = foo:bar(), 
             PidParent!{result,Res} 
-        end).
+        end,
+    spawn(TracingNode, FUN).
+    % rpc:call(
+    %     TracingNode, erlang, 'spawn', [FUN]).
 
 get_mod_name(InitialCall) ->
     AExpr = 
@@ -210,17 +242,17 @@ get_file_path(ModName, Dir) ->
             Dir ++ "/" ++ atom_to_list(ModName) ++ ".erl"
     end.
 
-instrument_and_reload(ModName, Dir) ->
+instrument_and_reload(ModName, Dir, TracingNode) ->
     CompileOpts = 
         [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
     Msg = 
         "Instrumenting...",
-    instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg).
+    instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg, TracingNode).
 
-instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg) ->
+instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg, TracingNode) ->
     case lists:member(ModName, [gen_server, gen_fsm, supervisor, proc_lib, gen]) of 
         true -> 
-            instrument_and_reload_sticky(ModName, Dir, CompileOpts, Msg);
+            instrument_and_reload_sticky(ModName, Dir, CompileOpts, Msg, TracingNode);
         false -> 
             % try 
             % CompileOpts = 
@@ -246,14 +278,14 @@ instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg) ->
                 % io:format("~p\n", [ file:get_cwd()]),
                 %  = 
                 %     compile:file(get_file_path(ModName, Dir),),
-            reload_module(ModName, Binary)
+            reload_module(ModName, Binary, TracingNode)
             % catch 
             %     _:_ -> ok 
             % end.
             ,ok
     end.
 
-instrument_and_reload_sticky(ModName, UserDir, CompileOpts, Msg) ->
+instrument_and_reload_sticky(ModName, UserDir, CompileOpts, Msg, TracingNode) ->
     LibDir = 
         code:lib_dir(stdlib, src),
     BeamDir = 
@@ -271,31 +303,37 @@ instrument_and_reload_sticky(ModName, UserDir, CompileOpts, Msg) ->
             Other ->
                 io:format("~p\n", [Other])
         end,
-    ok = 
-        code:unstick_dir(BeamDir),
-    reload_module(ModName, Binary),
-    ok = 
-        code:stick_dir(BeamDir).
+    % ok = 
+    %     code:unstick_dir(BeamDir),
+    rpc:call(
+        TracingNode, code, unstick_dir, [BeamDir]),
+    reload_module(ModName, Binary, TracingNode),
+    rpc:call(
+        TracingNode, code, stick_dir, [BeamDir]).
+    % ok = 
+    %     code:stick_dir(BeamDir).
 
-undo_instrument_and_reload(ModName, Dir) ->
-    CompileOpts = 
-        [binary, {i,Dir}, {outdir,Dir}, return],
-    Msg = 
-        "Restoring...",
-    instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg).   
-    % case lists:member(ModName, [gen_server, gen_fsm, supervisor]) of 
-    %     true -> 
-    % {ok,ModName,Binary} = 
-    %     compile:file(get_file_path(ModName, Dir), [binary, {i,Dir}, {outdir,Dir}]),
-    % reload_module(ModName, Binary).
+% undo_instrument_and_reload(ModName, Dir) ->
+%     CompileOpts = 
+%         [binary, {i,Dir}, {outdir,Dir}, return],
+%     Msg = 
+%         "Restoring...",
+%     instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg).   
+%     % case lists:member(ModName, [gen_server, gen_fsm, supervisor]) of 
+%     %     true -> 
+%     % {ok,ModName,Binary} = 
+%     %     compile:file(get_file_path(ModName, Dir), [binary, {i,Dir}, {outdir,Dir}]),
+%     % reload_module(ModName, Binary).
 
-reload_module(ModName, Binary) ->
+reload_module(ModName, Binary, TracingNode) ->
     try
         erlang:purge_module(ModName)
     catch 
         _:_ -> ok
     end,
-    code:load_binary(ModName, atom_to_list(ModName) ++ ".erl", Binary).
+    rpc:call(
+        TracingNode, code, load_binary, [ModName, atom_to_list(ModName) ++ ".erl", Binary]).
+    % code:load_binary(ModName, atom_to_list(ModName) ++ ".erl", Binary).
     % code:load_abs(atom_to_list(ModName)).
 
 parse_expr(Func) ->
