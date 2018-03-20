@@ -31,6 +31,8 @@
 trace(InitialCall, Timeout, PidAnswer, Dir) -> 
     ModName = get_mod_name(InitialCall),
     % io:format("~p\n~p\n", [ModName, Dir]),
+    % OriginalLibCode = 
+    %     [code:get_object_code(Mod) || Mod <- [gen_server, supervisor, gen_fsm, proc_lib, gen]],
     instrument_and_reload(ModName, Dir),
     PidMain = self(),
     PidCall = execute_call(InitialCall, self()),
@@ -67,7 +69,33 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
             {loaded,Loaded0} ->
                 Loaded0
         end,
-    [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded],
+    % [begin 
+    %     {Mod, Binary, Filename} = 
+    %         code:get_object_code(Mod),
+    %     io:format("~p, ~s\n", [Mod, Filename]),
+    %     code:load_binary(Mod, Filename, Binary)
+    % end
+    % || Mod <- Loaded, lists:member( Mod, [gen_server])],
+    % io:format("PASA\n"),
+    % [begin 
+    %     {Mod, Binary, Filename} = 
+    %         code:get_object_code(Mod),
+    %     io:format("~p, ~s\n", [Mod, Filename]),
+    %     code:load_binary(Mod, Filename, Binary)
+    % end
+    % || Mod <- Loaded, lists:member( Mod, [supervisor])],
+    % io:format("PASA\n"),
+    % [begin 
+    %     {Mod, Binary, Filename} = 
+    %         code:get_object_code(Mod),
+    %     io:format("~p, ~s\n", [Mod, Filename]),
+    %     code:load_binary(Mod, Filename, Binary)
+    % end
+    % || Mod <- Loaded, lists:member( Mod, [gen_fsm, proc_lib, gen])],
+    % [erlang:purge_module(Mod) || Mod <- Loaded, lists:member( Mod, [gen_fsm, supervisor, proc_lib, gen])],
+
+     % [ code:load_binary(Mod, Filename, Binary) || {Mod, Binary, Filename}  <- OriginalLibCode],
+    [undo_instrument_and_reload(Mod, Dir) || Mod <- Loaded, not(lists:member( Mod, [gen_server, gen_fsm, supervisor, proc_lib, gen]))],
     DictFun = 
         receive 
             {fun_dict,FunDict0} ->
@@ -86,7 +114,7 @@ trace(InitialCall, Timeout, PidAnswer, Dir) ->
 receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir) ->
     % io:format("Itera\n"),
     receive 
-        TraceItem = {edd_trace, Type, _, _} ->
+        TraceItem = {edd_trace, _, _, _} ->
             NTraceItem = 
                 case TraceItem of 
                     {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
@@ -183,40 +211,83 @@ get_file_path(ModName, Dir) ->
     end.
 
 instrument_and_reload(ModName, Dir) ->
-    % try 
     CompileOpts = 
-         [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
-    io:format("Instrumenting...~p\n", [get_file_path(ModName, Dir)]),
-    % io:format("~p\n", [CompileOpts]),
-    {ok,ModName,Binary,_} = 
-        case compile:file(get_file_path(ModName, Dir), CompileOpts) of 
+        [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
+    Msg = 
+        "Instrumenting...",
+    instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg).
+
+instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg) ->
+    case lists:member(ModName, [gen_server, gen_fsm, supervisor, proc_lib, gen]) of 
+        true -> 
+            instrument_and_reload_sticky(ModName, Dir, CompileOpts, Msg);
+        false -> 
+            % try 
+            % CompileOpts = 
+            %      [{parse_transform,edd_con_pt}, binary, {i,Dir}, {outdir,Dir}, return],
+            io:format("~s~p\n", [Msg, get_file_path(ModName, Dir)]),
+            % io:format("~p\n", [CompileOpts]),
+            {ok,ModName,Binary,_} = 
+                case compile:file(get_file_path(ModName, Dir), CompileOpts) of 
+                    {ok,_,_,_} = Res ->
+                        Res
+                    %     ;
+                    % Other ->
+                    %     io:format("~p\n", [Other])
+                    % _ ->
+                    %     io:format("~p\n", [element(1, filename:find_src(ModName))]),
+                    %     Res = compile:file(element(1, filename:find_src(ModName)) ++ ".erl", CompileOpts),
+                    %     io:format("~p\n", [Res]),
+                    %     Res 
+                end,
+
+                % io:format("~p\n", [get_file_path(ModName, Dir)]),
+                % io:format("~p\n", [filename:find_src(ModName)]),
+                % io:format("~p\n", [ file:get_cwd()]),
+                %  = 
+                %     compile:file(get_file_path(ModName, Dir),),
+            reload_module(ModName, Binary)
+            % catch 
+            %     _:_ -> ok 
+            % end.
+            ,ok
+    end.
+
+instrument_and_reload_sticky(ModName, UserDir, CompileOpts, Msg) ->
+    LibDir = 
+        code:lib_dir(stdlib, src),
+    BeamDir = 
+        code:lib_dir(stdlib, ebin),
+    FileName = 
+        get_file_path(ModName, LibDir),
+    % CompileOpts = 
+    %     [{parse_transform,edd_con_pt}, binary, 
+    %      {i, UserDir}, {outdir, UserDir}, return],
+    io:format("~s~p\n", [Msg, FileName]),
+    {ok, ModName, Binary,_} = 
+        case compile:file(FileName, CompileOpts) of 
             {ok,_,_,_} = Res ->
-                Res
-                ;
+                Res;
             Other ->
                 io:format("~p\n", [Other])
-            % _ ->
-            %     io:format("~p\n", [element(1, filename:find_src(ModName))]),
-            %     Res = compile:file(element(1, filename:find_src(ModName)) ++ ".erl", CompileOpts),
-            %     io:format("~p\n", [Res]),
-            %     Res 
         end,
-
-        % io:format("~p\n", [get_file_path(ModName, Dir)]),
-        % io:format("~p\n", [filename:find_src(ModName)]),
-        % io:format("~p\n", [ file:get_cwd()]),
-        %  = 
-        %     compile:file(get_file_path(ModName, Dir),),
-    reload_module(ModName, Binary)
-    % catch 
-    %     _:_ -> ok 
-    % end.
-    ,ok.
+    ok = 
+        code:unstick_dir(BeamDir),
+    reload_module(ModName, Binary),
+    ok = 
+        code:stick_dir(BeamDir).
 
 undo_instrument_and_reload(ModName, Dir) ->
-    {ok,ModName,Binary} = 
-        compile:file(get_file_path(ModName, Dir), [binary, {i,Dir}, {outdir,Dir}]),
-    reload_module(ModName, Binary).
+    CompileOpts = 
+        [binary, {i,Dir}, {outdir,Dir}, return],
+    Msg = 
+        "Restoring...",
+    instrument_and_reload_gen(ModName, Dir, CompileOpts, Msg).   
+    % case lists:member(ModName, [gen_server, gen_fsm, supervisor]) of 
+    %     true -> 
+    % {ok,ModName,Binary} = 
+    %     compile:file(get_file_path(ModName, Dir), [binary, {i,Dir}, {outdir,Dir}]),
+    % reload_module(ModName, Binary).
 
 reload_module(ModName, Binary) ->
     try

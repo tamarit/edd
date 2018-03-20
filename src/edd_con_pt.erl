@@ -321,11 +321,42 @@ inst_call_loading(T, ModName) ->
 				[erl_syntax:underscore()],
 				[],
 				[	
-				% erl_syntax:application(
-				% 	erl_syntax:atom(io) , 
-				% 	erl_syntax:atom(format), 
-				% 	[erl_syntax:string("NO entra " ++ ModNameStr ++ " " ++ erl_syntax:atom_literal(FunName) ++ "\n")]),
-				T])
+					erl_syntax:case_expr(
+						erl_syntax:application(
+							erl_syntax:atom(lists), 
+							erl_syntax:atom(member), 
+							[ModName,
+							erl_syntax:list([
+								erl_syntax:atom(gen_server),
+								erl_syntax:atom(gen_fsm),
+								erl_syntax:atom(supervisor),
+								erl_syntax:atom(proc_lib)%,
+								% erl_syntax:atom(gen)
+								])]),
+						[
+							erl_syntax:clause(
+								[erl_syntax:atom(true)] ,
+								[],
+								[	
+									% erl_syntax:application(
+									% 	erl_syntax:atom(io) , 
+									% 	erl_syntax:atom(format), 
+									% 	[erl_syntax:application(
+									% 			erl_syntax:atom(erlang),
+									% 			erl_syntax:atom(atom_to_list),
+									% 			[ModName])]),
+									build_send_load(ModName),
+									build_receive_load(),
+									T
+								]),
+							erl_syntax:clause(
+								[erl_syntax:atom(false)] ,
+								[],
+								[	
+									T
+								])
+						])
+				])
 		]).
 
 inst_fun_clauses(Clauses, FunId) ->
