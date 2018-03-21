@@ -151,7 +151,7 @@ ask_initial_process(Pids) ->
 	PidsString = 
 		[
 			{Pid, format(
-				"~p\n\tFirst call:~s\n\tResult: ~s", 
+				"~p\n\tFirst call: ~s\n\tResult: ~s", 
 				[Pid, build_call_string_or_afun(Call), any2str(Result)]
 			) }
 		|| {Pid, Call, _, _, Result} <- Pids],
