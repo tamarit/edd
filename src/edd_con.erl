@@ -912,7 +912,9 @@ build_code_line(NumPoints, JoinPid) ->
                 ++ quote_enclosing(JoinPid ++ integer_to_list(Num))
                 ++ " [taillabel="
                 ++ quote_enclosing(dot_spaces() ++ integer_to_list(Num))
-                ++ ", penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0];"
+                ++ ", "
+                ++ dots_properties() 
+                ++ "];"
                 | Acc] end
             , [], lists:reverse(lists:seq(1, NumPoints))),
     lines(
@@ -925,27 +927,30 @@ build_code_line(NumPoints, JoinPid) ->
         ++ Link
         ).
 
+dots_properties() ->
+	"penwidth = 1, style = dotted, color = grey, labelfontsize = 20, labelfontcolor = grey,labelangle=0, labeldistance=0".
 
 divide_list(Pred, [H|T], Prev) ->
 	case Pred(H) of 
 		true -> 
-			{Prev, T};
+			{lists:reverse(Prev), T};
 		false ->
-			divide_list(Pred, T, Prev ++ [H])
+			divide_list(Pred, T, [H | Prev])
 	end;
 divide_list(Pred, [], Prev) ->
-	{Prev,[]}.
+	{lists:reverse(Prev),[]}.
 
 acc_search_in_list(Pred, [H|T]) ->
 	case Pred(H) of 
 		true -> 
-			{[H],true};
+			{[H], T, true};
 		false ->
-			{List ,Found} = acc_search_in_list(Pred, T),
-			{[H|List] ,Found}
+			{List, Rest, Found} = 
+				acc_search_in_list(Pred, T),
+			{[H|List], Rest, Found}
 	end;
 acc_search_in_list(Pred, []) ->
-	{[],false}.
+	{[], [], false}.
 
 distribute_edge([Pid]) ->
 	quote_enclosing(Pid) ++ "-> code [style=invis];\n";
@@ -980,7 +985,7 @@ build_transitive_edge(From, From, CommonEdgeProperties, LastEdgeProperties, Pids
 		++ 	" -> " 
 		++ 	quote_enclosing(str_term(From) ++ integer_to_list(CurrentStep)) 
 		++  " [" ++ LastEdgeProperties ++ "];",
-	[LoopEdge | OtherSteps];
+	[LoopEdge | OtherSteps] ++ build_line_until_to(Pids, CurrentStep, dots_properties(), dots_properties());
 build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep) ->
 	{Before0, After} = 
 		divide_list(fun(Pid) -> str_term(From)  ==  Pid end, Pids, []),
@@ -992,24 +997,49 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 	% io:format("After: ~p\n", [After]),
 	% io:format("str_term(To): ~p\n", [str_term(To)]),
 	% try io:format("str_term(To): ~p\n", [whereis(To)]) catch _:_ -> ok end,
-	{ToInBefore, FoundBefore} = acc_search_in_list(PredTo, Before),
-	{ToInAfter, FoundAfter} = acc_search_in_list(PredTo, After),
-	ListWhereIsTo = 
+	{ToInBefore, ToInBeforeRest, FoundBefore} = 
+		acc_search_in_list(PredTo, Before),
+	{ToInAfter, ToInAfterRest, FoundAfter} = 
+		acc_search_in_list(PredTo, After),
+	{ListWhereIsTo, ListToJoinWithDots} = 
 		case {FoundBefore, FoundAfter} of 
 			{true, _} ->
-				ToInBefore;
+				{
+					ToInBefore, 
+					[
+						lists:reverse([str_term(To) | ToInBeforeRest]), 
+						[str_term(From) | After]
+					]
+				};
 			{_, true} ->
-				ToInAfter;
+				{
+					ToInAfter, 
+					[
+						Before0 ++ [str_term(From)],
+						[str_term(To) | ToInAfterRest]
+					]
+				};
 			{_, _} ->
-				[]
+				{[], [Pids]}
 		end,
+
 	% io:format("ListWhereIsTo: ~p\n",[ListWhereIsTo]),
-	case ListWhereIsTo of 
-		[] ->
-			[];
-		_ ->
-			build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties)
-	end.
+	EdgesComm = 
+		case ListWhereIsTo of 
+			[] ->
+				[];
+			_ ->
+				build_line_until_to([str_term(From) | ListWhereIsTo], CurrentStep, CommonEdgeProperties, LastEdgeProperties)
+		end,
+	EdgesDots = 
+		lists:foldl(
+			fun(JoinWithDots, Acc) ->
+					Acc 
+				++ 	build_line_until_to(JoinWithDots, CurrentStep, dots_properties(), dots_properties())
+			end,
+			[],
+			ListToJoinWithDots),
+	EdgesComm ++ EdgesDots.
 
 communication_lines(
 		{sent, #message_info{from = From , to = To, msg = Msg}}, 
@@ -1032,7 +1062,10 @@ communication_lines(
 		++ 	quote_enclosing(str_term(To) ++ integer_to_list(CurrentStep + 1)) 
 		++  " [label=" ++ quote_enclosing(Label) ++ "];"],
 	%  TODO: Related to previous TODO. Should only be incremented by one.
-	{ReceiveEdge, CurrentStep + 2};
+	DottedLines = 
+			build_line_until_to(Pids, CurrentStep, dots_properties(), dots_properties())
+		++ 	build_line_until_to(Pids, CurrentStep + 1, dots_properties(), dots_properties()),
+	{[ReceiveEdge | DottedLines], CurrentStep + 2};
 communication_lines(
 		{spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
 		Pids, CurrentStep) -> 
@@ -1048,7 +1081,7 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 	Header = 
 		["digraph G {"
 		,"  rankdir=\"LR\";"
-		,"  nodesep = 0.75;"
+		,"  margin = 3.0;"
 		,"  node[shape=\"point\"];"
 		,"  edge[arrowhead=\"none\"]"],
 	LengthReceives = 
@@ -1079,8 +1112,8 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 			fun(Com, CurrentStep) -> communication_lines(Com, PidsStr, CurrentStep) end,
 			1,
 			lists:reverse(Communications)),
-	CommLines = lists:concat(CommLines0),
-
+	CommLines = 
+		lists:concat(CommLines0),
 	Closer = "}",
 	DotContent = 
 		lines(Header ++ PidLines ++ CodeLines ++ [Distribution] ++ CommLines ++ [Closer]),

@@ -1,6 +1,7 @@
 digraph G {
   rankdir="LR";
   //nodesep = 0.75;
+  overlap = compress;
   margin = 2.5;
   node[shape="point"];
   edge[arrowhead="none"]
