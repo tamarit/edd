@@ -27,7 +27,7 @@
 %%%-----------------------------------------------------------------------------
 
 -module(edd).
--export([dd/1,dd/2,dd/3, dd_server/2, cdd/2, cdd/3]).
+-export([dd/1,dd/2,dd/3, dd_server/2, cdd/2, cdd/3, cdd/4]).
 
 
 -record(edd_options, 
@@ -118,7 +118,21 @@ dd(Expr,_) ->
 %%------------------------------------------------------------------------------
 -spec cdd(Expr::string(), TraceTimeout :: integer()) -> ok.	
 cdd(Expr,TraceTimeout) ->
+	cdd(Expr,TraceTimeout, []).
+
+%%------------------------------------------------------------------------------
+%% @doc Starts the declarative debugger 'edd' with an initial expression 'Expr'
+%%      whose evaluation yields an incorrect value. This function allow to debug
+%%		concurrent programs. The second argument is the time (in miliseconds) to
+%%		trace the program.
+%% @end
+%%------------------------------------------------------------------------------
+-spec cdd(Expr::string(), TraceTimeout :: integer(), info | list()) -> ok.	
+cdd(Expr,TraceTimeout, info) ->
+	cdd(Expr,TraceTimeout, info, []);
+cdd(Expr,TraceTimeout, InstModules) when is_list(InstModules) ->
 	put(print_session_info, false),
+	put(modules_to_instrument, InstModules),
 	edd_con:cdd(Expr,TraceTimeout).
 
 %%------------------------------------------------------------------------------
@@ -128,11 +142,11 @@ cdd(Expr,TraceTimeout) ->
 %%		trace the program.
 %% @end
 %%------------------------------------------------------------------------------
--spec cdd(Expr::string(), TraceTimeout :: integer(), info) -> ok.	
-cdd(Expr,TraceTimeout, info) ->
+-spec cdd(Expr::string(), TraceTimeout :: integer(), info, InstModules :: list()) -> ok.	
+cdd(Expr,TraceTimeout, info, InstModules) ->
 	put(print_session_info, true),
+	put(modules_to_instrument, InstModules),
 	edd_con:cdd(Expr,TraceTimeout).
-
 
 %%------------------------------------------------------------------------------
 %% @doc Starts the declarative debugger 'edd' server.

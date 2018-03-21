@@ -130,7 +130,13 @@ cdd_internal_core(Expr, Timeout, FunCore, Dir) ->
     compile:file(atom_to_list(ModName)++".erl"),
     % {{first_pid,FirstPid},{traces,Traces0}} = 
     Self = self(),
-    spawn(fun() -> edd_trace:trace(Expr,Timeout, Self, Dir) end),
+    InstMod = 
+    	get(modules_to_instrument),
+    spawn(
+    	fun() -> 
+    		put(modules_to_instrument, InstMod), 
+    		edd_trace:trace(Expr,Timeout, Self, Dir) 
+    	end),
     receive 
         {Trace, DictFun, PidCall} ->
             ok

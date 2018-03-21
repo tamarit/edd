@@ -29,7 +29,9 @@
 % TODO: Treat correctly errors to be considered as a value
 
 
-parse_transform(Forms, _) ->
+parse_transform(Forms, Opts) ->
+	% io:format("Opts: ~p\n", [Opts]),
+	put(modules_to_instrument, hd([InsMod0 || {inst_mod, InsMod0} <- Opts])),
 	% io:format("Trans: ~p\n", [hd(Forms)]),
 	put(free, 0),
 	ModFileName = 
@@ -326,13 +328,7 @@ inst_call_loading(T, ModName) ->
 							erl_syntax:atom(lists), 
 							erl_syntax:atom(member), 
 							[ModName,
-							erl_syntax:list([
-								erl_syntax:atom(gen_server),
-								erl_syntax:atom(gen_fsm),
-								erl_syntax:atom(supervisor),
-								erl_syntax:atom(proc_lib),
-								erl_syntax:atom(gen)
-								])]),
+							 lists_with_modules_to_instument()]),
 						[
 							erl_syntax:clause(
 								[erl_syntax:atom(true)] ,
@@ -750,6 +746,13 @@ get_ann_info(Tag, T) ->
 		[H|_] ->
 			H 
 	end.
+
+lists_with_modules_to_instument() ->	
+	erl_syntax:list(
+		[erl_syntax:atom(M) 
+		|| 
+		M <- get(modules_to_instrument), is_atom(M)]).
+
 	% hd(
 	% 	[Info 
 	% 	|| {Tag_, Info} <- erl_syntax:get_ann(T), 
