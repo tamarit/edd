@@ -242,7 +242,12 @@ buggy_node_str(G, NotCorrectVertex, Message) ->
 		end.
 
 print_buggy_node(G, NotCorrectVertex, Message) ->
-	io:format("\nBuggy node: ~p\n", [NotCorrectVertex]),
+	case get(print_session_info) of 
+		true ->
+			io:format("\nBuggy node: ~p\n", [NotCorrectVertex]);
+		false ->
+			ok
+	end,
 	io:format("~s", [buggy_node_str(G, NotCorrectVertex, Message)]).
 
 get_answer(Message,Answers) ->
@@ -318,6 +323,7 @@ print_help() ->
 				, "#. - Indicates that the corresponding option is wrong"
 				, "t. - Means \"trust\". Select this when the process or function is reliable"
 				, "d. - Means \"don't know\". Select this when you are not sure what is the answer"
+				, "i. - Means \"inadmissible\". Select this when the computation should not take place because it does not satisfy the preconditions (for example because it contains invalid arguments)"
 				, "c. - Chooses the question related with a selected event from the sequence diagram"
 				, "s. - Changes the search strategy"
 				, "p. - Changes the search priority"
@@ -341,6 +347,8 @@ initial_state({PidsInfo, Comm, {G, DictQuestions}, DictTrace}, Strategy, Priorit
 	NDictTrace = 
 			replicate_receives(lists:sort(dict:to_list(DictTrace)), Comm, []) 
 		++ 	[ {{last_node, Pid}, []} || Pid <- lists:sort(Pids)],
+	% io:format("NDictTrace: ~p\n", [NDictTrace]),
+	% io:format("NDictTrace (length): ~p\n", [length(NDictTrace)]),
 	#edd_con_state{
 		graph = G,
 		dict_questions = DictQuestions,
@@ -371,6 +379,7 @@ obtain_node_seq_diagram(Code, DictsTrace, Comm, G) ->
 					end,
 					{1,[]},
 					EventBoolList),
+		% io:format("PosList: ~p\n", [PosList]),
 		io:format("Selected event:\n"),
 		Node = 
 			case PosList of 
@@ -386,9 +395,15 @@ obtain_node_seq_diagram(Code, DictsTrace, Comm, G) ->
 					% TODO. Maybe it should be choosen whether it should go to the inner- or outer-most.
 					hd(Ns);
 				[] ->
-					{last_node, PidLN} = E,
-					io:format("The last event occured in ~p", [PidLN]),
-					lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(G, V) == PidLN])) 
+					case E of 
+						{last_node, PidLN} ->
+							io:format("The last event occured in ~p", [PidLN]),
+							lists:last(lists:sort([V || V <- digraph:vertices(G), get_pid_vertex(G, V) == PidLN]));
+						_ ->
+							io:format("Unfortunately, the selected event has not a linked question.\n"),
+							io:get_line("Press intro to continue..."),
+							none
+					end 
 			end,
 		Node.
 
@@ -423,8 +438,12 @@ ask(Info, Strategy, Priority) ->
 				Code = get_answer(
 					"Select an event from the sequence diagram: ",
 					lists:seq(1,length(DictTraces))),
-				Node = obtain_node_seq_diagram(Code, DictTraces, Comm, G),
-				State0#edd_con_state{preselected = Node};
+				case obtain_node_seq_diagram(Code, DictTraces, Comm, G) of 
+					none ->
+						State0;
+					Node ->
+						State0#edd_con_state{preselected = Node}
+				end;
 			false -> 
 				State0
 		end,
@@ -733,8 +752,12 @@ asking_loop(State0 = #edd_con_state{
 			        {goto, Node} ->
 						NewStateFromNode(State, Node);
 					{from_seq_diag, Code} ->
-						Node = obtain_node_seq_diagram(Code, DictsTrace, Comm, G),
-						NewStateFromNode(State, Node);
+						case obtain_node_seq_diagram(Code, DictsTrace, Comm, G) of 
+							none ->
+								State;
+							Node ->
+								NewStateFromNode(State, Node)
+						end;
 					help -> 
 						print_help(),
 						State#edd_con_state{
@@ -762,7 +785,12 @@ ask_question(Selected, #question{text = QuestionStr, answers = Answers}, OptsDia
 		lists:mapfoldl(
 			fun({Id, #answer{text = AnswerStr, complexity = Comp}}, Acc) ->
 				{
-					format("~p. - ~s \n(Complexity: ~p)", [Id, AnswerStr, Comp]),
+					case get(print_session_info) of 
+						true ->
+							format("~p. - ~s \n(Complexity: ~p)", [Id, AnswerStr, Comp]);
+						false ->
+							format("~p. - ~s", [Id, AnswerStr])
+					end,
 					Acc + Comp
 				}
 			end,
@@ -776,9 +804,14 @@ ask_question(Selected, #question{text = QuestionStr, answers = Answers}, OptsDia
 	OptionsStr = 
 		string:join(Options, "/"),
 	QuestionCompStr = 
-		format(
-			"\n\n<Question complexity: ~p> <Node selected: ~p>\n", 
-			[QuestionComp, Selected]),
+		case get(print_session_info) of
+			true ->
+				format(
+					"\n\n<Question complexity: ~p>\n<Node selected: ~p>\n", 
+					[QuestionComp, Selected]);
+			false ->
+				""
+		end,
 	Prompt = 
 		space()
 		++ QuestionStr 
@@ -787,7 +820,7 @@ ask_question(Selected, #question{text = QuestionStr, answers = Answers}, OptsDia
 		++ QuestionCompStr
 		++ "\n[" 
 		++ OptionsStr
-		++ "/t/d/c/s/p/r/u/h/a]: ",
+		++ "/t/d/i/c/s/p/r/u/h/a]: ",
 	[_|Answer0] = lists:reverse(io:get_line(Prompt)),
 	Answer = lists:reverse(Answer0),
 	get_behavior(Answer, DictAnswers, OptsDiagramSeq, FunAsk).
@@ -797,6 +830,8 @@ get_behavior("t", _, _, _) ->
 	trust;
 get_behavior("d", _, _, _) ->
 	dont_know;
+get_behavior("i", _, _, _) ->
+	correct;
 get_behavior("s", _, _, _) ->
 	change_strategy;
 get_behavior("p", _, _, _) ->

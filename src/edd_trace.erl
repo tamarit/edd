@@ -142,12 +142,17 @@ receive_loop(Current, Trace, Loaded, FunDict, PidMain, Timeout, Dir, TracingNode
         TraceItem = {edd_trace, _, _, _} ->
             NTraceItem = 
                 case TraceItem of 
-                    {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
-                        % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
-                        {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
-                    {edd_trace, send_sent, Pid,  {PidReceive, Msg, _, PosAndPP}} when is_atom(PidReceive) -> 
-                        % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
-                        {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    % {edd_trace, send_sent, Pid,  {PidReceive, Msg, PosAndPP}} when is_atom(PidReceive) -> 
+                    %     % case PidReceive of 
+                    %     %     undefined ->
+                    %     %         io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]);
+                    %     %     _ ->
+                    %     %         ok
+                    %     % end,
+                    %     {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
+                    % {edd_trace, send_sent, Pid,  {PidReceive, Msg, _, PosAndPP}} when is_atom(PidReceive) -> 
+                    %     % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
+                    %     {edd_trace, send_sent, Pid, {whereis(PidReceive), Msg, PosAndPP}};
                     {edd_trace, send_sent, Pid,  {PidReceive, Msg, _, PosAndPP}}  -> 
                         % io:format("SEND TRACED: ~p\n", [{ Pid,  {PidReceive, Msg, PosAndPP}}]),
                         {edd_trace, send_sent, Pid, {PidReceive, Msg, PosAndPP}};

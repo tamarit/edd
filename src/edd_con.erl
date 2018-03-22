@@ -320,10 +320,10 @@ build_graph(Trace, DictFuns, PidInit) ->
 
 	dot_graph_file_int(PidsTree, "pids_tree", fun dot_vertex_pids_tree/1, false),
 
-	
-	communication_sequence_diagram(
-		FinalState#evaltree_state.pids_info,
-		FinalState#evaltree_state.communication),
+	PrintedComm = 
+		communication_sequence_diagram(
+			FinalState#evaltree_state.pids_info,
+			FinalState#evaltree_state.communication),
 
 
 	TimeStartEvalTree = os:timestamp(),
@@ -352,7 +352,7 @@ build_graph(Trace, DictFuns, PidInit) ->
 	put(eval_tree_time, TimeTotalEvalTree),
     dot_graph_file_int(G, "eval_tree", fun(V) -> dot_vertex_eval_tree(V, DictQuestions) end, true),
     % edd_graph!del_disconected_vertices,
-    {lists:reverse(FinalState#evaltree_state.pids_info), FinalState#evaltree_state.communication, {G, DictQuestions}, DictTrace}.
+    {lists:reverse(FinalState#evaltree_state.pids_info), PrintedComm, {G, DictQuestions}, DictTrace}.
 
 
 build_graph_trace(
@@ -501,6 +501,12 @@ build_graph_trace_send(
 		{TraceId, {edd_trace, send_sent, Pid, {PidReceive, Msg, _PosAndPP}}}, 
 		State = #evaltree_state{pids_info = PidsInfo, communication = Communication}) ->
 	% io:format("BGT: ~p\n", [{Pid, PidReceive, Msg, TraceId}]),
+	% case PidReceive of
+	% 	undefined -> 
+	% 		io:format("UNDEFINED: ~p\n", [{PidReceive, Msg, _PosAndPP}]);
+	% 	_ ->
+	% 		ok
+	% end,
 	MessageRecord = 
 		#message_info{from = Pid, to = PidReceive, msg = Msg, trace = TraceId},
 	% Add to the communication history
@@ -1020,7 +1026,9 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 					]
 				};
 			{_, _} ->
-				{[], [Pids]}
+				% io:format("~s -> ~s", [str_term(From), str_term(To)]),
+				% {[], [Pids]}
+				{[], []}
 		end,
 
 	% io:format("ListWhereIsTo: ~p\n",[ListWhereIsTo]),
@@ -1042,16 +1050,23 @@ build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, 
 	EdgesComm ++ EdgesDots.
 
 communication_lines(
-		{sent, #message_info{from = From , to = To, msg = Msg}}, 
-		Pids, CurrentStep) -> 
+		Event = {sent, #message_info{from = From , to = To, msg = Msg}}, 
+		Pids, CurrentStep, CurrentPrintedComm) -> 
 	LastEdgeProperties = 
 		"label=" ++ quote_enclosing(str_term(Msg)) ++ ", arrowhead=\"normal\"",
 	CommonEdgeProperties = 
 		"",
-	{build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1};
+	Edges = 
+		build_transitive_edge(From, To, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep),
+	case Edges of 
+		[] ->
+			{[], {CurrentStep, CurrentPrintedComm}};
+		_ -> 
+			{Edges, {CurrentStep + 1, [Event | CurrentPrintedComm]}}
+	end;
 communication_lines(
-		{received, #message_info{from = From , to = To, msg = Msg}}, 
-		Pids, CurrentStep) -> 
+		Event = {received, #message_info{from = From , to = To, msg = Msg}}, 
+		Pids, CurrentStep, CurrentPrintedComm) -> 
 	Label = 
 		edd_con_lib:format("~p (from ~p)", [Msg, From]), 
 	%  TODO: Should be  the same CurrentStep for both. 
@@ -1065,15 +1080,22 @@ communication_lines(
 	DottedLines = 
 			build_line_until_to(Pids, CurrentStep, dots_properties(), dots_properties())
 		++ 	build_line_until_to(Pids, CurrentStep + 1, dots_properties(), dots_properties()),
-	{[ReceiveEdge | DottedLines], CurrentStep + 2};
+	{[ReceiveEdge | DottedLines], {CurrentStep + 2, [Event | CurrentPrintedComm]}};
 communication_lines(
-		{spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
-		Pids, CurrentStep) -> 
+		Event = {spawned, #spawn_info{spawner = Spawner, spawned = Spawned}}, 
+		Pids, CurrentStep, CurrentPrintedComm) -> 
 	LastEdgeProperties = 
 		"label=" ++ "\"\"" ++ ", penwidth = 3, color = red, arrowhead=\"normal\"",
 	CommonEdgeProperties = 
 		"label=" ++ "\"\"" ++ ", penwidth = 3, color = red",
-	{build_transitive_edge(Spawner, Spawned, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep), CurrentStep + 1}.
+	Edges = 
+		build_transitive_edge(Spawner, Spawned, CommonEdgeProperties, LastEdgeProperties, Pids, CurrentStep),
+	case Edges of 
+		[] ->
+			{[], {CurrentStep, CurrentPrintedComm}};
+		_ -> 
+			{Edges, {CurrentStep + 1, [Event | CurrentPrintedComm]}}
+	end.
 
 communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) > 1 ->
 	TimeStart = 
@@ -1086,9 +1108,6 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 		,"  edge[arrowhead=\"none\"]"],
 	LengthReceives = 
 		length([0 || {received,_} <- Communications]),
-	NumPoints = 
-		(length(Communications) - LengthReceives)
-		+ (2 * LengthReceives),
 	{PidsStr, PidsCall} = 
 		lists:unzip(
             % lists:sort(
@@ -1100,20 +1119,32 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
                 ]
             % )
         ),
+	{CommLines0,{FinalStep, PrintedComm0}} = 
+		lists:mapfoldl(
+			fun(Com, {CurrentStep, CPrintedComm}) -> 
+				communication_lines(Com, PidsStr, CurrentStep, CPrintedComm) 
+			end,
+			{1, []},
+			lists:reverse(Communications)),
+	PrintedComm =
+		lists:reverse(PrintedComm0),
+		% PrintedComm0,
+	CommLines = 
+		lists:concat(CommLines0),
+	NumPoints = 
+		% (length(Communications) - LengthReceives)
+		% + (2 * LengthReceives),
+		% length(CommLines),
+		FinalStep - 1,
 	PidLines = 
 		lists:map(
-			fun({Code, Pid, Call}) -> build_pid_line(Pid, Call, Code, NumPoints) end,
+			fun({Code, Pid, Call}) -> 
+				build_pid_line(Pid, Call, Code, NumPoints) 
+			end,
 			lists:zip3(lists:seq(NumPoints + 1, NumPoints + length(PidsStr)), PidsStr, PidsCall) ),
     CodeLines = [build_code_line(NumPoints, lists:last(PidsStr))],
 	Distribution = distribute_edge(PidsStr), 
 	% io:format("lists:reverse(Communications):\n~p\n", [lists:reverse(Communications)]),
-	{CommLines0,_} = 
-		lists:mapfoldl(
-			fun(Com, CurrentStep) -> communication_lines(Com, PidsStr, CurrentStep) end,
-			1,
-			lists:reverse(Communications)),
-	CommLines = 
-		lists:concat(CommLines0),
 	Closer = "}",
 	DotContent = 
 		lines(Header ++ PidLines ++ CodeLines ++ [Distribution] ++ CommLines ++ [Closer]),
@@ -1129,9 +1160,10 @@ communication_sequence_diagram(PidsInfo, Communications) when length(PidsInfo) >
 	put(seq_diag_events_lasts, NumPoints + length(PidsStr)),
 	Name = "comm_seq_diag",
 	file:write_file(Name ++ ".dot", list_to_binary(DotContent)),
-	os:cmd("dot -Tpdf "++ Name ++ ".dot > " ++ Name ++ ".pdf");
-communication_sequence_diagram(_, _) ->
-	ok. 
+	os:cmd("dot -Tpdf "++ Name ++ ".dot > " ++ Name ++ ".pdf"),
+	PrintedComm;
+communication_sequence_diagram(_, Communications) ->
+	Communications. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1382,7 +1414,7 @@ build_question(
          	edd_con_lib:question_list("created processes",Spawned), 
          	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
          	complexity_term(Spawned)),
-         build_answer("Inadmissible", correct),
+         % build_answer("Inadmissible", correct),
          build_answer("Nothing", correct)
         ],
     % Question ++ "\n" ++ edd_con_lib:any2str(Answers);
@@ -1459,7 +1491,7 @@ build_question(
          	edd_con_lib:question_list("created processes",Spawned), 
          	behavior_question(Spawned, DictNodes, Node, incorrect, correct),
          	complexity_term(Spawned)),
-         build_answer("Inadmissible", correct),
+         % build_answer("Inadmissible", correct),
          build_answer("Nothing", correct)
         ],
     NDictTraces  = 

@@ -448,10 +448,34 @@ inst_send(T, SendArgs) ->
 	{VarArgs, StoreArgs} = 
 		args_assign("EDDSendArg", SendArgs),
 
+	VarArgsToSend = 
+		[
+			erl_syntax:case_expr(
+				erl_syntax:application(
+					erl_syntax:atom(erlang),
+					erl_syntax:atom(is_atom),
+					[hd(VarArgs)]),
+				[
+					erl_syntax:clause(
+						[erl_syntax:atom(true)],
+						[],
+						[erl_syntax:application(
+							erl_syntax:atom(erlang),
+							erl_syntax:atom(whereis),
+							[hd(VarArgs)])]),
+					erl_syntax:clause(
+						[erl_syntax:atom(false)],
+						[],
+						[hd(VarArgs)])
+				])
+			|
+			tl(VarArgs)
+		],
+
 	SendSend = 
 		build_send_trace(
 			send_sent, 
-			VarArgs ++ pos_and_pp(T)), 	
+			VarArgsToSend ++ pos_and_pp(T)), 	
 
 	NT = 
 		build_send_par(
