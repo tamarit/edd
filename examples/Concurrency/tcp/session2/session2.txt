@@ -1,0 +1,199 @@
+> edd:cdd("tcp:main()", 4000).                                                                                       
+Instrumenting..."tcp.erl"
+
+Execution result: error_ack
+
+**********************************
+PROCESS <12327.77.0>
+First call tcp:ack(<12327.72.0>, 50, 201, 502, <12327.76.0>)
+Result {data,error_ack} 
+Sent messages:
+        {data,error_ack} (from <12327.77.0> to <12327.72.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <12327.76.0>
+First call tcp:client_fun(<12327.74.0>, 50, 200, client2)
+Result {502,201,50,client2}
+Sent messages:
+        {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+        {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+        {<12327.76.0>,{syn,50,200}} (from <12327.76.0> to <12327.74.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <12327.75.0>
+First call tcp:client_fun(<12327.74.0>, 57, 100, client1)
+Result {port_rejected,57}
+Sent messages:
+        {<12327.75.0>,{syn,57,100}} (from <12327.75.0> to <12327.74.0>)
+No spawned processes
+**********************************
+
+**********************************
+PROCESS <12327.74.0>
+First call tcp:server_fun(<12327.72.0>, 50, 500)
+Result Blocked because it is waiting for a message
+Sent messages:
+        {<12327.77.0>,{syn_ack,201,501}} (from <12327.74.0> to <12327.76.0>)
+        rst (from <12327.74.0> to <12327.75.0>)
+Spawned processes:
+        <12327.77.0>
+**********************************
+
+**********************************
+PROCESS <12327.72.0>
+First call tcp:main()
+Result error_ack
+No sent messages
+Spawned processes:
+        <12327.76.0>
+        <12327.75.0>
+        <12327.74.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <12327.77.0>
+        First call: tcp:ack(<12327.72.0>, 50, 201, 502, <12327.76.0>)
+        Result: {data,error_ack}
+2.- <12327.76.0>
+        First call: tcp:client_fun(<12327.74.0>, 50, 200, client2)
+        Result: {502,201,50,client2}
+3.- <12327.75.0>
+        First call: tcp:client_fun(<12327.74.0>, 57, 100, client1)
+        Result: {port_rejected,57}
+4.- <12327.74.0>
+        First call: tcp:server_fun(<12327.72.0>, 50, 500)
+        Result: Blocked because it is waiting for a message
+5.- <12327.72.0>
+        First call: tcp:main()
+        Result: error_ack
+6.- Choose an event
+7.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 6 to select an event): [1..7]: 6
+
+Initial PID not defined.
+
+**********************************
+Select an event from the sequence diagram: 21
+Selected event:
+Sent message: {data,error_ack} (from <12327.77.0> to <12327.72.0>)
+**********************************
+Process <12327.77.0> called tcp:ack(<12327.72.0>, 50, 201, 502, <12327.76.0>).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Client_PID, {ack, Port, Seq, Ack}} ->
+              receive
+                {Client_PID, {data, Port, D}} -> Main_PID ! {data, D};
+                _ -> Main_PID ! {data, error_data}
+              end;
+          _ -> Main_PID ! {data, error_ack}
+        end
+        in tcp.erl:24
+        Context:
+                'Ack' = 201
+                'Client_PID' = <12327.76.0>
+                'Main_PID' = <12327.72.0>
+                'Port' = 50
+                'Seq' = 502
+        Received messages:
+                {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+                {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+        Consumed messages:
+                {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+2. - Evaluated to value: {data,error_ack}
+3. - Sent messages:
+        {data,error_ack} (from <12327.77.0> to <12327.72.0>)
+4. - No created processes
+5. - Nothing
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <12327.77.0> evaluated
+receive
+  {Client_PID, {ack, Port, Seq, Ack}} ->
+      receive
+        {Client_PID, {data, Port, D}} -> Main_PID ! {data, D};
+        _ -> Main_PID ! {data, error_data}
+      end;
+  _ -> Main_PID ! {data, error_ack}
+end
+in tcp.erl:24
+What is wrong?
+1. - Context:
+        'Ack' = 201
+        'Client_PID' = <12327.76.0>
+        'Main_PID' = <12327.72.0>
+        'Port' = 50
+        'Seq' = 502
+2. - Received messages:
+        {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+        {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+3. - Consumed messages:
+        {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+4. - Evaluated to value: {data,error_ack}
+5. - Sent messages:
+        {data,error_ack} (from <12327.77.0> to <12327.72.0>)
+6. - No created processes
+7. - Nothing
+[1/2/3/4/5/6/7/t/d/i/c/s/p/r/u/h/a]: 2
+
+**********************************
+Which one is not expected?
+1. - {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+2. - {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+[1/2/t/d/i/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <12327.76.0> evaluated
+receive
+  rst -> {port_rejected, Port};
+  {Ack_PID, {syn_ack, Ack, Seq}} -> 
+      Ack_PID ! {self(), {Ack, Port, Seq + 1, ack}},
+      Ack_PID ! {self(), {data, Port, Data}},
+      {Seq + 1, Ack, Port, Data}
+end
+in tcp.erl:37
+What is wrong?
+1. - Context:
+        'Ack' = 201
+        'Ack_PID' = <12327.77.0>
+        'Data' = client2
+        'Port' = 50
+        'Seq' = 501
+2. - Received messages:
+        {<12327.77.0>,{syn_ack,201,501}} (from <12327.74.0> to <12327.76.0>)
+3. - Consumed messages:
+        {<12327.77.0>,{syn_ack,201,501}} (from <12327.74.0> to <12327.76.0>)
+4. - Evaluated to value: {502,201,50,client2}
+5. - Sent messages:
+        {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+        {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+6. - No created processes
+7. - Nothing
+[1/2/3/4/5/6/7/t/d/i/c/s/p/r/u/h/a]: 5
+
+**********************************
+Which one is not expected?
+1. - {<12327.76.0>,{201,50,502,ack}} (from <12327.76.0> to <12327.77.0>)
+2. - {<12327.76.0>,{data,50,client2}} (from <12327.76.0> to <12327.77.0>)
+[1/2/t/d/i/c/s/p/r/u/h/a]: 1
+
+The error has been detected:
+The problem is in pid <12327.76.0>
+while running receive
+receive
+  rst -> {port_rejected, Port};
+  {Ack_PID, {syn_ack, Ack, Seq}} ->
+      Ack_PID ! {self(), {Ack, Port, Seq + 1, ack}},
+      Ack_PID ! {self(), {data, Port, Data}},
+      {Seq + 1, Ack, Port, Data}
+end
+in tcp.erl:37
+
