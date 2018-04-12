@@ -1,0 +1,181 @@
+******************************************
+*** Debugging session using symptom1() ***
+*** Starting from event #32            ***    
+******************************************
+
+
+$ make load
+erl -run edd_comp load -rsh ssh -sname edd_main -setcookie edd_cookie
+Erlang/OTP 20 [erts-9.3] [source] [64-bit] [smp:2:2] [ds:2:2:10] [async-threads:10] [hipe] [kernel-poll:false]
+
+Eshell V9.3  (abort with ^G)
+> cd("PATH_TO_POOLBOY").
+PATH_TO_POOLBOY
+ok
+> edd:cdd("main:symptom1()", 7000, [gen_fsm, gen, proc_lib, supervisor, gen_server]).
+Instrumenting..."main.erl"
+Instrumenting..."poolboy.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen_fsm.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/proc_lib.erl"
+Instrumenting..."poolboy_sup.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/supervisor.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen_server.erl"
+Instrumenting..."poolboy_test_worker.erl"
+<12295.102.0> 
+timeout 
+full 
+
+Execution result: ok
+
+**********************************
+PROCESS <12295.102.0>
+First call proc_lib:init_p(<12295.99.0>, [<12295.88.0>,<12295.72.0>], gen, init_it, [gen_server,<12295.99.0>,<12295.99.0>,poolboy_test_worker,[],[]])
+Result Blocked because it is waiting for a message
+Sent messages:
+        {ack,<12295.102.0>,{ok,<12295.102.0>}} (from <12295.102.0> to <12295.99.0>)
+No spawned processes
+********************************** 
+
+**********************************
+PROCESS <12295.99.0>
+First call proc_lib:init_p(<12295.88.0>, [<12295.72.0>], gen, init_it, [gen_server,<12295.88.0>,<12295.88.0>,supervisor,
+ {self,poolboy_sup,{poolboy_test_worker,[]}},
+ []])
+Result none
+Sent messages:
+        {#Ref<12295.1301874958.1179385857.40681>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        {ack,<12295.99.0>,{ok,<12295.99.0>}} (from <12295.99.0> to <12295.88.0>)
+Spawned processes:
+        <12295.102.0>
+**********************************
+
+**********************************
+PROCESS <12295.88.0>
+First call proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []])
+Result none
+Sent messages:
+        {#Ref<12295.1301874958.1179385857.40736>,full} (from <12295.88.0> to <12295.72.0>)
+        {#Ref<12295.1301874958.1179385857.40719>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+        {#Ref<12295.1301874958.1179385857.40674>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+        {'$gen_call',{<12295.88.0>,#Ref<12295.1301874958.1179385857.40681>},
+             {start_child,[]}} (from <12295.88.0> to <12295.99.0>)
+        {ack,<12295.88.0>,{ok,<12295.88.0>}} (from <12295.88.0> to <12295.72.0>)
+Spawned processes:
+        <12295.99.0>
+**********************************
+
+**********************************
+PROCESS <12295.72.0>
+First call main:symptom1()
+Result none
+Sent messages:
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1301874958.1179385857.40736>},
+                   {checkout,false}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_event',{checkin,<12295.102.0>}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1301874958.1179385857.40719>},
+                   {checkout,true}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1301874958.1179385857.40674>},
+                   {checkout,false}} (from <12295.72.0> to <12295.88.0>)
+Spawned processes:
+        <12295.88.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <12295.102.0>
+        First call: proc_lib:init_p(<12295.99.0>, [<12295.88.0>,<12295.72.0>], gen, init_it, [gen_server,<12295.99.0>,<12295.99.0>,poolboy_test_worker,[],[]])
+        Result: Blocked because it is waiting for a message
+2.- <12295.99.0>
+        First call: proc_lib:init_p(<12295.88.0>, [<12295.72.0>], gen, init_it, [gen_server,<12295.88.0>,<12295.88.0>,supervisor,
+ {self,poolboy_sup,{poolboy_test_worker,[]}},
+ []])
+        Result: none
+3.- <12295.88.0>
+        First call: proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []])
+        Result: none
+4.- <12295.72.0>
+        First call: main:symptom1()
+        Result: none
+5.- Choose an event
+6.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 5 to select an event): [1..6]: 5
+
+Initial PID not defined.
+
+**********************************
+Select an event from the sequence diagram: 32
+Selected event:
+Sent message: {#Ref<12295.1301874958.1179385857.40719>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+**********************************
+Process <12295.88.0> called poolboy:full({checkin,<12295.102.0>}, {state,{[],[]},
+       <12295.99.0>, 
+       {[{<12295.72.0>,#Ref<12295.1301874958.1179385857.40719>}],[]},
+       [{<12295.102.0>,#Ref<12295.1301874958.1179385857.40711>}],
+       0,1,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>}).
+What is wrong?
+1. - Evaluated to value: {next_state,full,
+            {state,{[],[]},
+                   <12295.99.0>,
+                   {[],[]},
+                   [{<12295.102.0>,#Ref<12295.1301874958.1179385857.40737>}],
+                   0,1,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>}}
+2. - Sent messages:
+        {#Ref<12295.1301874958.1179385857.40719>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+3. - No created processes
+4. - Nothing
+[1/2/3/4/t/d/i/c/s/p/r/u/h/a]: 1
+
+**********************************
+Process <12295.88.0> called gen_fsm:from({'$gen_event',{checkin,<12295.102.0>}}).
+What is wrong?
+1. - Evaluated to value: undefined
+2. - No sent messages
+3. - No created processes
+4. - Nothing
+[1/2/3/4/t/d/i/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <12295.88.0> called gen_fsm:reply({<12295.72.0>,#Ref<12295.1301874958.1179385857.40719>}, <12295.102.0>).
+What is wrong?
+1. - Evaluated to value: {#Ref<12295.1301874958.1179385857.40719>,<12295.102.0>}
+2. - Sent messages:
+        {#Ref<12295.1301874958.1179385857.40719>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+3. - No created processes
+4. - Nothing
+[1/2/3/4/t/d/i/c/s/p/r/u/h/a]: 4
+
+The error has been detected:
+The problem is in pid <12295.88.0>
+while running call poolboy:full({checkin,<12295.102.0>}, {state,{[],[]},
+       <12295.99.0>,
+       {[{<12295.72.0>,#Ref<12295.1301874958.1179385857.40719>}],[]},
+       [{<12295.102.0>,#Ref<12295.1301874958.1179385857.40711>}],
+       0,1,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>})
+
+
+
+
+SUMMARY:
+        "Answered questions" : 3,
+        "Questions' complexity" : 39,
+        "Initial PID selection Complexity" : 104,
+        "Evaluation tree time (microseconds)" : 231246,
+        "Evaluation tree memory (bytes)" : 571495,
+        "Evaluation tree nodes" : 402,
+        "Sequence diagram time (microseconds)" : 3833,
+        "Sequence diagram memory (bytes)" : 29656,
+        "Sequence diagram events" : 37,
+        "Sequence diagram events + Lasts" : 41

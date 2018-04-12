@@ -1,0 +1,507 @@
+******************************************
+*** Debugging session using symptom1() ***
+*** Starting from process #3 (poolboy) ***    
+******************************************
+
+
+$ make load
+erl -run edd_comp load -rsh ssh -sname edd_main -setcookie edd_cookie
+Erlang/OTP 20 [erts-9.3] [source] [64-bit] [smp:2:2] [ds:2:2:10] [async-threads:10] [hipe] [kernel-poll:false]
+
+Eshell V9.3  (abort with ^G)
+> cd("PATH_TO_POOLBOY").
+PATH_TO_POOLBOY
+ok
+> edd:cdd("main:symptom1()", 7000, info, [gen_fsm, gen, proc_lib, supervisor, gen_server]). 
+Instrumenting..."main.erl"
+Instrumenting..."poolboy.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen_fsm.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/proc_lib.erl"
+Instrumenting..."poolboy_sup.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/supervisor.erl"
+Instrumenting..."/usr/lib/erlang/lib/stdlib-3.4.4/src/gen_server.erl"
+Instrumenting..."poolboy_test_worker.erl"
+<12295.102.0> 
+timeout 
+full 
+
+Execution result: ok
+
+**********************************
+PROCESS <12295.102.0>
+First call proc_lib:init_p(<12295.99.0>, [<12295.88.0>,<12295.72.0>], gen, init_it, [gen_server,<12295.99.0>,<12295.99.0>,poolboy_test_worker,[],[]])
+Result Blocked because it is waiting for a message
+Sent messages:
+        {ack,<12295.102.0>,{ok,<12295.102.0>}} (from <12295.102.0> to <12295.99.0>)
+No spawned processes
+********************************** 
+
+**********************************
+PROCESS <12295.99.0>
+First call proc_lib:init_p(<12295.88.0>, [<12295.72.0>], gen, init_it, [gen_server,<12295.88.0>,<12295.88.0>,supervisor,
+ {self,poolboy_sup,{poolboy_test_worker,[]}},
+ []])
+Result none
+Sent messages:
+        {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        {ack,<12295.99.0>,{ok,<12295.99.0>}} (from <12295.99.0> to <12295.88.0>)
+Spawned processes:
+        <12295.102.0>
+**********************************
+
+**********************************
+PROCESS <12295.88.0>
+First call proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []])
+Result none
+Sent messages:
+        {#Ref<12295.1841697518.2754084866.88767>,full} (from <12295.88.0> to <12295.72.0>)
+        {#Ref<12295.1841697518.2754084865.89330>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+        {#Ref<12295.1841697518.2754084865.89285>,<12295.102.0>} (from <12295.88.0> to <12295.72.0>)
+        {'$gen_call',{<12295.88.0>,#Ref<12295.1841697518.2754084865.89292>},
+             {start_child,[]}} (from <12295.88.0> to <12295.99.0>)
+        {ack,<12295.88.0>,{ok,<12295.88.0>}} (from <12295.88.0> to <12295.72.0>)
+Spawned processes:
+        <12295.99.0>
+**********************************
+
+**********************************
+PROCESS <12295.72.0>
+First call main:symptom1()
+Result none
+Sent messages:
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1841697518.2754084866.88767>},
+                   {checkout,false}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_event',{checkin,<12295.102.0>}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1841697518.2754084865.89330>},
+                   {checkout,true}} (from <12295.72.0> to <12295.88.0>)
+        {'$gen_sync_event',{<12295.72.0>,#Ref<12295.1841697518.2754084865.89285>},
+                   {checkout,false}} (from <12295.72.0> to <12295.88.0>)
+Spawned processes:
+        <12295.88.0>
+**********************************
+
+**********************************
+Pid selection
+**********************************
+1.- <12295.102.0>
+        First call: proc_lib:init_p(<12295.99.0>, [<12295.88.0>,<12295.72.0>], gen, init_it, [gen_server,<12295.99.0>,<12295.99.0>,poolboy_test_worker,[],[]])
+        Result: Blocked because it is waiting for a message
+2.- <12295.99.0>
+        First call: proc_lib:init_p(<12295.88.0>, [<12295.72.0>], gen, init_it, [gen_server,<12295.88.0>,<12295.88.0>,supervisor,
+ {self,poolboy_sup,{poolboy_test_worker,[]}},
+ []])
+        Result: none
+3.- <12295.88.0>
+        First call: proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []])
+        Result: none
+4.- <12295.72.0>
+        First call: main:symptom1()
+        Result: none
+5.- Choose an event
+6.- None
+
+Please, insert a PID where you have observed a wrong behavior (or 5 to select an event): [1..6]: 3
+
+Selected initial PID: <12295.88.0>
+        First call: proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []])
+        Result: none
+
+**********************************
+
+**********************************
+Process <12295.88.0> called proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []]).
+What is wrong?
+1. - Reached receive:
+        receive
+          {ack, Pid, Return} -> Return;
+          {'EXIT', Pid, Reason} -> {error, Reason}
+          after Timeout ->
+                    unlink(Pid),
+                    exit(Pid, kill),
+                    flush(Pid),
+                    {error, timeout}
+        end
+        in proc_lib.erl:348
+        Context:
+                'Pid' = <12295.99.0>
+                'Timeout' = infinity 
+(Complexity: 18)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 21>
+<Node selected: 190>
+
+[1/2/3/4/t/d/i/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <12295.88.0> called proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []]).
+What is wrong?
+1. - Reached receive:
+        receive
+          Msg ->
+              decode_msg(Msg, Parent, Name, StateName, StateData, Mod,
+                         infinity, HibernateAfterTimeout, Debug, false)
+          after HibernateAfterTimeout ->
+                    loop(Parent, Name, StateName, StateData, Mod, hibernate,
+                         HibernateAfterTimeout, Debug)
+        end
+        in gen_fsm.erl:382
+        Context:
+                'Debug' = []
+                'HibernateAfterTimeout' = infinity
+                'Mod' = poolboy
+                'Name' = <12295.88.0>
+                'Parent' = <12295.72.0>
+                'StateData' = {state,{[],[]},
+                             <12295.99.0>,
+                             {[],[]},
+                             [{<12295.102.0>,#Ref<12295.1841697518.2754084866.88770>}],
+                             0,1,1,#Fun<poolboy.0.125717824>,
+                             #Fun<poolboy.1.125717824>}
+                'StateName' = full 
+(Complexity: 37)
+2. - No sent messages 
+(Complexity: 1)
+3. - No created processes 
+(Complexity: 1)
+4. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 40>
+<Node selected: 321>
+
+[1/2/3/4/t/d/i/c/s/p/r/u/h/a]: 4
+
+**********************************
+Process <12295.88.0> called proc_lib:init_p(<12295.72.0>, [], gen, init_it, [gen_fsm,<12295.72.0>,<12295.72.0>,poolboy,
+ [{size,0},
+  {max_overflow,1},
+  {name,undefined},
+  {worker_module,poolboy_test_worker}],
+ []]).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Reached receive:
+        receive
+          Msg ->
+              decode_msg(Msg, Parent, Name, StateName, StateData, Mod,
+                         infinity, HibernateAfterTimeout, Debug, false)
+          after HibernateAfterTimeout ->
+                    loop(Parent, Name, StateName, StateData, Mod, hibernate,
+                         HibernateAfterTimeout, Debug)
+        end
+        in gen_fsm.erl:382
+        Context:
+                'Debug' = []
+                'HibernateAfterTimeout' = infinity
+                'Mod' = poolboy
+                'Name' = <12295.88.0>
+                'Parent' = <12295.72.0>
+                'StateData' = {state,{[],[]},
+                             <12295.99.0>,
+                             {[],[]},
+                             [{<12295.102.0>,#Ref<12295.1841697518.2754084865.89322>}],
+                             0,1,1,#Fun<poolboy.0.125717824>,
+                             #Fun<poolboy.1.125717824>}
+                'StateName' = overflow 
+(Complexity: 37)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 94>
+<Node selected: 256>
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <12295.88.0> called poolboy:ready({checkout,false}, {<12295.72.0>,#Ref<12295.1841697518.2754084865.89285>}, {state,{[],[]},
+       <12295.99.0>,
+       {[],[]},
+       [],0,0,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>}). 
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Evaluated to value: {reply,<12295.102.0>,overflow,
+       {state,{[],[]},
+              <12295.99.0>,
+              {[],[]},
+              [{<12295.102.0>,#Ref<12295.1841697518.2754084865.89322>}],
+              0,1,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>}} 
+(Complexity: 23)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 80>
+<Node selected: 244>
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: 2
+
+**********************************
+Process <12295.88.0> called gen:call(<12295.99.0>, '$gen_call', {start_child,[]}, infinity).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Evaluated to value: {ok,{ok,<12295.102.0>}} 
+(Complexity: 6)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 63>
+<Node selected: 238> 
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: t
+Do you trust the process, the function, both or none?
+[p/f/b/n]: f
+
+**********************************
+Process <12295.88.0> called supervisor:start_child(<12295.99.0>, []).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Evaluated to value: {ok,<12295.102.0>} 
+(Complexity: 4)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 61>
+<Node selected: 241>
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: t
+Do you trust the process, the function, both or none?
+[p/f/b/n]: f
+
+**********************************
+Process <12295.88.0> called poolboy:new_worker(<12295.99.0>, #Fun<poolboy.0.125717824>).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Evaluated to value: <12295.102.0> 
+(Complexity: 2)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 59>
+<Node selected: 242>
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: 5
+
+**********************************
+Process <12295.88.0> called poolboy:new_worker(<12295.99.0>, <12295.72.0>, #Fun<poolboy.0.125717824>).
+What is wrong?
+1. - Previous evaluated receive:
+        receive
+          {Mref, Reply} ->
+              erlang:demonitor(Mref, [flush]), {ok, Reply};
+          {'DOWN', Mref, _, _, noconnection} ->
+              Node = get_node(Process), exit({nodedown, Node});
+          {'DOWN', Mref, _, _, Reason} -> exit(Reason)
+          after Timeout ->
+                    erlang:demonitor(Mref, [flush]), exit(timeout)
+        end
+        in gen.erl:169
+        Context:
+                'Label' = '$gen_call'
+                'Mref' = #Ref<12295.1841697518.2754084865.89292>
+                'Process' = <12295.99.0>
+                'Reply' = {ok,<12295.102.0>}
+                'Request' = {start_child,[]}
+                'Timeout' = infinity
+        Received messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>)
+        Consumed messages:
+                {#Ref<12295.1841697518.2754084865.89292>,{ok,<12295.102.0>}} (from <12295.99.0> to <12295.88.0>) 
+(Complexity: 54)
+2. - Evaluated to value: {<12295.102.0>,#Ref<12295.1841697518.2754084865.89322>} 
+(Complexity: 4)
+3. - No sent messages 
+(Complexity: 1)
+4. - No created processes 
+(Complexity: 1)
+5. - Nothing 
+(Complexity: 1)
+
+<Question complexity: 61>
+<Node selected: 243>
+
+[1/2/3/4/5/t/d/i/c/s/p/r/u/h/a]: 5
+
+Buggy node: 244
+
+The error has been detected:
+The problem is in pid <12295.88.0>
+while running call poolboy:ready({checkout,false}, {<12295.72.0>,#Ref<12295.1841697518.2754084865.89285>}, {state,{[],[]},
+       <12295.99.0>,
+       {[],[]},
+       [],0,0,1,#Fun<poolboy.0.125717824>,#Fun<poolboy.1.125717824>})
+
+
+
+SUMMARY:
+        "Answered questions" : 6,
+        "Questions' complexity" : 349,
+        "Initial PID selection Complexity" : 104,
+        "Evaluation tree time (microseconds)" : 202805,
+        "Evaluation tree memory (bytes)" : 568529,
+        "Evaluation tree nodes" : 402,
+        "Sequence diagram time (microseconds)" : 4101,
+        "Sequence diagram memory (bytes)" : 29648,
+        "Sequence diagram events" : 37,
+        "Sequence diagram events + Lasts" : 41
+
