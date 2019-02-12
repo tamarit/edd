@@ -1,0 +1,224 @@
+module 'mergesort' ['comp'/2,
+		    'mergesort'/1,
+		    'mergesort'/2,
+		    'mergesort'/3,
+		    'module_info'/0,
+		    'module_info'/1]
+    attributes [%% Line 1
+		'file' =
+		    %% Line 1
+		    [{[109|[101|[114|[103|[101|[115|[111|[114|[116|[46|[101|[114|[108]]]]]]]]]]]]],1}]]
+'mergesort'/1 =
+    %% Line 5
+    fun (_0) ->
+	%% Line 6
+	apply 'mergesort'/3
+	    (_0, fun 'mergesort':'comp'/2, 'none')
+'mergesort'/2 =
+    %% Line 8
+    fun (_1,_0) ->
+	%% Line 9
+	apply 'mergesort'/3
+	    (_1, _0, 'none')
+'mergesort'/3 =
+    %% Line 11
+    fun (_2,_1,_0) ->
+	case <_2,_1,_0> of
+	  <[],_X_Comp,Parent> when 'true' ->
+	      apply 'send_return'/2
+		  ([], Parent)
+	  %% Line 12
+	  <_@r0 = [X|[]],_X_Comp,Parent> when 'true' ->
+	      apply 'send_return'/2
+		  (_@r0, Parent)
+	  %% Line 13
+	  <L,Comp,Parent> when 'true' ->
+	      let <_3> =
+		  call %% Line 14
+		       'erlang':%% Line 14
+				'length'
+		      (%% Line 14
+		       L)
+	      in  let <Half> =
+		      call %% Line 14
+			   'erlang':%% Line 14
+				    'div'
+			  (_3, %% Line 14
+			       2)
+		  in  let <L1> =
+			  apply %% Line 15
+				'take'/2
+			      (%% Line 15
+			       Half, %% Line 15
+				     L)
+		      in  let <_6> =
+			      call %% Line 16
+				   'erlang':%% Line 16
+					    'length'
+				  (%% Line 16
+				   L)
+			  in  let <_7> =
+				  call %% Line 16
+				       'erlang':%% Line 16
+						'-'
+				      (_6, %% Line 16
+					   Half)
+			      in  let <L2> =
+				      apply %% Line 16
+					    'last'/2
+					  (_7, %% Line 16
+					       L)
+				  in  let <_9> =
+					  call %% Line 17
+					       'erlang':%% Line 17
+							'self'
+					      ()
+				      in  do  %% Line 17
+					      call 'erlang':'spawn'
+						  ('mergesort', 'mergesort', [L1|[Comp|[_9|[]]]])
+					      let <_10> =
+						  call %% Line 18
+						       'erlang':%% Line 18
+								'self'
+						      ()
+					      in  do  %% Line 18
+						      call 'erlang':'spawn'
+							  ('mergesort', 'mergesort', [L2|[Comp|[_10|[]]]])
+						      let <_11> =
+							  receive
+							    %% Line 21
+							    <{'result',LOrd1_}> when 'true' ->
+								%% Line 22
+								LOrd1_
+							  after 'infinity' ->
+							    'true'
+						      in  let <_13> =
+							      receive
+								%% Line 26
+								<{'result',LOrd2_}> when 'true' ->
+								    %% Line 27
+								    LOrd2_
+							      after 'infinity' ->
+								'true'
+							  in  let <_15> =
+								  apply %% Line 29
+									'merge'/3
+								      (_11, _13, %% Line 29
+										 Comp)
+							      in  %% Line 29
+								  apply 'send_return'/2
+								      (_15, Parent)
+	end
+'send_return'/2 =
+    %% Line 31
+    fun (_1,_0) ->
+	case <_1,_0> of
+	  <Result,'none'> when 'true' ->
+	      %% Line 32
+	      Result
+	  %% Line 33
+	  <Result,Pid> when 'true' ->
+	      %% Line 34
+	      call 'erlang':'!'
+		  (Pid, {'result',Result})
+	end
+'merge'/3 =
+    %% Line 36
+    fun (_2,_1,_0) ->
+	case <_2,_1,_0> of
+	  <[],[],_X_Comp> when 'true' ->
+	      %% Line 37
+	      []
+	  %% Line 38
+	  <[],S2,_X_Comp> when 'true' ->
+	      %% Line 39
+	      S2
+	  %% Line 40
+	  <S1,[],_X_Comp> when 'true' ->
+	      %% Line 41
+	      S1
+	  %% Line 42
+	  <_@r0 = [H1|T1],_@r1 = [H2|T2],Comp> when 'true' ->
+	      %% Line 43
+	      case apply Comp
+		       (H1, H2) of
+		%% Line 44
+		<'false'> when 'true' ->
+		    let <_3> =
+			apply 'merge'/3
+			    (_@r0, T2, Comp)
+		    in  [H2|_3]
+		%% Line 46
+		<'true'> when 'true' ->
+		    let <_4> =
+			apply 'merge'/3
+			    (T1, _@r1, Comp)
+		    in  [H1|_4]
+		( <_5> when 'true' ->
+		      primop 'match_fail'
+			  ({'case_clause',_5})
+		  -| ['compiler_generated'] )
+	      end
+	  ( <_8,_7,_6> when 'true' ->
+		( primop 'match_fail'
+		      ({'function_clause',_8,_7,_6})
+		  -| [{'function_name',{'merge',3}}] )
+	    -| ['compiler_generated'] )
+	end
+'comp'/2 =
+    %% Line 50
+    fun (_1,_0) ->
+	%% Line 51
+	call 'erlang':'<'
+	    (_1, _0)
+'take'/2 =
+    %% Line 54
+    fun (_1,_0) ->
+	case <_1,_0> of
+	  <0,_6> when 'true' ->
+	      []
+	  %% Line 55
+	  <1,[H|_7]> when 'true' ->
+	      [H|[]]
+	  %% Line 56
+	  <_8,[]> when 'true' ->
+	      []
+	  %% Line 58
+	  <N,[_9|T]> when 'true' ->
+	      let <_2> =
+		  call 'erlang':'-'
+		      (N, 1)
+	      in  let <_3> =
+		      apply 'take'/2
+			  (_2, T)
+		  in  [N|_3]
+	  ( <_5,_4> when 'true' ->
+		( primop 'match_fail'
+		      ({'function_clause',_5,_4})
+		  -| [{'function_name',{'take',2}}] )
+	    -| ['compiler_generated'] )
+	end
+'last'/2 =
+    %% Line 60
+    fun (_1,_0) ->
+	let <_2> =
+	    call %% Line 61
+		 'lists':%% Line 61
+			 'reverse'
+		(_0)
+	in  let <_3> =
+		apply %% Line 61
+		      'take'/2
+		    (_1, _2)
+	    in  %% Line 61
+		call 'lists':'reverse'
+		    (_3)
+'module_info'/0 =
+    fun () ->
+	call 'erlang':'get_module_info'
+	    ('mergesort')
+'module_info'/1 =
+    fun (_0) ->
+	call 'erlang':'get_module_info'
+	    ('mergesort', _0)
+end
