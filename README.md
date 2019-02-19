@@ -34,7 +34,7 @@ https://github.com/tamarit/edd/archive/master.zip.
 
 
 Compiling and launching edd
---------------------------_
+---------------------------
 
 The Erlang Declarative Debugger is written in Erlang, so you will need an Erlang
 system installed in you computer. Concretely, it has been tested with **Erlang/OTP 21**.
