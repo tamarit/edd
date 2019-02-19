@@ -211,26 +211,243 @@ or dd/2 which also allows to use a list of options:
 
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", [top_down, tree]).
 
-Additionally there are three options related with eunit tests. Option "not_load_tests"/"not_save_tests" avoids load/save tests from/to the debugged modules. Finally, given the tuple "{test_files, Files :: list()}" edd will automatically load additional eunit tests from the given files.
+
 
 edd for concurrent programs
 ---------------------------
 
 The Erlang Declarative Debugger allows the user to debug concurrent programs in
 a similar way that sequential ones. To debug a function with concurrent features, 
-the user would use 'edd:cdd/2', where the first parameter is a call with a wrong
-behaviour, and the second is the timeout (in miliseconds) for the tracing 
-process needed in this kind of debugging. 
+the user would use 'edd:cdd':
+
+* `edd:cdd/2(Call, Timeout)`.
+
+The first parameter is a call with a wrong
+behavior, and the second is the timeout (in milliseconds) for the tracing 
+process needed in this kind of debugging
+
+* `edd:cdd(Call,Timeout,Strategy,Priority)`. 
+
+The first two parameters are the same as in the previous case. `Stategy` sets the way of exploring the debugging tree, that can be `top_down` or `divide_query`. On the other hand, `Priority` sets how to select the next node to debug in case of ties. It can take values `old` to select the oldest node (the closest to the root), `new` to select the newer node (the furthest from the root), or `indet` to select the next node randomly.
+
+The directory `examples/Concurrency` contains some concurrent examples with bugs to test the debugger. For example, the program `mergesort` can be debugged as follows:
+
+    > edd:cdd("mergesort:mergesort([3,2,1])", 2000). 
+
+    Execution result: [2,2,3]
+
+    **********************************
+    PROCESS <0.795.0>
+    First call mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+    Result {result,[2]}
+    Sent messages:
+            {result,[2]} (from <0.795.0> to <0.793.0>)
+    No spawned processes
+    **********************************
+
+    **********************************
+    PROCESS <0.794.0>
+    First call mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+    Result {result,[2]}
+    Sent messages:
+            {result,[2]} (from <0.794.0> to <0.793.0>)
+    No spawned processes
+    **********************************
+
+    **********************************
+    PROCESS <0.793.0>
+    First call mergesort:mergesort([2,2], #Fun<mergesort.comp.2>, <0.790.0>)
+    Result {result,[2,2]}
+    Sent messages:
+            {result,[2,2]} (from <0.793.0> to <0.790.0>)
+    Spawned processes:
+            <0.795.0>
+            <0.794.0>
+    **********************************
+
+    **********************************
+    PROCESS <0.792.0>
+    First call mergesort:mergesort([3], #Fun<mergesort.comp.2>, <0.790.0>)
+    Result {result,[3]}
+    Sent messages:
+            {result,[3]} (from <0.792.0> to <0.790.0>)
+    No spawned processes
+    **********************************
+
+    **********************************
+    PROCESS <0.790.0>
+    First call mergesort:mergesort([3,2,1])
+    Result [2,2,3]
+    No sent messages
+    Spawned processes:
+            <0.793.0>
+            <0.792.0>
+    **********************************
+
+    **********************************
+    Pid selection
+    **********************************
+    1.- <0.795.0>
+            First call:mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+            Result: {result,[2]}
+    2.- <0.794.0>
+            First call:mergesort:mergesort([2], #Fun<mergesort.comp.2>, <0.793.0>)
+            Result: {result,[2]}
+    3.- <0.793.0>
+            First call:mergesort:mergesort([2,2], #Fun<mergesort.comp.2>, <0.790.0>)
+            Result: {result,[2,2]}
+    4.- <0.792.0>
+            First call:mergesort:mergesort([3], #Fun<mergesort.comp.2>, <0.790.0>)
+            Result: {result,[3]}
+    5.- <0.790.0>
+            First call:mergesort:mergesort([3,2,1])
+            Result: [2,2,3]
+    6.- Choose an event
+    7.- None
+
+The returned value `[2,2,3]` is wrong, and the debugger shows the different processes involved as well as their results, messages sent, and spawns. At this point, before starting the debugging session, edd creates three files in the current directory to ease the debugging process:
+
+* `eval_tree.pdf`: The debugging tree with the different fragments evaluated.
+
+* `comm_seq_diag.pdf`: Sequence diagram showing process creation, message passing, and message consumption. Each event in this diagram has an identifier that can be used to start the debugging session.
+
+* `pids_tree.pdf`: Tree showing the hierarchy of process creation.
+
+To start the debugging session the user can select a process or an event from the sequence diagram. In this case we will select the process number 5 that incorrectly sorts the list `[3,2,1]`.
+
+    Please, insert a PID where you have observed a wrong behavior (or 6 to select an event): [1..7]: 5
+
+    Selected initial PID: <0.790.0>
+            First call:mergesort:mergesort([3,2,1])
+            Result: [2,2,3]
+
+    **********************************
+
+    **********************************
+    Process <0.790.0> called mergesort:mergesort([3,2,1]).
+    What is wrong?
+    1. - Previous evaluated receive:
+            receive {result, LOrd2_} -> LOrd2_ end
+            in mergesort.erl:25
+            Context:
+                    'Comp' = #Fun<mergesort.comp.2>
+                    'Half' = 1
+                    'L' = [3,2,1]
+                    'L1' = [3]
+                    'L2' = [2,2]
+                    'LOrd1' = [3]
+                    'LOrd2_' = [2,2]
+                    'Parent' = none
+            Received messages:
+                    {result,[2,2]} (from <0.793.0> to <0.790.0>)
+            Consumed messages:
+                    {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+    2. - Evaluated to value: [2,2,3] 
+    3. - No sent messages 
+    4. - No created processes 
+    5. - Nothing 
+
+    [1/2/3/4/5/t/d/c/s/p/r/u/h/a]: 1
+
+    **********************************
+    Process <0.790.0> evaluated
+    receive {result, LOrd2_} -> LOrd2_ end
+    in mergesort.erl:25
+    What is wrong?
+    1. - Context:
+            'Comp' = #Fun<mergesort.comp.2>
+            'Half' = 1
+            'L' = [3,2,1]
+            'L1' = [3]
+            'L2' = [2,2]
+            'LOrd1' = [3]
+            'LOrd2_' = [2,2]
+            'Parent' = none 
+    2. - Received messages:
+            {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+    3. - Consumed messages:
+            {result,[2,2]} (from <0.793.0> to <0.790.0>) 
+    4. - Evaluated to value: [2,2] 
+    5. - No sent messages 
+    6. - No created processes 
+    7. - Nothing 
+
+    [1/2/3/4/5/6/7/t/d/c/s/p/r/u/h/a]: 1
+
+    **********************************
+    Process <0.790.0> called mergesort:mergesort([3,2,1], #Fun<mergesort.comp.2>, none).
+    What is wrong?
+    1. - Reached receive:
+            receive {result, LOrd1_} -> LOrd1_ end
+            in mergesort.erl:20
+            Context:
+                    'Comp' = #Fun<mergesort.comp.2>
+                    'Half' = 1
+                    'L' = [3,2,1]
+                    'L1' = [3]
+                    'L2' = [2,2]
+                    'Parent' = none 
+    2. - No sent messages 
+    3. - Created processes:
+            <0.792.0>
+            <0.793.0> 
+    4. - Nothing 
+
+    [1/2/3/4/t/d/c/s/p/r/u/h/a]: 1
+
+    **********************************
+    Process <0.790.0> called mergesort:take(1, [2,3]).
+    What is wrong?
+    1. - Evaluated to value: [2] 
+    2. - No sent messages 
+    3. - No created processes  
+    4. - Nothing 
+
+    [1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+    **********************************
+    Process <0.790.0> called mergesort:take(2, [1,2,3]).
+    What is wrong?
+    1. - Evaluated to value: [2,2] 
+    2. - No sent messages 
+    3. - No created processes 
+    4. - Nothing 
+
+    [1/2/3/4/t/d/c/s/p/r/u/h/a]: 1
+
+    **********************************
+    Process <0.790.0> called mergesort:take(1, [3,2,1]).
+    What is wrong?
+    1. - Evaluated to value: [3] 
+    2. - No sent messages 
+    3. - No created processes 
+    4. - Nothing 
+
+    [1/2/3/4/t/d/c/s/p/r/u/h/a]: 4
+
+    The error has been detected:
+    The problem is in pid <0.790.0>
+    while running call mergesort:take(2, [1,2,3])
+
+After the debugging session, edd detects the function mergesort:take as buggy, concretely in the call `mergesort:take(2, [1,2,3])`.
     
 
 edd and eunit/proper
 --------------------
 
 The Erlang Declarative Debugger can interact with eunit/proper in two ways:
-  * It reads eunit/proper tests from a given files and use this information to automatically answer some questions.
-  * It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
+
+* It reads eunit/proper tests from given files and use this information to automatically answer some questions.
+
+* It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
   
-The default behaviour for edd is to read and store the eunit/proper tests. However, there are some options to disable this functionality.
+The default behavior for edd is to read and store the eunit/proper tests inside debugged modules. There are three options related with these tests:
+
+* "not_load_tests" avoids loading tests from the debugged modules 
+
+* "not_save_tests" avoids saving generated test to the debugged modules
+
+* "{test_files, Files :: list()}" edd will automatically load additional eunit tests from the given files
 
 
 
