@@ -42,6 +42,8 @@ We provide a 'Makefile' to make compilation and launch easy:
 
 1. First, open a terminal and move to the directory of the repository (for example /home/john/edd)
 
+        $ cd /home/john/edd
+
 1. **Compilation**: type *make*
 
         $ make
@@ -166,8 +168,8 @@ In this second step of debugging, the debugger will not ask about function/fun
 applications but about the evaluation of different constructions like guards,
 case/if expressions, bindings, etc.
 
-Options for edd
----------------
+edd options for sequential programs
+-----------------------------------
 
 The Erlang Declarative Debugger has two different strategies to traverse the
 proof tree looking for the buggy node: "Divide & Query" and "Top Down". The
@@ -232,6 +234,11 @@ The first two parameters are the same as in the previous case. `Stategy` sets th
 
 The directory `examples/Concurrency` contains some concurrent examples with bugs to test the debugger. For example, the program `mergesort` can be debugged as follows:
 
+    > cd("examples/Concurrency/mergesort").
+    /home/john/edd/examples/Concurrency/mergesort
+    ok
+    > c(mergesort).
+    {ok,mergesort}
     > edd:cdd("mergesort:mergesort([3,2,1])", 2000). 
 
     Execution result: [2,2,3]
