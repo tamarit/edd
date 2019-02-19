@@ -3,16 +3,17 @@ Erlang Declarative Debugger (edd)
 
 A declarative (algorithmic) debugger for Erlang. This debugger asks the 
 programmers questions about the expected results of some evaluations (function 
-and fun calls, evalulation of case expressions, etc.) and points out the program 
+and fun calls, evaluation of case expressions, etc.) and points out the program 
 fragment that is causing the bug. 
 
 The Erlang Declarative Debugger uses the module 'smerl.erl' for metaprogramming 
 in Erlang. This module has been written by Yariv Sadan for Erlyweb 
-(https://github.com/yariv/erlyweb).
-  
-We have included this file in the repository only to make the installation of
-edd easier, since it does not require a complete Erlyweb installed in the 
-system to run edd but only the smerl.erl file.
+(https://github.com/yariv/erlyweb). It also uses the module 'mochijson.erl' for
+handling JSON. This module has been written by Bob Ippolito for Mochiweb 
+(https://github.com/mochi/mochiweb).
+We have included these files in the repository to make the installation of
+edd easier, since it does not require a complete Erlyweb and Mochiweb installed 
+in the system to run edd. Both modules have MIT license.
 
 Getting edd
 ----------------
@@ -32,51 +33,40 @@ part of the https://github.com/tamarit/edd page, or following the link
 https://github.com/tamarit/edd/archive/master.zip.
 
 
-Compiling edd
--------------
+Compiling and launching edd
+--------------------------_
 
 The Erlang Declarative Debugger is written in Erlang, so you will need an Erlang
-system installed in you computer. There are two ways to compile 'edd': the 
-simplest and the simple.
+system installed in you computer. Concretely, it has been tested with **Erlang/OTP 21**.
+We provide a 'Makefile' to make compilation and launch easy:
 
-1. **The simplest**: Move to the directory of the repository (for example /home/john/edd) and type *make*:	
+1. First, open a terminal and move to the directory of the repository (for example /home/john/edd)
+
+1. **Compilation**: type *make*
 
         $ make
         erlc edd_comp.erl
         erl -run edd_comp compile -noshell -s erlang halt
         
-2. **The simple**: Move to the directory of the repository (for example /home/john/edd) and open an Erlang 
-emulator:
-
-        $ erl
-        Erlang R15B02 (erts-5.9.2) [source] [smp:4:4] [async-threads:0] [hipe] [kernel-poll:false]
+2. **Launch**: type *make load*
         
-        Eshell V5.9.2  (abort with ^G)
-        1> 
-        
-    Write the following commands to compile, load and run the compiler and 
-    installer: 
-    
-        1> c(edd_comp).
-        {ok,edd_comp}
-        2> edd_comp:compile().
-        ok
+        $ make load
+        erl -run edd_comp load -rsh ssh -sname edd_main -setcookie edd_cookie
+        Erlang/OTP 21 [erts-10.2.3] [source] [64-bit] [smp:8:8] [ds:8:8:10] [async-threads:1]
 
-The 'edd_comp:compile()' function simply automates the process. The files 
-src/smerl.erl, src/edd_lib.erl and src/edd.erl will be compiled into the 'ebin' 
-directory, and the edoc documentation will be generated into the folder 'edoc'.
+        Eshell V10.2.3  (abort with ^G)
+        (edd_main@YOUR_MACHINE)1>
+
+After the compilation, the modules will be compiled into the 'ebin' directory, 
+and the edoc documentation will be generated into the folder 'edoc'. The launch process will
+open an interactive Erlang interpreter with the module *edd* loaded.
 
 
-Using edd
----------
+Using edd for debugging sequential Erlang programs
+--------------------------------------------------
 
 To debug an expression that is returning an incorrect value, simply call the
-*edd:dd/1* function with the string of the problematic expression. For that, the
-modules of edd must be loaded. The 'edd_comp:load()' function load all the needed
-modules. One can call it when the shell is initialized using:
-
-        $ erl -run edd_comp load
- 
+*edd:dd/1* function with the string of the problematic expression. 
 The 'edd' directory contains a 'examples' folder with some buggy programs to 
 debug. For example, if you compile and load the 'merge.erl' program you can observe 
 that the mergesort/2 function is buggy:
@@ -172,28 +162,9 @@ erroneous behavior. In the 'merge.erl' example, the session continues as follows
     This is the reason for the error:
     Value [b,a] for the final expression [H1 | merge([H2 | T1], T2, Comp)] (Line 27) is not correct.
     
-In this second step of debuggind, the debugger will not ask about function/fun
+In this second step of debugging, the debugger will not ask about function/fun
 applications but about the evaluation of different constructions like guards,
-case/if expressions, bindings, etc. 
-
-edd for concurrent programs
----------------------------
-
-The Erlang Declarative Debugger allows the user to debug concurrent programs in
-a similar way that sequential ones. To debug a function with concurrent features, 
-the user would use 'edd:cdd/2', where the first parameter is a call with a wrong
-behaviour, and the second is the timeout (in miliseconds) for the tracing 
-process needed in this kind of debugging. 
-    
-
-edd and eunit/proper
---------------------
-
-The Erlang Declarative Debugger can interact with eunit/proper in two ways:
-  * It reads eunit/proper tests from a given files and use this information to automatically answer some questions.
-  * It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
-  
-The default behaviour for edd is to read and store the eunit/proper tests. However, there are some options to disable this functionality.
+case/if expressions, bindings, etc.
 
 Options for edd
 ---------------
@@ -241,6 +212,27 @@ or dd/2 which also allows to use a list of options:
     > edd:dd("merge:mergesort([b,a], fun merge:comp/2)", [top_down, tree]).
 
 Additionally there are three options related with eunit tests. Option "not_load_tests"/"not_save_tests" avoids load/save tests from/to the debugged modules. Finally, given the tuple "{test_files, Files :: list()}" edd will automatically load additional eunit tests from the given files.
+
+edd for concurrent programs
+---------------------------
+
+The Erlang Declarative Debugger allows the user to debug concurrent programs in
+a similar way that sequential ones. To debug a function with concurrent features, 
+the user would use 'edd:cdd/2', where the first parameter is a call with a wrong
+behaviour, and the second is the timeout (in miliseconds) for the tracing 
+process needed in this kind of debugging. 
+    
+
+edd and eunit/proper
+--------------------
+
+The Erlang Declarative Debugger can interact with eunit/proper in two ways:
+  * It reads eunit/proper tests from a given files and use this information to automatically answer some questions.
+  * It generates and stores new eunit tests from the user answers. These new tests are always stored in a function named 'edd_test/0'  
+  
+The default behaviour for edd is to read and store the eunit/proper tests. However, there are some options to disable this functionality.
+
+
 
 
 
