@@ -1,5 +1,6 @@
 -module(mergesort).
--export([mergesort/2, comp/2]).
+%-export([mergesort/2, comp/2, mergesort_property/0, merge_ordered/0]).
+-compile(export_all).
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
@@ -52,24 +53,18 @@ ordered([]) -> true;
 ordered([_]) -> true;
 ordered([A,B|T]) -> A =< B andalso ordered([B|T]).
 
-mergesort_ordered() ->
-  ?FORALL(L, list(atom()), ordered(mergesort(L, fun comp/2))).
+merge_ordered() ->
+  ?FORALL(
+    {L1, L2}, 
+    {orderedlist(atom()), orderedlist(atom())}, 
+    ordered(merge(L1, L2, fun comp/2)) =:= true
+  ).
+  
+merge_property() ->
+  ?FORALL(
+    {L1, L2}, 
+    {orderedlist(atom()), orderedlist(atom())}, 
+    mergesort:merge(L1, L2, fun comp/2) =:= lists:merge(fun comp/2, L1, L2)
+  ).  
 
 
-
-% begin edd test
-
-edd_test() ->
-	?assertNotEqual(mergesort([c, b], fun comp/2), [c, b]),
-	?assertNotEqual(merge([c], [b], fun comp/2), [c, b]),
-	?assertEqual(merge([b], [], fun comp/2), [b]),
-	?assertEqual(comp(c, b), false).
-
-% end edd test
-
-% begin edd trusted
-
-edd_trusted() ->
-	[].
-
-% end edd trusted
