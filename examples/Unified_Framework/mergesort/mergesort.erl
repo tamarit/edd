@@ -1,5 +1,8 @@
--module(merge_prop).
+-module(mergesort).
 -export([mergesort/2, comp/2]).
+
+-include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 % Calls to the declarative debugger:
 % > edd:dd("merge:mergesort([b,a], fun merge:comp/2)").
@@ -42,15 +45,19 @@ last(N, List) ->
 
 
 
+mergesort_property() ->
+  ?FORALL(L, list(atom()), mergesort(L, fun comp/2) =:= lists:sort(fun mergesort:comp/2, L)).
+
+ordered([]) -> true;
+ordered([_]) -> true;
+ordered([A,B|T]) -> A =< B andalso ordered([B|T]).
+
+mergesort_ordered() ->
+  ?FORALL(L, list(atom()), ordered(mergesort(L, fun comp/2))).
+
+
+
 % begin edd test
-
--include_lib("proper/include/proper.hrl").
--include_lib("eunit/include/eunit.hrl").
-
-quicksort_sorted_proper() ->
-   ?FORALL(L, list(integer()), isSorted(fun leq/2, quicksort(fun leq/2, L)) ).
-%quicksort_sorted_proper() ->
-%  ?FORALL(L, list(atom()), lists:sort(fun comp/2, L) =:= mergesort(L, comp/2)).
 
 edd_test() ->
 	?assertNotEqual(mergesort([c, b], fun comp/2), [c, b]),
