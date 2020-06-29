@@ -1,0 +1,37 @@
+> edd:dd("g24:test([9,2,2,3],\"(9*2)+(2*3)\")").
+Your digits     [9,2,2,3]
+Your expression "(9*2)+(2*3)"
+The following numbers are wrong: []
+Total number of tree nodes: 19
+Tree size:
+        3777 words
+        30216 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+g24:eval("+(2*3)", 18) = {24, []}? [y/n/t/v/d/i/s/u/a]: y
+g24:eval("(9*2)+(2*3)", 0) = {24, []}? [y/n/t/v/d/i/s/u/a]: y
+g24:read_eval([9, 2, 2, 3], "(9*2)+(2*3)") = {invalid_chars, []}? [y/n/t/v/d/i/s/u/a]: n
+g24:eval("(9*2)+(2*3)") = 24? [y/n/t/v/d/i/s/u/a]: y
+g24:correct_nums("(9*2)+(2*3)", [9, 2, 2, 3]) = []? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+g24:correct_nums("(9*2)+(2*3)", [9, 2, 2, 3]) = []
+Please, revise the first clause:
+correct_nums(Exp, Digits) ->
+    case re:run(Exp,
+                "([0-9]+)",
+                [global, {capture, all_but_first, list}])
+        of
+        nomatch -> "No number entered";
+        {match, IntLs} ->
+            case [X
+                  || [X] <- IntLs,
+                     not lists:member(list_to_integer(X), Digits)]
+                of
+                [] -> [];
+                L -> L
+            end
+    end.
+PreviousTests: []
+Do you want to continue the debugging session inside this function? [y/n]: n
+ok
+
