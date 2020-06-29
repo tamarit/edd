@@ -1,0 +1,22 @@
+> edd:dd("caesar:test()").
+Plaintext ----> The five boxing wizards jump quickly
+Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
+Total number of tree nodes: 148
+Tree size:
+        21380 words
+        171040 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+fun (Char) -> rot(Char, 23) end(118) = 95
+fun location: (caesar.erl, line 39)? [y/n/t/v/d/i/s/u/a]: n
+caesar:rot(118, 23) = 95? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+caesar:rot(118, 23) = 95
+Please, revise the first clause:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+             (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+

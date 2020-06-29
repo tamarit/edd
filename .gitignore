@@ -1,3 +1,6 @@
+colors.pdf
+*.bak
+examples/Unified_Framework/*/*.dot
 *~
 .DS_Store
 *.beam
