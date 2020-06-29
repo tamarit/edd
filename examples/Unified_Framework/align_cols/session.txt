@@ -1,0 +1,177 @@
+edd:dd("align_columns:align_left()").
+Total number of tree nodes: 32
+Tree size:
+        140032 words
+        1120256 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+align_columns:prepare_line(["justified,",
+                            "right",
+                            "justified,",
+                            "or",
+                            "center",
+                            "justified",
+                            "within",
+                            "its",
+                            "column."],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4],
+                           left) =
+    ["justified",
+     "right    ",
+     "justified",
+     "or   ",
+     "cente",
+     "justifie",
+     "within   ",
+     "its    ",
+     "column",
+     "      ",
+     "     ",
+     "   "]
+Please, revise the first clause:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length),
+                            ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $\s])
+     || {Word, Length} <- Zipped].
+Do you want to continue the debugging session inside this function? [y/n]: y
+** exception error: no case clause matching [{function,{prepare_line,3}},34,{file,"align_columns.erl"}]
+     in function  edd_zoom:get_tree_case/3 (src/edd_zoom.erl, line 630)
+     in call from edd_zoom:get_tree_then_ask/5 (src/edd_zoom.erl, line 103)
+     in call from edd_zoom:zoom_graph/2 (src/edd_zoom.erl, line 61)
+     in call from edd_lib:ask_about/7 (src/edd_lib.erl, line 273)
+(edd_main@kike-laptop)47> edd:dd("align_columns:align_left()").
+Total number of tree nodes: 32
+Tree size:
+        140032 words
+        1120256 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+align_columns:max_length(["justified,",
+                          "right",
+                          "justified,",
+                          "or",
+                          "center",
+                          "justified",
+                          "within",
+                          "its",
+                          "column."],
+                         [8, 10, 9, 6, 6, 8, 10, 8, 6, 7, 6, 4]) =
+    [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:max_length(["Further,", "allow", "for", "each", "word", "in", "a", "column", "to", "be", "either", "left"],
+                         [6, 10, 9, 6, 6, 8, 10, 8, 6, 7, 2, 4]) =
+    [8, 10, 9, 6, 6, 8, 10, 8, 6, 7, 6, 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:max_length(["column", "are", "separated", "by", "at", "least", "one", "space."], [5, 10, 4, 6, 6, 8, 10, 8, 6, 7, 2, 4]) = [6, 10, 9, 6, 6, 8, 10, 8, 6, 7, 2, 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:max_length(["that",
+                          "aligns",
+                          "each",
+                          "column",
+                          "of",
+                          "fields",
+                          "by",
+                          "ensuring",
+                          "that",
+                          "words",
+                          "in",
+                          "each"],
+                         [5, 10, 4, 4, 6, 8, 10, 5, 6, 7, 1, 4]) =
+    [5, 10, 4, 6, 6, 8, 10, 8, 6, 7, 2, 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:max_length(["are", "delineated", "by", "a", "single", "'dollar'", "character,", "write", "a", "program"],
+                         [5, 1, 4, 4, 2, 4, 5, 5, 6, 6, 1, 4]) =
+    [5, 10, 4, 4, 6, 8, 10, 5, 6, 7, 1, 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:max_length(["Given", "a", "text", "file", "of", "many", "lines", "where", "fields", "within", "a", "line"], []) = [5,
+                                                                                                                                                                                                                                                                                                 1,
+                                                                                                                                                                                                                                                                                                 4,
+                                                                                                                                                                                                                                                                                                 4,
+                                                                                                                                                                                                                                                                                                 2,
+                                                                                                                                                                                                                                                                                                 4,
+                                                                                                                                                                                                                                                                                                 5,
+                                                                                                                                                                                                                                                                                                 5,
+                                                                                                                                                                                                                                                                                                 6,
+                                                                                                                                                                                                                                                                                                 6,
+                                                                                                                                                                                                                                                                                                 1,
+                                                                                                                                                                                                                                                                                                 4]? [y/n/t/v/d/i/s/u/a]: y
+align_columns:prepare_line(["justified,",
+                            "right",
+                            "justified,",
+                            "or",
+                            "center",
+                            "justified",
+                            "within",
+                            "its",
+                            "column."],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4],
+                           left) =
+    ["justified",
+     "right    ",
+     "justified",
+     "or   ",
+     "cente",
+     "justifie",
+     "within   ",
+     "its    ",
+     "column",
+     "      ",
+     "     ",
+     "   "]? [y/n/t/v/d/i/s/u/a]: n
+align_columns:adjust_list(["justified,",
+                           "right",
+                           "justified,",
+                           "or",
+                           "center",
+                           "justified",
+                           "within",
+                           "its",
+                           "column."],
+                          12,
+                          []) =
+    ["justified,",
+     "right",
+     "justified,",
+     "or",
+     "center",
+     "justified",
+     "within",
+     "its",
+     "column.",
+     [],
+     [],
+     []]? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+align_columns:prepare_line(["justified,",
+                            "right",
+                            "justified,",
+                            "or",
+                            "center",
+                            "justified",
+                            "within",
+                            "its",
+                            "column."],
+                           [10, 10, 10, 6, 6, 9, 10, 8, 7, 7, 6, 4],
+                           left) =
+    ["justified",
+     "right    ",
+     "justified",
+     "or   ",
+     "cente",
+     "justifie",
+     "within   ",
+     "its    ",
+     "column",
+     "      ",
+     "     ",
+     "   "]
+Please, revise the first clause:
+prepare_line(Words_line, Words_length, Alignment) ->
+    All_words = adjust_list(Words_line,
+                            length(Words_length),
+                            ""),
+    Zipped = lists:zip(All_words, Words_length),
+    [apply(string, Alignment, [Word, Length - 1, $\s])
+     || {Word, Length} <- Zipped].
+PreviousTests: []
+Do you want to continue the debugging session inside this function? [y/n]: 
+
