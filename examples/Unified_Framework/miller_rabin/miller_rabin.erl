@@ -1,0 +1,84 @@
+-module(miller_rabin).
+ 
+-compile(export_all).
+
+-include_lib("proper/include/proper.hrl").
+-include_lib("eunit/include/eunit.hrl").
+ 
+basis(N) when N>2 ->
+    1 + random:uniform(N-2).
+ 
+find_ds(D, S) ->
+    case D rem 2 == 0 of
+        true ->
+            find_ds(trunc(D/2), S+1);
+        false -> 
+            {D, S}
+    end.
+ 
+find_ds(N) ->
+    find_ds(N-1, 0).
+ 
+pow_mod(_B, 0, _M) ->
+  1;
+pow_mod(B, E, M) ->
+  case trunc(E) rem 2 == 0 of
+     true  -> trunc(math:pow(pow_mod(B, trunc(E/2), M), 2)) rem M;
+     false -> %trunc(B*pow_mod(B, E-1, M)) rem M % RIGHT
+              trunc(pow_mod(B, E-1, M)) rem M % WRONG
+  end.
+ 
+mr_series(N, A, D, S) when N rem 2 == 1 ->
+    Js = lists:seq(0, S),
+    lists:map(fun(J) -> pow_mod(A, math:pow(2, J)*D, N) end, Js).
+ 
+is_mr_prime(N, As) when N>2, N rem 2 == 1 ->
+    {D, S} = find_ds(N),
+    not lists:any(fun(A) ->
+                          case mr_series(N, A, D, S) of
+                              [1|_] -> false;
+                              L     -> not lists:member(N-1, L)
+                          end
+                  end,
+                  As).
+ 
+proving_bases(N) when N < 1373653 ->
+    [2, 3];
+proving_bases(N) when N < 25326001 ->
+    [2, 3, 5];
+proving_bases(N) when N < 25000000000 ->
+    [2, 3, 5, 7];
+proving_bases(N) when N < 2152302898747->
+    [2, 3, 5, 7, 11];
+proving_bases(N) when N < 341550071728321 ->
+    [2, 3, 5, 7, 11, 13];
+proving_bases(N) when N < 341550071728321 ->
+    [2, 3, 5, 7, 11, 13, 17].
+ 
+random_bases(N, K) ->
+    [basis(N) || _ <- lists:seq(1, K)].
+ 
+is_prime(1) -> false;
+is_prime(2) -> true;
+is_prime(N) when N rem 2 == 0 -> false;
+is_prime(N) when N < 341550071728321 ->
+    is_mr_prime(N, proving_bases(N)).
+ 
+is_probable_prime(N) ->
+    is_mr_prime(N, random_bases(N, 20)).
+ 
+first_10() -> 
+  lists:filter( fun is_prime/1, lists:seq(1,10) ).
+
+
+%% Test
+pow_mod_property() ->
+  ?FORALL({B,E,M}, 
+          {pos_integer(), pos_integer(), pos_integer()}, 
+          pow_mod(B,E,M) =:= trunc(math:pow(B,E)) rem M).
+          
+pow_mod_zero_property() ->
+  ?FORALL({B,M}, 
+          {pos_integer(), pos_integer()}, 
+          pow_mod(B,0,M) =:= 1).          
+

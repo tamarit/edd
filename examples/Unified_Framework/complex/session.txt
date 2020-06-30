@@ -1,0 +1,17 @@
+> edd:dd("complex_number:calculate()").
+Total number of tree nodes: 7
+Tree size:
+        2359 words
+        18872 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+complex_number:inverse({complex, 1, 3}) = {complex, -1.0e-1, -2.99999999999999988898e-1}? [y/n/t/v/d/i/s/u/a]: y
+complex_number:conjugate({complex, 1, 3}) = {complex, -1, -3}? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+complex_number:conjugate({complex, 1, 3}) = {complex, -1, -3}
+Please, revise the first clause:
+conjugate(A) ->
+    RealPart = -A#complex.real,
+    ImgPart = -A#complex.img,
+    #complex{real = RealPart, img = ImgPart}.
+
