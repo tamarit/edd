@@ -1,1 +1,1 @@
-Adaptation from the faulty nofib library for Haskell
+# Adaptation from the faulty nofib library for Haskell

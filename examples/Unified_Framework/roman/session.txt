@@ -1,0 +1,16 @@
+> edd:dd("roman:main()", [not_load_tests, not_save_tests]).
+Total number of tree nodes: 9
+Tree size:
+        2163 words
+        17304 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+roman:to_roman(89) = "LLXXIX"? [y/n/t/v/d/i/s/u/a]: n
+roman:to_roman(9) = "IX"? [y/n/t/v/d/i/s/u/a]: y
+roman:digit(8, 88, 76, 67) = "LLXX"? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+roman:digit(8, 88, 76, 67) = "LLXX"
+Please, revise the 8th clause:
+digit(8, X, Y, _) -> [Y, Y, X, X].
+
+

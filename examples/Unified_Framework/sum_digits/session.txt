@@ -1,0 +1,17 @@
+> edd:dd("sum_digits:sum_digits(13456)").
+Total number of tree nodes: 7
+Tree size:
+        1749 words
+        13992 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+sum_digits:sum_digits(1345, 10, 6) = 18? [y/n/t/v/d/i/s/u/a]: n
+sum_digits:sum_digits(13, 10, 15) = 18? [y/n/t/v/d/i/s/u/a]: n
+sum_digits:sum_digits(1, 10, 18) = 18? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+sum_digits:sum_digits(1, 10, 18) = 18
+Please, revise the second clause:
+sum_digits(N, B, Acc) when N < B -> Acc.
+PreviousTests: []
+Do you want to continue the debugging session inside this function? [y/n]: n
+

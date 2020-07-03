@@ -1,0 +1,25 @@
+> edd:dd( "stock:test()", tree ).
+Total number of tree nodes: 14
+Tree size:
+        4184 words
+        33472 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+stock:unify_orders([{item, water, 3}, {item, rice, 3}, {item, rice, 4}]) = [{item, water, 3}, {item, rice, 7}]? [y/n/t/v/d/i/s/u/a]: y
+stock:check_order([{item, water, 3}, {item, rice, 7}], [{item, rice, 5}, {item, bajoqueta, 8}]) = [{item, water, 3}, {item, rice, 7}]? [y/n/t/v/d/i/s/u/a]: n
+fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, rice, 7}) = {true, {item, rice, 7}}
+fun location: (stock.erl, line 28)? [y/n/t/v/d/i/s/u/a]: n
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}
+Please, revise the first clause:
+check_item(Needed = {item, Name, Q1}, Stock) ->
+    ItemStock = lists:keyfind(Name, 1, Stock),
+    case ItemStock of
+        {item, Name, Q2} ->
+            if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+               true -> false
+            end;
+        false -> {true, Needed}
+    end.
+
