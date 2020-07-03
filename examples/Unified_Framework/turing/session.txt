@@ -1,0 +1,65 @@
+> edd:dd("turing:main()").
+Total number of tree nodes: 49
+Tree size:
+        9671 words
+        77368 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+turing:turing(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, []) = ['1', '1', '1']? [y/n/t/v/d/i/s/u/a]: n
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/v/d/i/s/u/a]: n
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, c, {[], ['1', '1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/v/d/i/s/u/a]: y
+turing:action(left, '1', {[], ['1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/v/d/i/s/u/a]: y
+turing:busy_beaver(a, '1') = {'1', left, c}? [y/n/t/v/d/i/s/u/a]: y
+turing:symbol(['1', '1'], '0') = {['1'], '1'}? [y/n/t/v/d/i/s/u/a]: y
+turing:busy_beaver_config() = {a, [halt], '0'}? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}) = {[], ['1', '1', '1']}
+Please, revise the first clause:
+perform(Config, Rules, State,
+        Input = {LeftInput, RightInput}) ->
+    {_, Halts, Blank} = Config(),
+    case lists:member(State, Halts) of
+        true -> Input;
+        false ->
+            {NewRight, Symbol} = symbol(RightInput, Blank), 
+            {NewSymbol, Action, NewState} = Rules(State, Symbol),
+            NewInput = action(Action,
+                              NewSymbol,
+                              {LeftInput, [NewSymbol | NewRight]}),
+            perform(Config, Rules, NewState, NewInput)
+    end.
+
+
+
+**************
+* With tests *
+**************
+> edd:dd("turing:main()").
+Total number of tree nodes: 49
+Tree size:
+        9671 words
+        77368 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, c, {[], ['1', '1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/v/d/i/s/u/a]: y
+turing:action(left, '1', {[], ['1', '1']}) = {[], ['1', '1', '1']}? [y/n/t/v/d/i/s/u/a]: y
+turing:busy_beaver(a, '1') = {'1', left, c}? [y/n/t/v/d/i/s/u/a]: y
+turing:symbol(['1', '1'], '0') = {['1'], '1'}? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+turing:perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}) = {[], ['1', '1', '1']}
+Please, revise the first clause:
+perform(Config, Rules, State,
+        Input = {LeftInput, RightInput}) ->
+    {_, Halts, Blank} = Config(),
+    case lists:member(State, Halts) of
+        true -> Input;
+        false ->
+            {NewRight, Symbol} = symbol(RightInput, Blank), 
+            {NewSymbol, Action, NewState} = Rules(State, Symbol),
+            NewInput = action(Action,
+                              NewSymbol,
+                              {LeftInput, [NewSymbol | NewRight]}),
+            perform(Config, Rules, NewState, NewInput)
+    end.
+PreviousTests: []
+
