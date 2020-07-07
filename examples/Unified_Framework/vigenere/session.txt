@@ -1,0 +1,37 @@
+> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", tree, top_down).
+Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+
+vigenere:crypt("Attack tomorrow dawn", "lemon", fun vigenere:encipher/2) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 3 (data structures) + 1 (lambda) + 1 (base) = 5
+
+vigenere:normalize("Attack tomorrow dawn") = "ATTACKTOMORROWDAWN"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:normalize("lemon") = "LEMON"? [y/n/t/d/i/s/u/a]: y
+
+Complexity: 1 (base)
+
+vigenere:encipher(78, 77) = 90? [y/n/t/d/i/s/u/a]: t
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(18, "LEMON") = "LEMONLEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(13, "LEMON") = "LEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(8, "LEMON") = "LEMONLEMON"? [y/n/t/d/i/s/u/a]: n
+
+Complexity: 1 (base)
+
+vigenere:cycle_to(3, "LEMON") = "LEMON"? [y/n/t/d/i/s/u/a]: n
+
+Call to a function that contains an error:
+vigenere:cycle_to(3, "LEMON") = "LEMON"
+Please, revise the first clause:
+cycle_to(N, List) when length(List) >= N -> List.
