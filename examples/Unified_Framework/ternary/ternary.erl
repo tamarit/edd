@@ -1,11 +1,17 @@
 -module(ternary).
 -compile(export_all).
 
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
  
 test() ->
-    AS = "+-0++0+", AT = from_string(AS), A = from_ternary(AT),
-    B = -436, BT = to_ternary(B), BS = to_string(BT),
+    AS = "+-0++0+", 
+    AT = from_string(AS), 
+    A = from_ternary(AT),
+    %B = -436,
+    B = 985412,  
+    BT = to_ternary(B), 
+    BS = to_string(BT),
     [{AS,A},{BS,B}].
     
  
@@ -86,9 +92,13 @@ add_util(1) -> [0,1];
 add_util(0) -> [0,0].
 
 
-%% Tests 
-to_ternary_test() ->
-	?assertEqual(to_ternary(2, [1, 1, 0, 1, 1]), [1,-1,1,1,0,1,1]),
-	?assertEqual(to_ternary(1, [1, 1, 1, 0, 1, 1]), [1, 1, 1, 1, 0, 1, 1]).
+%% Tests %%
+prop_to_ternary1_complete() ->
+  ?FORALL(Acc, list(integer(-1,1)), to_ternary(1, Acc) =:= [1|Acc]).
+prop_to_ternary2_complete() ->
+  ?FORALL(Acc, list(integer(-1,1)), to_ternary(2, Acc) =:= [-1|Acc]).
 
+%to_ternary_test() ->
+%  ?assertEqual(to_ternary(2, [0,1,1,0,1,1,1,1,1,1,1,1]), [1,-1,0,1,1,0,1,1,1,1,1,1,1,1]),
+%  ?assertEqual(to_ternary(1, [1,0,1,1,0,1,1,1,1,1,1,1,1]), [1,1,0,1,1,0,1,1,1,1,1,1,1,1]). 
 

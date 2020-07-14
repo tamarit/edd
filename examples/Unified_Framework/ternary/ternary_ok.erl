@@ -1,5 +1,5 @@
 %edd:dd("ternary:test()").
--module(ternary).
+-module(ternary_ok).
 -compile(export_all).
 
 -include_lib("eunit/include/eunit.hrl").

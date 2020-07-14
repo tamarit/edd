@@ -1,16 +1,36 @@
-> edd:dd("ternary:test()").
-Total number of tree nodes: 37
+WITHOUT TESTS
+=============
+> edd:dd("ternary:test()", [tree]).
+Total number of tree nodes: 49
 Tree size:
-        5855 words
-        46840 bytes
+        8495 words
+        67960 bytes
 Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
 
-ternary:to_ternary(-436) = [-1, -1, -1, -1, 0, -1, -1]? [y/n/t/v/d/i/s/u/a]: n
-ternary:to_ternary(48, [1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
-ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
-ternary:to_ternary(1, [1, 1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]? [y/n/t/v/d/i/s/u/a]: y
+ternary:to_ternary(985412) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
+ternary:to_ternary(451, [1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
+ternary:to_ternary(6, [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
+ternary:to_ternary(1, [1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]? [y/n/t/v/d/i/s/u/a]: y
+ternary:to_ternary(2, [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]? [y/n/t/v/d/i/s/u/a]: n
 Call to a function that contains an error:
-ternary:to_ternary(2, [1, 1, 0, 1, 1]) = [1, 1, 1, 1, 0, 1, 1]
+ternary:to_ternary(2, [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+Please, revise the fourth clause:
+to_ternary(N, Acc) ->
+    to_ternary((N + 1) div 3, [1 | Acc]).
+
+
+
+USING TESTS
+===========
+> edd:dd("ternary:test()", [tree]).
+Total number of tree nodes: 49
+Tree size:
+        8495 words
+        67960 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+ternary:to_ternary(2, [0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]) = [1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]
 Please, revise the fourth clause:
 to_ternary(N, Acc) ->
     to_ternary((N + 1) div 3, [1 | Acc]).

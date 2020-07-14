@@ -44,7 +44,7 @@ test() ->
 
 
 %% Tests
-rot_lower_test_range1_proper_subset() -> 
+prop_rot_lower1_subset() -> 
   ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) >= $a).
 
 %rot_lower_test_range2() -> 
