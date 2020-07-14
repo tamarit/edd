@@ -1,4 +1,6 @@
-> edd:dd("sieve:find_primes_below(20)").       
+WITHOUT TESTS
+=============
+> edd:dd("sieve:find_primes_below(20)").
 Total number of tree nodes: 56
 Tree size:
         15806 words
@@ -27,5 +29,33 @@ next_prime(NumList, Index, Length) ->
                                    NumList),
             {Prime, Index, NewNumList}
     end.
-PreviousTests: []
+
+
+
+USING TESTS
+=============
+> edd:dd("sieve:find_primes_below(20)").
+Total number of tree nodes: 56
+Tree size:
+        15806 words
+        126448 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+sieve:next_prime([1, 2, 3, 0, 5, 0, 7, 0, 0, 0, 11, 0, 13, 0, 0, 0, 17, 0, 19, 0], 18, 20) = false
+Please, revise the second clause:
+next_prime(NumList, Index, Length) ->
+    case lists:nth(Index, NumList) of
+        0 -> next_prime(NumList, Index + 2, Length);
+        Prime ->
+            NewNumList = lists:map(fun (A) ->
+                                           if A > Index andalso
+                                                  A rem Index == 0 ->
+                                                  0;
+                                              true -> A
+                                           end
+                                   end,
+                                   NumList),
+            {Prime, Index, NewNumList}
+    end.
 

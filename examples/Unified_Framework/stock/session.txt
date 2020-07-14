@@ -1,3 +1,5 @@
+WITHOUT TESTS
+=============
 > edd:dd( "stock:test()", tree ).
 Total number of tree nodes: 14
 Tree size:
@@ -22,4 +24,28 @@ check_item(Needed = {item, Name, Q1}, Stock) ->
             end;
         false -> {true, Needed}
     end.
+
+
+USING TESTS
+===========
+> edd:dd( "stock:test()", [] ).              
+Total number of tree nodes: 14
+Tree size:
+        4184 words
+        33472 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}
+Please, revise the first clause:
+check_item(Needed = {item, Name, Q1}, Stock) ->
+    ItemStock = lists:keyfind(Name, 1, Stock),
+    case ItemStock of
+        {item, Name, Q2} ->
+            if Q1 > Q2 -> {true, {item, Name, Q1 - Q2}};
+               true -> false
+            end;
+        false -> {true, Needed}
+    end.
+
 

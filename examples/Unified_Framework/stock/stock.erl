@@ -64,9 +64,10 @@ unify_orders( [{item,Name,Quantity}|R] ) ->
 
 
 
-%% Tests
+%% Tests %%
 check_item_test() ->
 	?assertEqual(check_item({item, rice, 7}, 
 	                        [{item, rice, 5}, {item, bajoqueta, 8}]), 
 	             {true, {item, rice, 2}}).
+
 

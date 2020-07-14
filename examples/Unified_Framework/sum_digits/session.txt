@@ -1,3 +1,5 @@
+WITHOUT TESTS
+=============
 > edd:dd("sum_digits:sum_digits(13456)").
 Total number of tree nodes: 7
 Tree size:
@@ -15,3 +17,7 @@ sum_digits(N, B, Acc) when N < B -> Acc.
 PreviousTests: []
 Do you want to continue the debugging session inside this function? [y/n]: n
 
+
+
+USING TESTS
+===========

@@ -1,7 +1,3 @@
-% Erlang implementation of Vigenère cipher
-% Code from Rosetta Code
-% http://rosettacode.org/wiki/Vigen%C3%A8re_cipher#Erlang
-
 -module(vigenere).
 %-export([encrypt/2, decrypt/2]).
 %-import(lists, [append/2, filter/2, map/2, zipwith/3]).
@@ -60,11 +56,20 @@ decrypt(Text, Key) -> crypt(Text, Key, fun decipher/2).
 
 
 %% Tests
-cycle_property() ->
+prop_cycle_property_subset() ->
   ?FORALL(
     {N, S}, 
     {integer(1, 100), non_empty(string())},
     length(cycle_to(N, S)) =:= N
   ).
+
   
+
+
+% begin edd trusted
+
+edd_trusted() ->
+	[{vigenere,encipher,2}].
+
+% end edd trusted
 
