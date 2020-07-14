@@ -45,26 +45,47 @@ last(N, List) ->
     lists:reverse(take(N, lists:reverse(List))).
 
 
-
-mergesort_property() ->
+%% Tests %%
+mergesort_property_complete() ->
   ?FORALL(L, list(atom()), mergesort(L, fun comp/2) =:= lists:sort(fun mergesort:comp/2, L)).
-
-ordered([]) -> true;
-ordered([_]) -> true;
-ordered([A,B|T]) -> A =< B andalso ordered([B|T]).
-
-merge_ordered() ->
-  ?FORALL(
-    {L1, L2}, 
-    {orderedlist(atom()), orderedlist(atom())}, 
-    ordered(merge(L1, L2, fun comp/2)) =:= true
-  ).
   
-merge_property() ->
-  ?FORALL(
-    {L1, L2}, 
-    {orderedlist(atom()), orderedlist(atom())}, 
-    mergesort:merge(L1, L2, fun comp/2) =:= lists:merge(fun comp/2, L1, L2)
-  ).  
+%merge_empty1_complete() ->
+%  ?FORALL(L, list(atom()), merge([], L, fun comp/2) =:= L).
+  
+%merge_empty2_complete() ->
+%  ?FORALL(L, list(atom()), merge(L, [], fun comp/2) =:= L).      
 
+
+%ordered([]) -> true;
+%ordered([_]) -> true;
+%ordered([A,B|T]) -> A =< B andalso ordered([B|T]).
+
+%merge_ordered_subset() ->
+%  ?FORALL(
+%    {L1, L2}, 
+%    {orderedlist(atom()), orderedlist(atom())}, 
+%    ordered(merge(L1, L2, fun comp/2)) =:= true
+%  ).
+  
+%merge_property_complete() ->
+%  ?FORALL(
+%    {L1, L2}, 
+%    {orderedlist(atom()), orderedlist(atom())}, 
+%    mergesort:merge(L1, L2, fun comp/2) =:= lists:merge(fun comp/2, L1, L2)
+%  ).  
+
+
+
+
+
+
+
+
+
+% begin edd trusted
+
+edd_trusted() ->
+	[{mergesort,comp,2}].
+
+% end edd trusted
 

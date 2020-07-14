@@ -41,7 +41,7 @@ prepare_line(Words_line, Words_length, Alignment) ->
       || {Word, Length} <- Zipped].
       
       
-%% Tests
+%% Tests %%
 prepare_last_line_test() ->
 	?assertNotEqual(prepare_line([[106,
                117,

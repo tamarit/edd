@@ -2,6 +2,7 @@
 %-export([main/0]).
 -compile(export_all).
 
+-include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
  
 to_roman(0) -> [];
@@ -27,8 +28,8 @@ main() ->
 	to_roman(2489).
 	
 	
-%% Tests
-one_digit_test() ->
-	?assertEqual(to_roman(9), "IX").
-
+%% Tests %%
+digit_8_test() ->
+	?assertEqual(to_roman(8), [86, 73, 73, 73]),
+	?assertEqual(digit(8, 88, 76, 67), [76, 88, 88, 88]).
 

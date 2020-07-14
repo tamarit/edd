@@ -78,24 +78,13 @@ eval2([X|Rest], 0) when X >= $1, X =< $9 ->
     
     
 %% Tests %%
-trusted_eval2(Rest, Val) ->
-  [ValStr] = io_lib:format("~p", [Val]),
-  Expr = lists:concat([ValStr, Rest, "."]),
-  {ok, Tokens, _} = erl_scan:string(Expr),
-  {ok, Parsed} = erl_parse:parse_exprs(Tokens), 
-  {value, Result, _} = erl_eval:exprs(Parsed, []),
-  Result.
-  
-trusted_eval1(ExprStr) ->
-  Expr = lists:concat([ExprStr, "."]),
-  {ok, Tokens, _} = erl_scan:string(Expr),
-  {ok, Parsed} = erl_parse:parse_exprs(Tokens), 
-  {value, Result, _} = erl_eval:exprs(Parsed, []),
-  Result.  
-  
-eval2_property() ->
-  ?FORALL({Rest, Val}, {string(), non_neg_integer()}, eval2(Rest, Val) =:= trusted_eval2(Rest, Val)).    
-  
-eval1_property() ->
-  ?FORALL(Expr, string(), eval1(Expr) =:= trusted_eval1(Expr)). 
+eval1_proper_complete() ->
+  ?FORALL(ExprStr, string(), 
+   begin
+     Expr = lists:concat([ExprStr, "."]),
+     {ok, Tokens, _} = erl_scan:string(Expr),
+     {ok, Parsed} = erl_parse:parse_exprs(Tokens), 
+     {value, Result, _} = erl_eval:exprs(Parsed, []),
+     eval1(ExprStr) =:= Result
+   end).
 

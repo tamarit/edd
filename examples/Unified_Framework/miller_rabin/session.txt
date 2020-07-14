@@ -1,4 +1,6 @@
->miller_rabin:first_10().
+WITHOUT TESTS
+=============
+> miller_rabin:first_10().
 [2,3,5,7,9]
 > edd:dd("miller_rabin:first_10()", [not_load_tests]).
 Total number of tree nodes: 152
@@ -23,6 +25,26 @@ miller_rabin:pow_mod(3, 1, 9) = 1? [y/n/t/v/d/i/s/u/a]: n
 miller_rabin:pow_mod(3, 0, 9) = 1? [y/n/t/v/d/i/s/u/a]: y
 Call to a function that contains an error:
 miller_rabin:pow_mod(3, 1, 9) = 1
+Please, revise the second clause:
+pow_mod(B, E, M) ->
+    case trunc(E) rem 2 == 0 of
+        true ->
+            trunc(math:pow(pow_mod(B, trunc(E / 2), M), 2)) rem M;
+        false -> trunc(pow_mod(B, E - 1, M)) rem M
+    end.
+
+
+USING TESTS
+=============
+> edd:dd("miller_rabin:first_10()", [tree]).
+Total number of tree nodes: 152
+Tree size:
+        24680 words
+        197440 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+miller_rabin:pow_mod(2, 1, 3) = 1
 Please, revise the second clause:
 pow_mod(B, E, M) ->
     case trunc(E) rem 2 == 0 of

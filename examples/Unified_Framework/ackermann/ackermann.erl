@@ -17,13 +17,10 @@ ack(M,0) -> %ack(M-1, 1); %RIGHT
 ack(M,N) -> ack(M-1,ack(M,N-1)).
 
 
-%% Tests
-ack0_property() ->
+%% Tests %%
+ack0_proper_complete() ->
   ?FORALL(N, non_neg_integer(), ack(0, N) =:= N + 1).
   
-ack1_property() ->
+ack1_proper_complete() ->
   ?FORALL(N, non_neg_integer(), ack(1, N) =:= N + 2).
-  
-%ack2_property() ->
-%  ?FORALL(N, non_neg_integer(), ack(2, N) =:= 2*N + 3).
 

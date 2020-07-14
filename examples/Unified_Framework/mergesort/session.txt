@@ -1,0 +1,44 @@
+WITHOUT TESTS
+=============
+> edd:dd( "mergesort:mergesort([a,c,b,o,i,p,a,q,w,e,v], fun mergesort:comp/2)", [tree, not_load_tests, not_save_tests] ).
+Total number of tree nodes: 120
+Tree size:
+        18284 words
+        146272 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+mergesort:mergesort([p, a, q, w, e, v], fun mergesort:comp/2) = [p, a, q, w, e, v]? [y/n/t/v/d/i/s/u/a]: n
+mergesort:mergesort([w, e, v], fun mergesort:comp/2) = [w, e, v]? [y/n/t/v/d/i/s/u/a]: n
+mergesort:mergesort([e, v], fun mergesort:comp/2) = [e, v]? [y/n/t/v/d/i/s/u/a]: y
+mergesort:merge([w], [e, v], fun mergesort:comp/2) = [w, e, v]? [y/n/t/v/d/i/s/u/a]: n
+mergesort:merge([e], [v], fun mergesort:comp/2) = [e, v]? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+mergesort:merge([w], [e, v], fun mergesort:comp/2) = [w, e, v]
+Please, revise the fourth clause:
+merge([H1 | T1], [H2 | T2], Comp) ->
+    case Comp(H1, H2) of
+        false -> [H1 | merge([H2 | T1], T2, Comp)];
+        true -> [H1 | merge(T1, [H2 | T2], Comp)]
+    end.
+
+
+USING TESTS
+===========
+> edd:dd( "mergesort:mergesort([a,c,b,o,i,p,a,q,w,e,v], fun mergesort:comp/2)", [tree] ).                                
+Total number of tree nodes: 120
+Tree size:
+        18284 words
+        146272 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+mergesort:merge([o], [i], fun mergesort:comp/2) = [o, i]? [y/n/t/v/d/i/s/u/a]: n
+mergesort:merge([i], [], fun mergesort:comp/2) = [i]? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+mergesort:merge([o], [i], fun mergesort:comp/2) = [o, i]
+Please, revise the fourth clause:
+merge([H1 | T1], [H2 | T2], Comp) ->
+    case Comp(H1, H2) of
+        false -> [H1 | merge([H2 | T1], T2, Comp)];
+        true -> [H1 | merge(T1, [H2 | T2], Comp)]
+    end.
+

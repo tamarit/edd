@@ -44,11 +44,11 @@ test() ->
 
 
 %% Tests
-rot_lower_test_range1() -> 
+rot_lower_test_range1_proper_subset() -> 
   ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) >= $a).
 
-rot_lower_test_range2() -> 
-  ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) =< $z).  
+%rot_lower_test_range2() -> 
+%  ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) =< $z).  
   
 %rot_upper_test_range1() -> 
 %  ?FORALL({Char, Key}, {range($A, $Z), integer()}, rot(Char,Key) >= $A).

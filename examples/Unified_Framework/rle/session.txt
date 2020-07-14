@@ -1,3 +1,5 @@
+WITHOUT TESTS
+=============
 > edd:dd("rle:test()").
 Total number of tree nodes: 69
 Tree size:
@@ -25,4 +27,30 @@ doEncode(S, CurrChar, Count, R) ->
                     R ++ integer_to_list(Count) ++ CurrChar)
     end.
 PreviousTests: []
+
+
+
+USING TESTS
+=============
+> edd:dd("rle:test()").
+Total number of tree nodes: 69
+Tree size:
+        28141 words
+        225128 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+rle:doEncode([], "W", 3, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"? [y/n/t/v/d/i/s/u/a]: y
+Call to a function that contains an error:
+rle:doEncode("WW", "W", 2, "4W1B3W2B4W1B") = "4W1B3W2B4W1B3W"
+Please, revise the second clause:
+doEncode(S, CurrChar, Count, R) ->
+    NextChar = string:substr(S, 1, 1),
+    if NextChar == CurrChar ->
+           doEncode(string:substr(S, 3), CurrChar, Count + 1, R);
+       true ->
+           doEncode(string:substr(S, 2),
+                    NextChar,
+                    1,
+                    R ++ integer_to_list(Count) ++ CurrChar)
+    end.
 

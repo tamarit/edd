@@ -44,9 +44,10 @@ test() ->
         and(decode(encode(PreEncoded)) =:= PreEncoded).
     %encode(PreEncoded).
 
-%% Tests
+
+%% Tests %%
 doEnconde_test() ->
-	?assertNotEqual(doEncode([87, 87],
+    ?assertNotEqual(doEncode([87, 87],
          [87],
          2,
          [52, 87, 49, 66, 51, 87, 50, 66, 52, 87, 49, 66]), [52, 87, 49, 66, 51, 87, 50, 66, 52, 87, 49, 66, 51, 87]),
@@ -54,4 +55,5 @@ doEnconde_test() ->
          [87],
          1,
          [52, 87, 49, 66, 51, 87, 50, 66, 52, 87, 49, 66]), [52, 87, 49, 66, 51, 87, 50, 66, 52, 87, 49, 66, 51, 87]).
+
 

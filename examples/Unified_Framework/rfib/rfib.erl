@@ -54,14 +54,28 @@ main(N) ->
 %-- CORRECT -- nfib n = if n <= 1 then 1 else nfib (n-1) + nfib (n-2)
 %
 
-nfib(N) when N < 1 -> 1; %WRONG
+nfib(N) when N < 1 -> 1;                        % WRONG
 nfib(N) when N >= 1 -> nfib(N-1) + nfib(N-2).
 % nfib(N) when N =< 1 -> 1;                     % CORRECT
 % nfib(N) when N > 1 -> nfib(N-1) + nfib(N-2).
 
-%% Tests
+%% Tests %%
 base_cases_test() ->
     ?assertEqual(nfib(0), 1),
     ?assertEqual(nfib(1), 1).
 
 
+
+% begin edd trusted
+
+edd_trusted() ->
+	[].
+
+% end edd trusted
+
+% begin edd test
+
+edd_test() ->
+	?assertEqual(nfib(-1), 1).
+
+% end edd test

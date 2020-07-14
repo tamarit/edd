@@ -71,13 +71,21 @@ first_10() ->
   lists:filter( fun is_prime/1, lists:seq(1,10) ).
 
 
-%% Test
-pow_mod_property() ->
-  ?FORALL({B,E,M}, 
-          {pos_integer(), pos_integer(), pos_integer()}, 
-          pow_mod(B,E,M) =:= trunc(math:pow(B,E)) rem M).
+%% Tests %%
+
+% A property like this one is not valid because of the fixed size of integers,
+% which are quickly overflowed
+%pow_mod_complete() ->
+%  ?FORALL({B,E,M}, 
+%          {pos_integer(), pos_integer(), pos_integer()}, 
+%          pow_mod(B,E,M) =:= trunc(math:pow(B,E)) rem M).
+
+pow_mod_one_property_complete() ->
+  ?FORALL({B,M}, 
+          {pos_integer(), pos_integer()}, 
+          pow_mod(B,1,M) =:= B rem M).
           
-pow_mod_zero_property() ->
+pow_mod_zero_property_complete() ->
   ?FORALL({B,M}, 
           {pos_integer(), pos_integer()}, 
           pow_mod(B,0,M) =:= 1).          

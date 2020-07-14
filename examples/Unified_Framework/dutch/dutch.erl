@@ -71,12 +71,11 @@ white() ->
 rbw_list() ->
     list(frequency([{33, red}, {33, blue}, {34, white}])).
   
-dutch_lenght_property() ->
-   ?FORALL({R,W,B,Rest},
-           {list(red()), list(white()), list(blue()), rbw_list()},
-           dutch(R,W,B,Rest) =:= lists:sort(fun comp_color/2, R++W++B++Rest)).
+%dutch_lenght_property_subset() ->
+%   ?FORALL({R,W,B,Rest},
+%           {list(red()), list(white()), list(blue()), rbw_list()},
+%           dutch(R,W,B,Rest) =:= lists:sort(fun comp_color/2, R++W++B++Rest)).
            
-
 
 
 % begin edd trusted

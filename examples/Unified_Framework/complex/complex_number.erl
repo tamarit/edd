@@ -47,8 +47,11 @@ conjugate (A) ->
 
 
 %% Tests
-conjugate_property() ->
+conjugate_proper_complete() ->
   ?FORALL({R,I}, 
-          {float(), float()}, 
+          {float(), float()},
           conjugate(#complex{real=R, img=I}) =:= #complex{real=R, img=-I}).
 
+
+
+% end edd trusted

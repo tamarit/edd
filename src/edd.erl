@@ -184,9 +184,9 @@ dd_internal(Expr,
 	       ok
 	end,
 	%TO BENCHAMARK ONLY %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	% io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
-	% [_,{memory,Words},_] = digraph:info(G),
-	% io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
+	io:format("Total number of tree nodes: ~p\n",[length(digraph:vertices(G))]),
+	[_,{memory,Words},_] = digraph:info(G),
+	io:format("Tree size:\n\t~p words\n\t~p bytes\n", [Words, Words * erlang:system_info(wordsize)]),
 	%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	edd_lib:ask(G,Strategy,Graph, {LoadTest, SaveTest, TestFiles}).
 
