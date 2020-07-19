@@ -146,6 +146,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 				{IniValidProper, IniNotValidProper} = 
 					edd_proper_reader:get_initial_set_of_nodes(
 						G, TrustedFunctions, TestFiles, IniValTuple),
+				% io:format("~p\n", [{IniValidProper, IniNotValidProper}]),
 				edd_test_reader:get_initial_set_of_nodes(
 					G, IniValidProper, IniNotValidProper, TestFiles);
 			false -> 

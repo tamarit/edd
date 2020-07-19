@@ -327,6 +327,7 @@ instrument_and_reload_sticky(ModName, UserDir, CompileOpts, Msg, TracingNode) ->
     rpc:call(
         TracingNode, code, unstick_dir, [BeamDir]),
     reload_module(ModName, Binary, TracingNode),
+    % ok.
     rpc:call(
         TracingNode, code, stick_dir, [BeamDir]).
     % ok = 
@@ -349,10 +350,13 @@ reload_module(ModName, Binary, TracingNode) ->
         rpc:call(
             TracingNode, erlang, purge_module, [ModName])
     catch 
-        _:_ -> ok
+        _:_ -> 
+            ok
     end,
-    rpc:call(
-        TracingNode, code, load_binary, [ModName, atom_to_list(ModName) ++ ".erl", Binary]).
+    Res = rpc:call(
+        TracingNode, code, load_binary, [ModName, atom_to_list(ModName) ++ ".erl", Binary]),
+    io:format("res: ~p\n", [Res]),
+    Res.
     % code:load_binary(ModName, atom_to_list(ModName) ++ ".erl", Binary).
     % code:load_abs(atom_to_list(ModName)).
 

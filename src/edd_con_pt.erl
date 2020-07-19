@@ -60,10 +60,13 @@ parse_transform(Forms, Opts) ->
 	% 	 		erl_pp:function(Form)
 	% 	 	catch 
 	% 	 	_:_ ->
-	% 	 		"error" ++ lists:flatten(io_lib:format("~p", [Form]))
+	% 	 		% "error" ++ lists:flatten(io_lib:format("~p", [Form]))
+	% 	 		"error"
 	% 	 	end
 	% 	 end || Form <- erl_syntax:revert_forms(NForms)],
 	% [io:format("~s\n", [StrForm]) || StrForm <- StrRevertedNForms],
+	% [io:format("~s\n", [erl_pp:form(F)]) || F <- erl_syntax:revert_form(NForms)],
+	% [io:format("~s\n", [try lists:flatten(erl_prettypr:format(F)) catch E:R -> edd_con_lib:format("~p",[{E, R}]) end]) || F <- NForms],
 	erl_syntax:revert_forms(NForms).
 
 get_module_filename(T, Acc) ->

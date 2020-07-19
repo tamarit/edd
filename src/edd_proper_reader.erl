@@ -468,7 +468,7 @@ get_compatible_usable_tests(
 		{FunVertex, ArgsVertex}, 
 		TrustedFunctions, 
 		Acc) -> 
-	% 	io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
+	% io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
 	case same_fun(ModuleTest, FunVertex, FunUsable) of 
 		true ->
 			% io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
@@ -496,18 +496,21 @@ get_compatible_usable_tests(
        						TypeCheckCalls = 
        							[
        								% Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
-		       						erl_syntax:application(
-										erl_syntax:atom(proper_typeserver),
-										erl_syntax:atom(demo_is_instance),
-										[
-											Value,
-										 	erl_syntax:atom(ModuleTest),
-										 	erl_syntax:string(erl_prettypr:format(Type))
-										])
+		       						{
+										erl_syntax:application(
+											erl_syntax:atom(proper_typeserver),
+											erl_syntax:atom(demo_is_instance),
+											[
+												Value,
+												erl_syntax:atom(ModuleTest),
+												erl_syntax:string(erl_prettypr:format(Type))
+											]),
+										erl_prettypr:format(Type)
+									}
 		       					|| {_, Type, Value} <- DictWithTypes],
 		       				% [
 		       				% 	io:format(erl_prettypr:format(Call) ++ "\n") 
-		       				% || Call <- TypeCheckCalls],
+		       				% || {Call, _} <- TypeCheckCalls],
 		       				AllTypesCorrect = 
 		       					lists:all(
 		       						fun
@@ -519,13 +522,22 @@ get_compatible_usable_tests(
 				       				[
 				       					begin 
 				       						% TODO: Proper does not find the user-defined types
-					       					{value, TypeCorrect, _}	= 
-					       						erl_eval:expr(erl_syntax:revert(Call), []),
-					       					% io:format(erl_prettypr:format(Call) ++ "\n"),
-					       					% io:format("~p\n", [TypeCorrect]),
-					       					TypeCorrect
+											% io:format(Type),
+											% io:format("\n"),
+											% io:format("~p\n", [string:str("range(", Type)]),
+											case string:str(Type, "range(") > 0 of 
+												true -> 
+													% range is integer (this solution should be reused in other types)
+													true;
+												false -> 
+													{value, TypeCorrect, _}	= 
+														erl_eval:expr(erl_syntax:revert(Call), []),
+													% io:format(erl_prettypr:format(Call) ++ "\n"),
+													% io:format("~p\n", [TypeCorrect]),
+													TypeCorrect
+											end
 				       					end 
-				       				|| Call <- TypeCheckCalls]),
+				       				|| {Call, Type} <- TypeCheckCalls]),
 		       				% io:format("All: ~p\n", [AllTypesCorrect]),
 		       				case AllTypesCorrect of 
 		       					true -> 
