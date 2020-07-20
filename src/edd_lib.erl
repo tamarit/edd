@@ -162,6 +162,7 @@ initial_state(G, TrustedFunctions, LoadTest, TestFiles) ->
 	SelectableTrees =
 		[{V, digraph_utils:reachable([V],G) -- AlreadyKnown} 
 		 || V <- IniNotValid],
+	% io:format("~p\n", [length(SelectableTrees)]),
 	OrderingFunction = 
 		fun({_, R1}, {_, R2}) -> 
 			length(R1) =< length(R2) 
@@ -264,6 +265,10 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 	               				NotValidNodesToStore0 -- ExpectedValuesNodes,
 	               			% io:format("test_to_NOT_store: ~w\n", [{RemoveableValidTest, RemovableNotValidTest}]),
 	               			edd_trusted_rw:write(element(1, edd_lib:get_MFA_Label(G, look_for_root(G)))),
+							io:format("***** TEST GENERATION REPORT *****\n", []),   
+							io:format("Stored ~p ?assertEqual tests\n", [length(ValidNodesToStore) + length(ExpectedValuesTest)]),
+							io:format("Stored ~p ?assertNotEqual tests\n", [length(NotValidNodesToStore)]),
+							io:format("**********************************\n", []),   
 	               			edd_test_writer:write(G, ValidNodesToStore, NotValidNodesToStore, ExpectedValuesTest);
 	               		false -> 
 	               			ok 
