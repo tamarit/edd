@@ -516,9 +516,10 @@ get_compatible_usable_tests(
 			TupledRestOfFuns = 
 				[tuple_function(ModuleTest, NeededFun, Arity) 
 				 || {NeededFun, Arity} <- RestOfFuns],
-			% case (TupledRestOfFuns -- TrustedFunctions) of 
-			% 	[] -> 
+			case length(ArgsVertex) == length(ArgsUsable) of 
+				true -> 
 					% io:format("Needed functions are trusted\n"),
+					% [io:format(erl_prettypr:format(AV) ++ "\n") || AV <- ArgsVertex],
 					% io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
 					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
 						false -> 
@@ -588,10 +589,10 @@ get_compatible_usable_tests(
 		       						Acc
 		       				end
 					end;
-				% _ ->
-				% 	% io:format("Needed functions are NOT trusted\n"),
-				% 	Acc 
-			% end;
+				false ->
+					% io:format("Needed functions are NOT trusted\n"),
+					Acc 
+			end;
 		false ->
 			Acc 
 	end.
