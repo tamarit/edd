@@ -375,7 +375,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles, {Valid0, NoValid0}) ->
 			 || Module <- Modules]
 			++ [ element(1, edd_proper_reader:read_file(File))
 			 || File <- TestFiles]),
-	% io:format("Tests: ~p\n", [Tests]),
+	io:format("Tests: ~p\n", [Tests]),
 	% io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
 	VerticesValidity = 
 		lists:flatten(
@@ -486,7 +486,6 @@ get_test_bindings(
 		{{ModuleTest,FunTest,0}, IsComplete, [{Pars, UsableCalls}]}, 
 		TrustedFunctions) -> 
 	compile:file(atom_to_list(ModuleTest) ++ ".erl", [debug_info]),
-	% io:format("ENTRA\n"),
 	Dicts = 
 		lists:foldl(
 			fun(UsableCall, CAcc) -> 
@@ -511,19 +510,19 @@ get_compatible_usable_tests(
 	% io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
 	case same_fun(ModuleTest, FunVertex, FunUsable) of 
 		true ->
-			% io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
-			% io:format("RestOfFuns; ~p\n", [RestOfFuns]),
+			io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
+			io:format("RestOfFuns; ~p\n", [RestOfFuns]),
 			TupledRestOfFuns = 
 				[tuple_function(ModuleTest, NeededFun, Arity) 
 				 || {NeededFun, Arity} <- RestOfFuns],
 			case length(ArgsVertex) == length(ArgsUsable) of 
 				true -> 
-					% io:format("Needed functions are trusted\n"),
+					% io:format("Same length\n"),
 					% [io:format(erl_prettypr:format(AV) ++ "\n") || AV <- ArgsVertex],
 					% io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
 					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
 						false -> 
-							% io:format("The arguments are NOT compatible\n", []), 
+							io:format("The arguments are NOT compatible\n", []), 
 							Acc;
 						{true, Dict} ->
 							% io:format("The arguments are compatible:\n~p\n", [Dict]), 
@@ -536,18 +535,23 @@ get_compatible_usable_tests(
        							|| {Var, Value} <- Dict],
        						TypeCheckCalls = 
        							[
-       								% Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
-		       						{
-										erl_syntax:application(
-											erl_syntax:atom(proper_typeserver),
-											erl_syntax:atom(demo_is_instance),
-											[
-												Value,
-												erl_syntax:atom(ModuleTest),
-												erl_syntax:string(erl_prettypr:format(Type))
-											]),
-										erl_prettypr:format(Type)
-									}
+									begin
+										PPType0 = erl_prettypr:format(Type),
+										PPType1 = re:replace(PPType0, "range\\(.*?\\)", "integer()", [ {return, list}]),
+										PPType = re:replace(PPType1, "integer\\(.*?,.*?\\)", "integer()", [ {return, list}]),
+										% Type check: proper_typeserver:demo_is_instance(1, rat, "integer()").
+										{
+											erl_syntax:application(
+												erl_syntax:atom(proper_typeserver),
+												erl_syntax:atom(demo_is_instance),
+												[
+													Value,
+													erl_syntax:atom(ModuleTest),
+													erl_syntax:string(PPType)
+												]),
+											PPType
+										}
+									end
 		       					|| {_, Type, Value} <- DictWithTypes],
 		       				% [
 		       				% 	io:format(erl_prettypr:format(Call) ++ "\n") 
@@ -565,32 +569,33 @@ get_compatible_usable_tests(
 				       						% TODO: Proper does not find the user-defined types
 											% io:format(Type),
 											% io:format("\n"),
-											% io:format("~p\n", [string:str("range(", Type)]),
-											case string:str(Type, "range(") > 0 of 
-												true -> 
-													% range is integer (this solution should be reused in other types)
-													true;
-												false -> 
-													{value, TypeCorrect, _}	= 
-														erl_eval:expr(erl_syntax:revert(Call), []),
-													% io:format(erl_prettypr:format(Call) ++ "\n"),
-													% io:format("~p\n", [TypeCorrect]),
-													TypeCorrect
-											end
+											% % io:format("~p\n", [string:str("range(", Type)]),
+											% CallCorrected = 
+											% 	case string:str(Type, "range(") > 0 of 
+											% 		true -> 
+											% 			% range is integer (this solution should be reused in other types)
+											% 			true;
+											% 		false -> 
+											% 	end,
+											{value, TypeCorrect, _}	= 
+												erl_eval:expr(erl_syntax:revert(Call), []),
+											io:format(erl_prettypr:format(Call) ++ "\n"),
+											io:format("~p\n", [TypeCorrect]),
+											TypeCorrect
 				       					end 
-				       				|| {Call, Type} <- TypeCheckCalls]),
-		       				% io:format("All: ~p\n", [AllTypesCorrect]),
+				       				|| {Call, _} <- TypeCheckCalls]),
+		       				io:format("All: ~p\n", [AllTypesCorrect]),
 		       				case AllTypesCorrect of 
 		       					true -> 
-		       						% io:format("Type constraints are hold."),
+		       						io:format("Type constraints are hold.\n"),
 		       						[{Dict, TupledRestOfFuns -- TrustedFunctions} | Acc];
 		       					false ->
-		       						% io:format("Type constraints are NOT hold."),
+		       						io:format("Type constraints are NOT hold.\n"),
 		       						Acc
 		       				end
 					end;
 				false ->
-					% io:format("Needed functions are NOT trusted\n"),
+					% io:format("No matchin length (maybe it is calling to a function with the same name but with a sdifferent arity)\n"),
 					Acc 
 			end;
 		false ->
@@ -620,10 +625,10 @@ same_fun(ModuleTest, FunVertex, FunUsable) ->
 	end. 
 
 compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) -> 
-	io:format("~p\n", [{ArgV, ArgT}]),
+	% io:format("~p\n", [{ArgV, ArgT}]),
 	FunRecords = 
 		fun(NameRecordT, ArgsFieldT) -> 
-			io:format("~p\n", [{NameRecordT, ArgsFieldT}]),
+			% io:format("~p\n", [{NameRecordT, ArgsFieldT}]),
 			case erl_syntax:type(ArgV) of 
 				record_expr -> 
 					{record, _, NameRecordV, ListFields} = ArgV,
@@ -641,7 +646,7 @@ compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) ->
 					false
 			end
 		end,
-	io:format("~p\n", [erl_syntax:type(ArgT)]),
+	% io:format("~p\n", [erl_syntax:type(ArgT)]),
 	case erl_syntax:type(ArgT) of
 		variable -> 
 			Var = 
