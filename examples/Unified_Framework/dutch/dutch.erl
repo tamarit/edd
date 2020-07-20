@@ -22,7 +22,7 @@ is_dutch([_])       -> true;
 is_dutch([B|[H|L]]) -> (ball(B) < ball(H)) and is_dutch([H|L]);
 is_dutch(_)         -> false.
  
-dutch_list(L) -> dutch([],[],[],L).
+dutch(L) -> dutch([],[],[],L).
  
 dutch(R, W, B, [])          -> R ++ W ++ B;
 dutch(R, W, B, [red   | L]) -> dutch([red|R],  W,  B,  L);
@@ -34,14 +34,14 @@ main(N) ->
    L = random_balls(N),
    case is_dutch(L) of
      true  -> io:format("The random sequence ~p is already in the order of the Dutch flag!~n", [L]);
-     false -> io:format("The starting random sequence is ~p;~nThe ordered sequence is ~p.~n", [L, dutch_list(L)])
+     false -> io:format("The starting random sequence is ~p;~nThe ordered sequence is ~p.~n", [L, dutch(L)])
    end.
    
 main() ->
    L = [white,red,white,white,red,white,red,blue,red,red,white,white,blue,blue,white,red,white,blue,blue,white],
    case is_dutch(L) of
      true  -> L;
-     false -> OrderedL = dutch_list(L),
+     false -> OrderedL = dutch(L),
               OrderedL
    end.
 
