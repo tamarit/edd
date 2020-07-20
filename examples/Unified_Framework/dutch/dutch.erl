@@ -59,21 +59,21 @@ comp_color(blue, blue)   -> true.
 
 
 
-red() ->
-  red.
+% red() ->
+%   red.
   
-blue() ->
-  blue.
+% blue() ->
+%   blue.
   
-white() ->
-  white.  
+% white() ->
+%   white.  
   
-rbw_list() ->
-    list(frequency([{33, red}, {33, blue}, {34, white}])).
+% rbw_list() ->
+%     list(frequency([{33, red}, {33, blue}, {34, white}])).
   
 prop_dutch_complete() ->
    ?FORALL({R,W,B,Rest},
-           {list(red()), list(white()), list(blue()), rbw_list()},
-           dutch(R,W,B,Rest) =:= lists:sort(fun comp_color/2, R++W++B++Rest)).
+          %  {list(red), list(white), list(blue), list(frequency([{33, red}, {33, blue}, {34, white}]))},
+          {list(red), list(white), list(blue), list(atom())},
+          dutch(R,W,B,Rest) =:= lists:sort(fun comp_color/2, R++W++B++Rest)).
            
-
