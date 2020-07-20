@@ -55,21 +55,10 @@ encrypt(Text, Key) -> crypt(Text, Key, fun encipher/2).
 decrypt(Text, Key) -> crypt(Text, Key, fun decipher/2).
 
 
-%% Tests
+%% Tests %%
 prop_cycle_property_subset() ->
   ?FORALL(
     {N, S}, 
     {integer(1, 100), non_empty(string())},
     length(cycle_to(N, S)) =:= N
   ).
-
-  
-
-
-% begin edd trusted
-
-edd_trusted() ->
-	[{vigenere,encipher,2}].
-
-% end edd trusted
-

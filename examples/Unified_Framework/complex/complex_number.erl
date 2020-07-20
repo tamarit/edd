@@ -49,8 +49,6 @@ conjugate (A) ->
 %% Tests
 prop_conjugate_complete() ->
   ?FORALL({R,I}, 
-          {float(), float()},
-          % conjugate(#complex{real=R, img=I}) =:= #complex{real=R, img=-I}).
-          conjugate({complex, R, I}) =:= {complex, R, -I}).
-
+          {integer(), integer()},
+          conjugate(#complex{real=R, img=I}) =:= #complex{real=R, img=-I}).
 
