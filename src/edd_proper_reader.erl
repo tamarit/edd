@@ -22,11 +22,13 @@ read_file(File) ->
 		end,
 	AllTestsCandidates = 
 		lists:reverse(lists:foldl(F, [], Forms)),
+	% io:format("~p\n", [AllTestsCandidates]),
 	ProperTest = 
 		lists:foldl(
 			fun separeteUsefulDiscarded/2,
 			{[], []},
 			AllTestsCandidates),
+	% io:format("~p\n", [ProperTest]),
 	{ok, IODeviceW} = 
 		file:open(File ++ "_result.txt",[write]),
 	file:write(IODeviceW, list_to_binary(lists:flatten(io_lib:format("~p\n", [ProperTest])))),
@@ -111,9 +113,12 @@ read_from_clause(Clause0, Acc) ->
 		erl_syntax:clause_body(Clause)).
 
 extract_forAll(Application, Acc) ->
+	% io:format("Application: ~p\n", [Application]),
 	try
+		% io:format("Application: ~p\n", [Application]),
 		ForAllFun = 
 			erl_syntax:application_operator(Application),
+		% io:format("ForAllFun: ~p\n", [ForAllFun]),
 		[TypeDescAST, FunTest] = 
 			erl_syntax:application_arguments(Application),
 		proper = 
@@ -125,8 +130,10 @@ extract_forAll(Application, Acc) ->
 		% The first parameter (the type descriptors) can only be a call or a tuples of calls
 		TypeDesc = 
 			get_type_descriptors(TypeDescAST),
+		% io:format("TypeDesc: ~p\n", [TypeDesc]),
 		[ClauseFunTest] = 
 			erl_syntax:fun_expr_clauses(FunTest),
+		% io:format("ClauseFunTest: ~p\n", [ClauseFunTest]),
 		[PatternFunTest] = 
 			erl_syntax:clause_patterns(ClauseFunTest),
 		VarsPattern = 
@@ -135,13 +142,17 @@ extract_forAll(Application, Acc) ->
 			lists:zip(VarsPattern, TypeDesc),
 		[BodyTest] = 
 			erl_syntax:clause_body(ClauseFunTest),
+		% io:format("BodyTest: ~p\n", [BodyTest]),
 		Calls = 
 			extract_calls(BodyTest),
+		% io:format("Calls: ~p\n", [Calls]),
 		CallNotInFun = 
 			extract_calls_not_in_fun(BodyTest),
+		% io:format("CallNotInFun: ~p\n", [CallNotInFun]),
 		AllFunsCalled = 
 			[{erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))} 
 			|| C <- CallNotInFun, not(is_trusted_fun({erl_syntax:application_operator(C), length(erl_syntax:application_arguments(C))}))],
+		% io:format("AllFunsCalled: ~p\n", [AllFunsCalled]),
 		UsableCalls = 
 			lists:foldl(
 				fun(Call, CurrentUsableCalls) -> 
@@ -211,8 +222,30 @@ add_if_call_no_in_fun(Node, Acc) ->
 	end.
 
 usable_calls(Call, Acc, VarsPattern, AllFunsCalled) ->
+	% io:format("Call: ~p\n", [Call]),
+	% {record,53,complex,
+    %                  [{record_field,53,{atom,53,real},{var,53,'R'}},
+    %                   {record_field,53,{atom,53,img},{var,53,'I'}}]}
 	Args = 
 		erl_syntax:application_arguments(Call),
+	FieldsVarsArgs = 
+		lists:foldl(
+			fun
+				({record,_,_,FieldList}, AccVars) -> 
+					% io:format("FieldList: ~p\n", [FieldList]),
+					VarsInFields = [V || {record_field,_,{atom,_,_},{var,_,V}} <- FieldList],
+					case length(FieldList) == length(VarsInFields) of 
+						true -> 
+							[VarsInFields|AccVars]; 
+						false -> 
+							AccVars
+					end;
+				(_, AccVars) -> 
+					AccVars 
+			end,
+			[],
+			Args),
+		% [FieldList || {record,_,_,FieldList} <- Args],
 	OnlyVarsArgs = 
 		[V || {var,_,V} <- Args],
 	WithoutVarsArgs = 
@@ -220,9 +253,15 @@ usable_calls(Call, Acc, VarsPattern, AllFunsCalled) ->
 			fun add_if_does_not_have_vars/2,
 			[],
 			Args),
-	case length(Args) =:= (length(OnlyVarsArgs) + length(WithoutVarsArgs)) of 
+	% io:format("FieldsVarsArgs: ~p\n", [FieldsVarsArgs]),
+	% io:format("OnlyVarsArgs: ~p\n", [OnlyVarsArgs]),
+	% io:format("WithoutVarsArgs: ~p\n", [WithoutVarsArgs]),
+	case length(Args) =:= (length(OnlyVarsArgs) + length(WithoutVarsArgs) + length(FieldsVarsArgs))  of 
 		true ->
-			case lists:usort(VarsPattern) == lists:usort(OnlyVarsArgs) of 
+			% io:format("~p\n", [lists:concat(FieldsVarsArgs)]),
+			% io:format("~p\n", [lists:usort(VarsPattern)]),
+			% io:format("~p\n", [lists:usort(OnlyVarsArgs ++ lists:concat(FieldsVarsArgs))]),
+			case lists:usort(VarsPattern) == lists:usort(OnlyVarsArgs ++ lists:concat(FieldsVarsArgs)) of 
 				true -> 
 					Op = 
 						erl_syntax:application_operator(Call),
@@ -336,7 +375,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles, {Valid0, NoValid0}) ->
 			 || Module <- Modules]
 			++ [ element(1, edd_proper_reader:read_file(File))
 			 || File <- TestFiles]),
-	% io:format("Tests : ~p\n", [Tests]),
+	% io:format("Tests: ~p\n", [Tests]),
 	% io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
 	VerticesValidity = 
 		lists:flatten(
@@ -447,6 +486,7 @@ get_test_bindings(
 		{{ModuleTest,FunTest,0}, IsComplete, [{Pars, UsableCalls}]}, 
 		TrustedFunctions) -> 
 	compile:file(atom_to_list(ModuleTest) ++ ".erl", [debug_info]),
+	% io:format("ENTRA\n"),
 	Dicts = 
 		lists:foldl(
 			fun(UsableCall, CAcc) -> 
@@ -579,6 +619,28 @@ same_fun(ModuleTest, FunVertex, FunUsable) ->
 	end. 
 
 compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) -> 
+	io:format("~p\n", [{ArgV, ArgT}]),
+	FunRecords = 
+		fun(NameRecordT, ArgsFieldT) -> 
+			io:format("~p\n", [{NameRecordT, ArgsFieldT}]),
+			case erl_syntax:type(ArgV) of 
+				record_expr -> 
+					{record, _, NameRecordV, ListFields} = ArgV,
+					ArgsFieldV = [ArgField || {record_field, _, {atom, _, _}, ArgField} <- ListFields];
+				tuple -> 
+					{tuple, _, [{atom, 1, NameRecordV} | ArgsFieldV]} = ArgV;
+				_ -> 
+					NameRecordV = "THISISNOTGOINGTOMATCH",
+					ArgsFieldV = ArgsFieldT
+			end,
+			case NameRecordV == NameRecordT of 
+				true -> 
+					compatible_args(lists:zip(ArgsFieldV, ArgsFieldT) ++ Args, ModuleTest, Dict);
+				false -> 
+					false
+			end
+		end,
+	io:format("~p\n", [erl_syntax:type(ArgT)]),
 	case erl_syntax:type(ArgT) of
 		variable -> 
 			Var = 
@@ -599,6 +661,13 @@ compatible_args([{ArgV, ArgT} | Args], ModuleTest, Dict) ->
 							false
 					end
 			end;
+		record_expr ->
+			{record, _, NameRecordT, ListFields} = ArgT,
+			ArgsFieldT = [ArgField || {record_field, _, {atom, _, _}, ArgField} <- ListFields],
+			FunRecords(NameRecordT, ArgsFieldT);
+		tuple -> 
+			{tuple, _, [{atom, 1, NameRecordT} | ArgsFieldT]} = ArgT,
+			FunRecords(NameRecordT, ArgsFieldT);
 		_ ->
 			StrArgV = 
 				erl_prettypr:format(ArgV),
