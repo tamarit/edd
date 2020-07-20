@@ -59,6 +59,6 @@ decrypt(Text, Key) -> crypt(Text, Key, fun decipher/2).
 prop_cycle_property_subset() ->
   ?FORALL(
     {N, S}, 
-    {integer(1, 100), non_empty(string())},
+    {integer(1, 100), nonempty_string()},
     length(cycle_to(N, S)) =:= N
   ).
