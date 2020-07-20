@@ -43,32 +43,7 @@ test() ->
 
 
 
-%% Tests
+%% Tests %%
 prop_rot_lower1_subset() -> 
   ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) >= $a).
-
-%rot_lower_test_range2() -> 
-%  ?FORALL({Char, Key}, {range($a, $z), integer()}, rot(Char,Key) =< $z).  
-  
-%rot_upper_test_range1() -> 
-%  ?FORALL({Char, Key}, {range($A, $Z), integer()}, rot(Char,Key) >= $A).
-
-%rot_upper_test_range2() -> 
-%  ?FORALL({Char, Key}, {range($A, $Z), integer()}, rot(Char,Key) =< $Z).    
-
-%rot_lower_test() -> 
-%  ?FORALL({Char, Key}, 
-%          {range($a, $z), integer()}, 
-%          begin
-%            D = rot(Char,Key),
-%            D >= $a andalso D =< $z
-%          end).
-          
-%rot_upper_test() -> 
-%  ?FORALL({Char, Key}, 
-%          {range($A, $Z), integer()}, 
-%          begin
-%            D = rot(Char,Key),
-%            D >= $A andalso D =< $Z
-%          end).          
 

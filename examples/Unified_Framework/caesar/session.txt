@@ -1,3 +1,5 @@
+WITHOUT TESTS
+-------------
 > edd:dd("caesar:test()").
 Plaintext ----> The five boxing wizards jump quickly
 Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
@@ -19,4 +21,29 @@ rot(Char, Key)
     Offset = $A + Char band 32,
     N = Char - Offset,
     Offset + (N - Key) rem 26.
+    
+    
+    
+USING TESTS
+-----------
+> edd:dd("caesar:test()").
+Plaintext ----> The five boxing wizards jump quickly
+Cyphertext ---> Qeb cfsb _lufkd tfw^oap grjm nrf`hiv
+Total number of tree nodes: 148
+Tree size:
+        21380 words
+        171040 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+caesar:rot(84, 3) = 81
+Please, revise the first clause:
+rot(Char, Key)
+    when (Char >= $A) and (Char =< $Z) or
+             (Char >= $a) and (Char =< $z) ->
+    Offset = $A + Char band 32,
+    N = Char - Offset,
+    Offset + (N - Key) rem 26.
+
+
 
