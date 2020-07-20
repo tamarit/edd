@@ -375,7 +375,7 @@ get_initial_set_of_nodes(G, TrustedFunctions, TestFiles, {Valid0, NoValid0}) ->
 			 || Module <- Modules]
 			++ [ element(1, edd_proper_reader:read_file(File))
 			 || File <- TestFiles]),
-	io:format("Tests: ~p\n", [Tests]),
+	% io:format("Tests: ~p\n", [Tests]),
 	% io:format("TrustedFunctions : ~p\n", [TrustedFunctions]),
 	VerticesValidity = 
 		lists:flatten(
@@ -510,8 +510,8 @@ get_compatible_usable_tests(
 	% io:format("A: ~p\nB: ~p\n", [{FunVertex, ArgsVertex}, {FunUsable, ArgsUsable}]),
 	case same_fun(ModuleTest, FunVertex, FunUsable) of 
 		true ->
-			io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
-			io:format("RestOfFuns; ~p\n", [RestOfFuns]),
+			% io:format("Equal_A: ~p\nEqual_B: ~p\n", [FunVertex, FunUsable]),
+			% io:format("RestOfFuns; ~p\n", [RestOfFuns]),
 			TupledRestOfFuns = 
 				[tuple_function(ModuleTest, NeededFun, Arity) 
 				 || {NeededFun, Arity} <- RestOfFuns],
@@ -522,7 +522,7 @@ get_compatible_usable_tests(
 					% io:format("Arguments:\n~p\n", [{ArgsVertex, ArgsUsable}]), 
 					case compatible_args(lists:zip(ArgsVertex, ArgsUsable), ModuleTest, []) of 
 						false -> 
-							io:format("The arguments are NOT compatible\n", []), 
+							% io:format("The arguments are NOT compatible\n", []), 
 							Acc;
 						{true, Dict} ->
 							% io:format("The arguments are compatible:\n~p\n", [Dict]), 
@@ -579,18 +579,18 @@ get_compatible_usable_tests(
 											% 	end,
 											{value, TypeCorrect, _}	= 
 												erl_eval:expr(erl_syntax:revert(Call), []),
-											io:format(erl_prettypr:format(Call) ++ "\n"),
-											io:format("~p\n", [TypeCorrect]),
+											% io:format(erl_prettypr:format(Call) ++ "\n"),
+											% io:format("~p\n", [TypeCorrect]),
 											TypeCorrect
 				       					end 
 				       				|| {Call, _} <- TypeCheckCalls]),
-		       				io:format("All: ~p\n", [AllTypesCorrect]),
+		       				% io:format("All: ~p\n", [AllTypesCorrect]),
 		       				case AllTypesCorrect of 
 		       					true -> 
-		       						io:format("Type constraints are hold.\n"),
+		       						% io:format("Type constraints are hold.\n"),
 		       						[{Dict, TupledRestOfFuns -- TrustedFunctions} | Acc];
 		       					false ->
-		       						io:format("Type constraints are NOT hold.\n"),
+		       						% io:format("Type constraints are NOT hold.\n"),
 		       						Acc
 		       				end
 					end;
