@@ -268,6 +268,7 @@ ask_about(G, Strategy, Vertices, Valid0, NotValid0, Graph, SaveTests) ->
 							io:format("***** TEST GENERATION REPORT *****\n", []),   
 							io:format("Stored ~p ?assertEqual tests\n", [length(ValidNodesToStore) + length(ExpectedValuesTest)]),
 							io:format("Stored ~p ?assertNotEqual tests\n", [length(NotValidNodesToStore)]),
+							io:format("Total of stored tests: ~p\n", [length(NotValidNodesToStore) + length(ValidNodesToStore) + length(ExpectedValuesTest)]),
 							io:format("**********************************\n", []),   
 	               			edd_test_writer:write(G, ValidNodesToStore, NotValidNodesToStore, ExpectedValuesTest);
 	               		false -> 
