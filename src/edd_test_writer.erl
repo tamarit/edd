@@ -76,7 +76,7 @@ write_in_file(Module, Tests, G) ->
 			[PT] -> 
 				PT 
 		end,
-	io:format("PreviousTests: ~p\n", [PreviousTests]),
+	% io:format("PreviousTests: ~p\n", [PreviousTests]),
 		% case lists:last(Forms -- [lists:last(Forms)]) of 
 		% 	{function, _, edd_test, _, [Clause]} ->
 		% 		edd_test_reader:read_from_clause(Clause);
