@@ -319,7 +319,7 @@ disremotize_implicit_fun(Node) ->
 			erl_syntax:atom_value(
 				erl_syntax:module_qualifier_argument(Name)),
 		erl_syntax:implicit_fun(
-			erl_syntax:module_qualifier_body(Name)),
+			erl_syntax:module_qualifier_body(Name))
 	catch 
 		_:_ ->
 			Node
