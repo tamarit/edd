@@ -1,0 +1,29 @@
+digraph PDG {
+13 [shape=ellipse, label="13 .- stock:test() = [{item, water, 3}, {item, rice, 7}]"];
+8 [shape=ellipse, label="8 .- fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, water, 3}) = {true, {item, water, 3}}\lfun location: (stock.erl, line 30)"];
+11 [shape=ellipse, label="11 .- stock:check_order([{item, water, 3}, {item, rice, 7}], [{item, rice, 5}, {item, bajoqueta, 8}]) = [{item, water, 3}, {item, rice, 7}]"];
+1 [shape=ellipse, label="1 .- fun ({item, ItemName, _}) -> ItemName == water end({item, rice, 4}) = false\lfun location: (stock.erl, line 60)"];
+12 [shape=ellipse, label="12 .- stock:check_orders([[{item, water, 3}, {item, rice, 3}], [{item, rice, 4}]], [{item, rice, 5}, {item, bajoqueta, 8}]) = [{item, water, 3}, {item, rice, 7}]"];
+7 [shape=ellipse, label="7 .- stock:check_item({item, water, 3}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, water, 3}}"];
+3 [shape=ellipse, label="3 .- fun ({item, _, N}, Acc) -> N + Acc end({item, rice, 4}, 0) = 4\lfun location: (stock.erl, line 61)"];
+10 [shape=ellipse, label="10 .- fun (X) -> check_item(X, [{item, rice, 5}, {item, bajoqueta, 8}]) end({item, rice, 7}) = {true, {item, rice, 7}}\lfun location: (stock.erl, line 30)"];
+9 [shape=ellipse, label="9 .- stock:check_item({item, rice, 7}, [{item, rice, 5}, {item, bajoqueta, 8}]) = {true, {item, rice, 7}}"];
+4 [shape=ellipse, label="4 .- stock:unify_orders([]) = []"];
+0 [shape=ellipse, label="0 .- fun ({item, ItemName, _}) -> ItemName == water end({item, rice, 3}) = false\lfun location: (stock.erl, line 60)"];
+6 [shape=ellipse, label="6 .- stock:unify_orders([{item, water, 3}, {item, rice, 3}, {item, rice, 4}]) = [{item, water, 3}, {item, rice, 7}]"];
+2 [shape=ellipse, label="2 .- fun ({item, ItemName, _}) -> ItemName == rice end({item, rice, 4}) = true\lfun location: (stock.erl, line 60)"];
+5 [shape=ellipse, label="5 .- stock:unify_orders([{item, rice, 3}, {item, rice, 4}]) = [{item, rice, 7}]"];
+13 -> 12 [color=black, penwidth=3];
+8 -> 7 [color=black, penwidth=3];
+11 -> 10 [color=black, penwidth=3];
+11 -> 8 [color=black, penwidth=3];
+12 -> 11 [color=black, penwidth=3];
+12 -> 6 [color=black, penwidth=3];
+10 -> 9 [color=black, penwidth=3];
+6 -> 5 [color=black, penwidth=3];
+6 -> 1 [color=black, penwidth=3];
+6 -> 0 [color=black, penwidth=3];
+5 -> 4 [color=black, penwidth=3];
+5 -> 3 [color=black, penwidth=3];
+5 -> 2 [color=black, penwidth=3];
+}

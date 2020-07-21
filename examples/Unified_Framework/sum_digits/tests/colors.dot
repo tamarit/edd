@@ -1,0 +1,15 @@
+digraph PDG {
+1 [shape=ellipse, label="1 .- sum_digits:sum_digits(13, 10, 15) = 18" style=filled color="red" fontcolor="white" fillcolor="red"];
+3 [shape=ellipse, label="3 .- sum_digits:sum_digits(1345, 10, 6) = 18" style=filled color="red" fontcolor="white" fillcolor="red"];
+4 [shape=ellipse, label="4 .- sum_digits:sum_digits(13456, 10, 0) = 18" style=filled color="red" fontcolor="white" fillcolor="red"];
+0 [shape=ellipse, label="0 .- sum_digits:sum_digits(1, 10, 18) = 18" style=filled color="red" fontcolor="white" fillcolor="red"];
+6 [shape=ellipse, label="6 .- sum_digits:sum_digits(13456) = 18"];
+2 [shape=ellipse, label="2 .- sum_digits:sum_digits(134, 10, 11) = 18" style=filled color="red" fontcolor="white" fillcolor="red"];
+5 [shape=ellipse, label="5 .- sum_digits:sum_digits(13456, 10) = 18"];
+1 -> 0 [color=black, penwidth=3];
+3 -> 2 [color=black, penwidth=3];
+4 -> 3 [color=black, penwidth=3];
+6 -> 5 [color=black, penwidth=3];
+2 -> 1 [color=black, penwidth=3];
+5 -> 4 [color=black, penwidth=3];
+}

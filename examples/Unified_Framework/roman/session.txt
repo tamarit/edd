@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("roman:main()", [not_load_tests, not_save_tests]).
+> edd:dd("roman:main()", [tree]).
 Total number of tree nodes: 9
 Tree size:
         2163 words

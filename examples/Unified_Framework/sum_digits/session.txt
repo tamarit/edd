@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("sum_digits:sum_digits(13456)").
+> edd:dd("sum_digits:sum_digits(13456)", [tree]).
 Total number of tree nodes: 7
 Tree size:
         1749 words

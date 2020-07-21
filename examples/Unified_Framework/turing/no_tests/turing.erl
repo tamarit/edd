@@ -72,9 +72,28 @@ action(right, Blank, {Left, []}) -> {[Blank|Left], []};
 action(right, _, {Left, [R|Rs]}) -> {[R|Left], Rs}.
 
 
-%% Tests
-busy_beaver_config_test() ->
-    ?assertEqual(busy_beaver_config(), {a, [halt], '0'}),
-    ?assertEqual(perform(fun turing:busy_beaver_config/0, fun turing:busy_beaver/2, a, {[], ['1', '1']}), {['1','1','1'],['1','1','1']}).
+% begin edd trusted
 
+edd_trusted() ->
+	[].
 
+% end edd trusted
+
+% begin edd test
+
+edd_test() ->
+	?assertNotEqual(turing(fun busy_beaver_config/0, fun busy_beaver/2, []), ['1', '1', '1']),
+	?assertNotEqual(perform(fun busy_beaver_config/0,
+        fun busy_beaver/2,
+        a,
+        {[], ['1', '1']}), {[], ['1', '1', '1']}),
+	?assertEqual(perform(fun busy_beaver_config/0,
+        fun busy_beaver/2,
+        c,
+        {[], ['1', '1', '1']}), {[], ['1', '1', '1']}),
+	?assertEqual(action(left, '1', {[], ['1', '1']}), {[], ['1', '1', '1']}),
+	?assertEqual(busy_beaver(a, '1'), {'1', left, c}),
+	?assertEqual(symbol(['1', '1'], '0'), {['1'], '1'}),
+	?assertEqual(busy_beaver_config(), {a, [halt], '0'}).
+
+% end edd test

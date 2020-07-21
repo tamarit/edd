@@ -1,5 +1,4 @@
 -module(sum_digits).
-%-export([sum_digits/2, sum_digits/1]).
 -compile(export_all).
 
 -include_lib("proper/include/proper.hrl").

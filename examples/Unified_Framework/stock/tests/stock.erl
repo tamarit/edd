@@ -70,4 +70,3 @@ check_item_test() ->
 	                        [{item, rice, 5}, {item, bajoqueta, 8}]), 
 	             {true, {item, rice, 2}}).
 
-

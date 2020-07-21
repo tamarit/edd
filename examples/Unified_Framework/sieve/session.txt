@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("sieve:find_primes_below(20)").
+> edd:dd("sieve:find_primes_below(20)", [tree]).
 Total number of tree nodes: 56
 Tree size:
         15806 words
@@ -34,7 +34,7 @@ next_prime(NumList, Index, Length) ->
 
 USING TESTS
 =============
-> edd:dd("sieve:find_primes_below(20)").
+> edd:dd("sieve:find_primes_below(20)", [tree]).
 Total number of tree nodes: 56
 Tree size:
         15806 words
