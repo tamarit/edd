@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("align_columns:align_left()").
+> edd:dd("align_columns:align_left()", [tree]).
 Total number of tree nodes: 32
 Tree size:
         140032 words

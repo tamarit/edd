@@ -1,8 +1,6 @@
 WITHOUT TESTS
 =============
-> miller_rabin:first_10().
-[2,3,5,7,9]
-> edd:dd("miller_rabin:first_10()", [not_load_tests]).
+> edd:dd("miller_rabin:first_10()", [tree]).
 Total number of tree nodes: 152
 Tree size:
         24680 words

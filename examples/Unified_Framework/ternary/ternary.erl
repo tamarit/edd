@@ -102,3 +102,10 @@ prop_to_ternary2_complete() ->
 %  ?assertEqual(to_ternary(2, [0,1,1,0,1,1,1,1,1,1,1,1]), [1,-1,0,1,1,0,1,1,1,1,1,1,1,1]),
 %  ?assertEqual(to_ternary(1, [1,0,1,1,0,1,1,1,1,1,1,1,1]), [1,1,0,1,1,0,1,1,1,1,1,1,1,1]). 
 
+
+% begin edd trusted
+
+edd_trusted() ->
+	[].
+
+% end edd trusted

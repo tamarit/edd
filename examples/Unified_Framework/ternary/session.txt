@@ -35,3 +35,4 @@ Please, revise the fourth clause:
 to_ternary(N, Acc) ->
     to_ternary((N + 1) div 3, [1 | Acc]).
 
+

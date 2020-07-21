@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("g24:test([9,2,2,3],\"(9*2)+(2*3)\")", [not_load_tests]).
+> edd:dd("g24:test([9,2,2,3],\"(9*2)+(2*3)\")", [tree]).
 Your digits     [9,2,2,3]
 Your expression "(9*2)+(2*3)"
 The following numbers are wrong: []

@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd( "mergesort:mergesort([a,c,b,o,i,p,a,q,w,e,v], fun mergesort:comp/2)", [tree, not_load_tests, not_save_tests] ).
+> edd:dd( "mergesort:mergesort([a,c,b,o,i,p,a,q,w,e,v], fun mergesort:comp/2)", [tree] ).
 Total number of tree nodes: 120
 Tree size:
         18284 words
@@ -12,6 +12,8 @@ mergesort:mergesort([w, e, v], fun mergesort:comp/2) = [w, e, v]? [y/n/t/v/d/i/s
 mergesort:mergesort([e, v], fun mergesort:comp/2) = [e, v]? [y/n/t/v/d/i/s/u/a]: y
 mergesort:merge([w], [e, v], fun mergesort:comp/2) = [w, e, v]? [y/n/t/v/d/i/s/u/a]: n
 mergesort:merge([e], [v], fun mergesort:comp/2) = [e, v]? [y/n/t/v/d/i/s/u/a]: y
+mergesort:comp(w, e) = false? [y/n/t/v/d/i/s/u/a]: t
+
 Call to a function that contains an error:
 mergesort:merge([w], [e, v], fun mergesort:comp/2) = [w, e, v]
 Please, revise the fourth clause:
@@ -33,6 +35,8 @@ Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m
 
 mergesort:merge([o], [i], fun mergesort:comp/2) = [o, i]? [y/n/t/v/d/i/s/u/a]: n
 mergesort:merge([i], [], fun mergesort:comp/2) = [i]? [y/n/t/v/d/i/s/u/a]: y
+mergesort:comp(w, e) = false? [y/n/t/v/d/i/s/u/a]: t
+
 Call to a function that contains an error:
 mergesort:merge([o], [i], fun mergesort:comp/2) = [o, i]
 Please, revise the fourth clause:

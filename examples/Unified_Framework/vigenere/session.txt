@@ -1,37 +1,48 @@
-> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", tree, top_down).
-Please, insert a list of trusted functions [m1:f1/a1, m2:f2/a2 ...]:
+> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", [tree]).
+Total number of tree nodes: 198
+Tree size:
+        24990 words
+        199920 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
 
-vigenere:crypt("Attack tomorrow dawn", "lemon", fun vigenere:encipher/2) = {error, match_fail}? [y/n/t/d/i/s/u/a]: n
+vigenere:normalize("Attack tomorrow dawn") = "ATTACKTOMORROWDAWN"? [y/n/t/v/d/i/s/u/a]: y
+vigenere:normalize("lemon") = "LEMON"? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(78, 77) = 90? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(87, 69) = 65? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(65, 76) = 76? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(68, 78) = 81? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(87, 79) = 75? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(79, 77) = 65? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(82, 69) = 86? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(82, 76) = 67? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(79, 78) = 66? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(77, 79) = 65? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(84, 69) = 88? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(75, 76) = 86? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(67, 78) = 80? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(65, 79) = 79? [y/n/t/v/d/i/s/u/a]: y
+vigenere:encipher(84, 77) = 70? [y/n/t/v/d/i/s/u/a]: y
+vigenere:cycle_to(13, "LEMON") = "LEMONLEMONLEMON"? [y/n/t/v/d/i/s/u/a]: n
+vigenere:cycle_to(8, "LEMON") = "LEMONLEMON"? [y/n/t/v/d/i/s/u/a]: n
+vigenere:cycle_to(3, "LEMON") = "LEMON"? [y/n/t/v/d/i/s/u/a]: n
+Call to a function that contains an error:
+vigenere:cycle_to(3, "LEMON") = "LEMON"
+Please, revise the first clause:
+cycle_to(N, List) when length(List) >= N -> List.
 
-Complexity: 3 (data structures) + 1 (lambda) + 1 (base) = 5
 
-vigenere:normalize("Attack tomorrow dawn") = "ATTACKTOMORROWDAWN"? [y/n/t/d/i/s/u/a]: y
 
-Complexity: 1 (base)
 
-vigenere:normalize("lemon") = "LEMON"? [y/n/t/d/i/s/u/a]: y
-
-Complexity: 1 (base)
-
-vigenere:encipher(78, 77) = 90? [y/n/t/d/i/s/u/a]: t
-
-Complexity: 1 (base)
-
-vigenere:cycle_to(18, "LEMON") = "LEMONLEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
-
-Complexity: 1 (base)
-
-vigenere:cycle_to(13, "LEMON") = "LEMONLEMONLEMON"? [y/n/t/d/i/s/u/a]: n
-
-Complexity: 1 (base)
-
-vigenere:cycle_to(8, "LEMON") = "LEMONLEMON"? [y/n/t/d/i/s/u/a]: n
-
-Complexity: 1 (base)
-
-vigenere:cycle_to(3, "LEMON") = "LEMON"? [y/n/t/d/i/s/u/a]: n
+USING TESTS
+-----------
+> edd:dd("vigenere:encrypt(\"Attack tomorrow dawn\", \"lemon\")", [tree]).   Total number of tree nodes: 198
+Tree size:
+        24990 words
+        199920 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
 
 Call to a function that contains an error:
 vigenere:cycle_to(3, "LEMON") = "LEMON"
 Please, revise the first clause:
 cycle_to(N, List) when length(List) >= N -> List.
+

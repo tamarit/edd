@@ -1,4 +1,7 @@
-> edd:dd( "dutch:main()", [tree, not_load_tests]).
+WITHOUT TESTS
+-------------
+
+> edd:dd( "dutch:main()", [tree]).
 Total number of tree nodes: 81
 Tree size:
         20167 words
@@ -15,3 +18,21 @@ Call to a function that contains an error:
 dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white, white, white, white], [], [blue, white]) = [red, red, red, red, red, red, white, white, white, white, white, white, white, white, white]
 Please, revise the fourth clause:
 dutch(R, W, B, [blue | L]) -> dutch(R, W, B, L).
+
+
+
+
+USING TESTS
+-----------
+> edd:dd( "dutch:main()", [tree]).                
+Total number of tree nodes: 81
+Tree size:
+        20167 words
+        161336 bytes
+Please, insert a list of trusted functions separated by commas (e.g. m1:f1/a1, m2:f2/a2 ...):
+
+Call to a function that contains an error:
+dutch:dutch([red, red, red, red, red, red], [white, white, white, white, white, white, white, white], [], [blue, white]) = [red, red, red, red, red, red, white, white, white, white, white, white, white, white, white]
+Please, revise the fourth clause:
+dutch(R, W, B, [blue | L]) -> dutch(R, W, B, L).
+

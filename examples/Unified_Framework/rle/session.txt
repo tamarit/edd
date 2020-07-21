@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("rle:test()").
+> edd:dd("rle:test()", [tree]).
 Total number of tree nodes: 69
 Tree size:
         28141 words
@@ -32,7 +32,7 @@ PreviousTests: []
 
 USING TESTS
 =============
-> edd:dd("rle:test()").
+> edd:dd("rle:test()", [tree]).
 Total number of tree nodes: 69
 Tree size:
         28141 words

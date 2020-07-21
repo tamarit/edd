@@ -1,6 +1,6 @@
 WITHOUT TESTS
 -------------
-> edd:dd("complex_number:calculate()").
+> edd:dd("complex_number:calculate()", [tree]).
 Total number of tree nodes: 7
 Tree size:
         2359 words
@@ -21,7 +21,7 @@ conjugate(A) ->
 
 USING TESTS
 -----------
-> edd:dd("complex_number:calculate()").
+> edd:dd("complex_number:calculate()", [tree]).
 Total number of tree nodes: 7
 Tree size:
         2359 words

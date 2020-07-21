@@ -20,15 +20,10 @@ sum_digits(N,B,Acc) when N < B ->
 sum_digits(N,B,Acc) ->
     sum_digits(N div B, B, Acc + (N rem B)).
     
-%%Tests
-sum_digits_property1_complete() ->
-  ?FORALL(Acc,
-          non_neg_integer(), 
-          sum_digits(1, 10, Acc) =:= 1 + Acc).
-          
+
+%% Tests %%       
 sum_digits_property_complete() ->
   ?FORALL({N, Acc},
           {integer(0,9), non_neg_integer()}, 
           sum_digits(N, 10, Acc) =:= N + Acc).
-
 

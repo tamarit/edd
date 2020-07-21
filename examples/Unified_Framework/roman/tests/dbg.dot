@@ -1,0 +1,19 @@
+digraph PDG {
+8 [shape=ellipse, label="8 .- roman:main() = \"MMCDLLXXIX\""];
+1 [shape=ellipse, label="1 .- roman:digit(8, 88, 76, 67) = \"LLXX\""];
+7 [shape=ellipse, label="7 .- roman:to_roman(2489) = \"MMCDLLXXIX\""];
+3 [shape=ellipse, label="3 .- roman:to_roman(9) = \"IX\""];
+4 [shape=ellipse, label="4 .- roman:to_roman(89) = \"LLXXIX\""];
+0 [shape=ellipse, label="0 .- roman:digit(4, 67, 68, 77) = \"CD\""];
+6 [shape=ellipse, label="6 .- roman:to_roman(1489) = \"MCDLLXXIX\""];
+2 [shape=ellipse, label="2 .- roman:digit(9, 73, 86, 88) = \"IX\""];
+5 [shape=ellipse, label="5 .- roman:to_roman(489) = \"CDLLXXIX\""];
+8 -> 7 [color=black, penwidth=3];
+7 -> 6 [color=black, penwidth=3];
+3 -> 2 [color=black, penwidth=3];
+4 -> 3 [color=black, penwidth=3];
+4 -> 1 [color=black, penwidth=3];
+6 -> 5 [color=black, penwidth=3];
+5 -> 4 [color=black, penwidth=3];
+5 -> 0 [color=black, penwidth=3];
+}

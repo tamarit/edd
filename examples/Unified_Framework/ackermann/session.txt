@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("ackermann:main([3,4])", [not_load_tests]).
+> edd:dd("ackermann:main([3,4])", [tree]).
 Total number of tree nodes: 91
 Tree size:
         9345 words
@@ -21,7 +21,7 @@ ack(M, 0) -> ack(M - 1, 0).
 
 USING TESTS
 ===========
-> edd:dd("ackermann:main([3,4])").
+> edd:dd("ackermann:main([3,4])", [tree]).
 Total number of tree nodes: 91
 Tree size:
         9345 words

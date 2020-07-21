@@ -1,6 +1,6 @@
 WITHOUT TESTS
 =============
-> edd:dd("rfib:main(10)").
+> edd:dd("rfib:main(10)", [tree]).
 Total number of tree nodes: 288
 Tree size:
         30736 words
@@ -26,7 +26,7 @@ nfib(N) when N >= 1 -> nfib(N - 1) + nfib(N - 2).
 
 USING TESTS
 ===========
-> edd:dd("rfib:main(10)").
+> edd:dd("rfib:main(10)", [tree]).
 Total number of tree nodes: 288
 Tree size:
         30736 words
